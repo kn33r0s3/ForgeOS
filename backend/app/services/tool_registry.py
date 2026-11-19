@@ -240,11 +240,7 @@ class ToolRegistry:
 
 
 def default_registry() -> ToolRegistry:
-    """Build the default registry from existing AI providers.
-
-    Importing is intentionally lazy so optional OpenAI dependencies and a
-    stopped Ollama daemon never prevent Forge from starting.
-    """
+    """Build the default registry for Hami's local model and deterministic tools."""
     from app.services import ai_engine
 
     registry = ToolRegistry()
@@ -264,40 +260,6 @@ def default_registry() -> ToolRegistry:
         ("web", WebCollector, "web"),
     ):
         registry.register(CollectorToolAdapter(name, factory, source_type))
-    def local_ollama_is_configured_for_this_runtime() -> bool:
-        if ai_engine.settings.AI_PROVIDER.strip().lower() != "ollama":
-            return False
-        # Unlike a configuration-only check, this requires the configured local
-        # or authenticated HTTPS self-hosted endpoint to answer and expose the
-        # selected model. It still does not claim generation quality.
-        status = ai_engine.get_provider_status()
-        return (
-            status.get("status") == "MODEL_AVAILABLE"
-            and (
-                status.get("mode") != "SELF_HOSTED"
-                or status.get("internal_context_allowed") is True
-            )
-        )
-
-    registry.register(
-        ProviderAdapter(
-            ToolCapability(
-                name="local-qwen3-coder",
-                category="reasoning",
-                input_types=("text", "prompt"),
-                output_types=("text", "analysis"),
-                cost="local",
-                latency="variable",
-                reliability=0.8,
-                languages=("en",),
-                media_support=("text",),
-                availability="optional",
-                capabilities=("completion", "reasoning", "code", "summarization"),
-            ),
-            ai_engine.OllamaProvider,
-            availability_check=local_ollama_is_configured_for_this_runtime,
-        )
-    )
     registry.register(
         ProviderAdapter(
             ToolCapability(
@@ -316,6 +278,24 @@ def default_registry() -> ToolRegistry:
             ai_engine.MockProvider,
         )
     )
-    # Do not register a direct OpenAI adapter: it would bypass ai_engine's
-    # paid-provider metering and global spend authorization boundary.
+    registry.register(
+        ProviderAdapter(
+            ToolCapability(
+                name="hami-model",
+                category="reasoning",
+                input_types=("text", "prompt"),
+                output_types=("text", "analysis"),
+                cost="free",
+                latency="medium",
+                reliability=0.8,
+                languages=("en", "ne"),
+                media_support=("text",),
+                availability="local",
+                capabilities=("completion", "summarization", "analysis"),
+            ),
+            ai_engine.HamiModelProvider,
+        )
+    )
+    # Do not register a direct model adapter: it would bypass ai_engine's
+    # provider boundary (hami-model only, through the guarded gateway).
     return registry

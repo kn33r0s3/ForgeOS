@@ -9,7 +9,7 @@ marketing strategy snippets.
 $0 OPERATING COST IS A HARD CONSTRAINT, NOT A DEFAULT TO OVERRIDE:
 The default AI_PROVIDER is the deterministic MockProvider for offline
 development; that is not model inference and must never be counted as
-evidence. Real local inference requires explicit Ollama configuration.
+evidence. Real inference requires hami-model (the owner's own model) via the guarded gateway.
 Paid completions remain disabled until per-call metering and a global
 spend guard are enforced at the call boundary.
 
@@ -30,53 +30,33 @@ Providers
                     Default. Keeps Forge fully usable on a low-end
                     laptop with no API key, no local model, and no
                     internet at all.
-- OllamaProvider : a real, free, open-source model running on the
-                    user's own machine via Ollama (https://ollama.com).
-                    No API key, no per-token cost, no internet required
-                    once a model is pulled. The intended "better than
-                    mock, still $0" path.
-- OpenAIProvider : legacy adapter class kept for compatibility; the
-                    shared provider factory deliberately refuses paid calls
-                    until per-call usage metering and the global spend guard
-                    are enforced. Tool/judge registries must not call it directly.
+- HamiModelProvider : Hami's own model (the clean adapter) on the
+                    owner's Mac, reached only through the guarded gateway
+                    (scripts/hami_ollama_gateway.py). No borrowed model
+                    or paid API. The intended
+                    "better than mock, still $0" path.
 """
 
 from __future__ import annotations
 
 import json
 import math
-import os
 import re
 import textwrap
 import urllib.request
 from abc import ABC, abstractmethod
-from urllib.parse import urlparse
 
 from app.config import settings
 
 
-MAX_OLLAMA_RESPONSE_BYTES = 1_048_576
+MAX_HAMI_RESPONSE_BYTES = 1_048_576
 
 
-class _RejectOllamaRedirects(urllib.request.HTTPRedirectHandler):
-    """A bearer-authenticated model gateway must not redirect credentials elsewhere."""
+class _RejectGatewayRedirects(urllib.request.HTTPRedirectHandler):
+    """A key-authenticated model gateway must not redirect credentials elsewhere."""
 
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         return None
-
-
-def _open_ollama_request(request, *, timeout: float, transport_mode: str):
-    if transport_mode == "SELF_HOSTED":
-        # The configured HTTPS gateway is trusted with the token. Refuse all
-        # redirects rather than risk forwarding Authorization to another host.
-        opener = urllib.request.build_opener(_RejectOllamaRedirects())
-        return opener.open(request, timeout=timeout)
-    return urllib.request.urlopen(request, timeout=timeout)
-
-
-class _OllamaResponseTooLarge(Exception):
-    """Internal sentinel for bounded inference response reads."""
-
 
 
 class AIUnavailableError(RuntimeError):
@@ -173,181 +153,69 @@ class MockProvider(AIProvider):
         )
 
 
-def ollama_transport_mode(
-    host: str | None = None,
-    api_key: str | None = None,
-    *,
-    vercel: bool | None = None,
-) -> str | None:
-    """Permit loopback HTTP locally or a token-authenticated HTTPS gateway remotely."""
-    configured_host = (host if host is not None else settings.OLLAMA_HOST).strip().rstrip("/")
-    configured_key = (api_key if api_key is not None else settings.OLLAMA_API_KEY).strip()
-    parsed = urlparse(configured_host)
-    if not parsed.hostname or parsed.username or parsed.password:
-        return None
-
-    hostname = parsed.hostname.lower()
-    loopback = hostname in {"localhost", "127.0.0.1", "::1"}
-    running_on_vercel = bool(os.getenv("VERCEL")) if vercel is None else vercel
-    if parsed.scheme == "http" and loopback and not running_on_vercel:
-        return "LOCAL"
-    if parsed.scheme == "https" and not loopback and configured_key:
-        return "SELF_HOSTED"
-    return None
-
-
-class OllamaProvider(AIProvider):
-    """
-    Real, free, local model provider via Ollama (https://ollama.com) —
-    the intended default path for anyone who wants better-than-mock
-    output without paying for or depending on a cloud API. Runs
-    entirely on the user's own hardware; no API key, no per-token cost,
-    no internet required once a model has been pulled.
-
-    Requires Ollama installed and running locally:
-        ollama pull qwen3-coder:latest  # one-time, downloads the model
-        ollama serve               # usually already running as a service
-
-    Uses only the stdlib (urllib/json) to talk to Ollama's local REST
-    API — no extra pip dependency for this provider.
-    """
+class HamiModelProvider(AIProvider):
+    """Single local inference adapter for Hami's own serving process."""
 
     def __init__(self):
-        self._host = settings.OLLAMA_HOST.rstrip("/")
-        self._model = settings.OLLAMA_MODEL
-        self._api_key = settings.OLLAMA_API_KEY.strip()
-        self._transport_mode = ollama_transport_mode(self._host, self._api_key)
-        self.last_call_metadata = {}
-
-    def _generate(self, payload: dict) -> dict:
-        import json
-        import urllib.request
-
-        if self._transport_mode is None:
-            raise RuntimeError("Ollama transport is not safely configured")
-        headers = {"Content-Type": "application/json"}
-        if self._transport_mode == "SELF_HOSTED":
-            headers["Authorization"] = f"Bearer {self._api_key}"
-        request = urllib.request.Request(
-            f"{self._host}/api/generate",
-            data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
-            headers=headers,
-        )
-        try:
-            with _open_ollama_request(request, timeout=60, transport_mode=self._transport_mode) as response:
-                # A configured local/self-hosted endpoint must not be able to
-                # force an unbounded body read into this process.
-                raw_response = response.read(MAX_OLLAMA_RESPONSE_BYTES + 1)
-                if len(raw_response) > MAX_OLLAMA_RESPONSE_BYTES:
-                    raise _OllamaResponseTooLarge()
-                data = json.loads(raw_response.decode("utf-8"))
-        except _OllamaResponseTooLarge as exc:
-            raise RuntimeError(
-                f"Ollama response exceeded {MAX_OLLAMA_RESPONSE_BYTES} bytes"
-            ) from exc
-        except Exception as exc:
-            raise RuntimeError(
-                f"Ollama request failed — is `ollama serve` running with "
-                f"model '{self._model}' pulled? ({type(exc).__name__})"
-            ) from exc
-        if not isinstance(data, dict) or not isinstance(data.get("response"), str):
-            raise RuntimeError("Ollama returned an invalid generation response")
-        prompt_tokens = data.get("prompt_eval_count")
-        completion_tokens = data.get("eval_count")
-        duration_ns = data.get("total_duration")
-        self.last_call_metadata = {
-            "prompt_eval_tokens": prompt_tokens if type(prompt_tokens) is int and prompt_tokens >= 0 else None,
-            "completion_eval_tokens": completion_tokens if type(completion_tokens) is int and completion_tokens >= 0 else None,
-            "total_duration_ms": round(duration_ns / 1_000_000, 2)
-            if type(duration_ns) in {int, float} and math.isfinite(duration_ns) and duration_ns >= 0
-            else None,
-        }
-        return data
+        self._host = settings.HAMI_MODEL_GATEWAY_HOST.rstrip('/')
+        self._model = settings.HAMI_MODEL_NAME
+        self._api_key = settings.HAMI_MODEL_GATEWAY_KEY.strip()
+        self._transport_mode = "LOCAL"
 
     def complete(self, prompt: str, system: str = "") -> str:
-        data = self._generate({
-            "model": self._model,
-            "prompt": prompt,
-            "system": system,
-            "stream": False,
-        })
-        return data["response"].strip()
-
-    def complete_json(self, prompt: str, *, system: str = "", schema: dict) -> str:
-        """Use Ollama's native JSON-schema constrained generation; caller still validates output."""
-        data = self._generate({
-            "model": self._model,
-            "prompt": prompt,
-            "system": system,
-            "format": schema,
-            "stream": False,
-            "options": {"temperature": 0},
-        })
-        return data["response"].strip()
-
-    def availability_status(self) -> dict:
-        """Probe a permitted local/self-hosted endpoint and model installation; not answer quality."""
-        self._transport_mode = ollama_transport_mode(self._host, self._api_key)
-        base = {
-            "provider": "ollama",
-            "mode": self._transport_mode or "UNKNOWN",
-            "model": self._model,
-            "inference_verified": False,
-        }
-        if self._transport_mode is None:
-            if os.getenv("VERCEL"):
-                note = "Vercel cannot reach the owner's localhost model. Configure OLLAMA_HOST as an authenticated HTTPS self-hosted gateway and OLLAMA_API_KEY."
-            else:
-                note = "Use loopback HTTP on a local runtime, or an authenticated HTTPS self-hosted gateway with OLLAMA_API_KEY."
-            return {**base, "status": "AI_UNAVAILABLE", "note": note}
-        headers = {"Accept": "application/json"}
-        if self._transport_mode == "SELF_HOSTED":
-            headers["Authorization"] = f"Bearer {self._api_key}"
-        request = urllib.request.Request(f"{self._host}/api/tags", headers=headers)
-        try:
-            with _open_ollama_request(request, timeout=1.5, transport_mode=self._transport_mode) as response:
-                payload = json.loads(response.read().decode("utf-8"))
-        except Exception as exc:
-            return {**base, "status": "AI_UNAVAILABLE", "failure_type": type(exc).__name__, "note": "The configured Ollama endpoint could not be reached or returned invalid JSON."}
-        if not isinstance(payload, dict) or not isinstance(payload.get("models"), list):
-            return {**base, "status": "AI_UNAVAILABLE", "note": "The local Ollama endpoint returned an unexpected model-list response."}
-        installed = {
-            name for item in payload["models"] if isinstance(item, dict)
-            for name in (item.get("name"), item.get("model"))
-            if isinstance(name, str) and name.strip()
-        }
-        requested = self._model.strip()
-        canonical_requested = requested if ":" in requested else f"{requested}:latest"
-        if requested not in installed and canonical_requested not in installed:
-            return {**base, "status": "MODEL_MISSING", "note": "Ollama responds, but the configured model is not installed on this machine."}
-        return {**base, "status": "MODEL_AVAILABLE", "note": "Ollama responds and the configured model is installed. Actual generation success and answer quality are not yet verified."}
-
-
-class OpenAIProvider(AIProvider):
-    """Optional, paid acceleration via the OpenAI API. Used only when
-    AI_PROVIDER=openai and a key is set — never required. The `openai`
-    package itself is an OPTIONAL dependency (see requirements-optional.txt);
-    it's imported lazily here so a base Forge install never needs it."""
-
-    def __init__(self):
-        from openai import OpenAI  # optional dependency — see requirements-optional.txt
-
-        self._client = OpenAI(api_key=settings.OPENAI_API_KEY)
-        self._model = settings.OPENAI_MODEL
-
-    def complete(self, prompt: str, system: str = "") -> str:
+        if not self._host or not self._api_key:
+            raise RuntimeError("hami-model gateway is not configured")
         messages = []
         if system:
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": prompt})
-
-        response = self._client.chat.completions.create(
-            model=self._model,
-            messages=messages,
-            max_tokens=500,
-            temperature=0.7,
+        body = json.dumps({
+            "model": self._model,
+            "messages": messages,
+            "stream": False,
+        }, ensure_ascii=False).encode("utf-8")
+        request = urllib.request.Request(
+            f"{self._host}/api/hami-llm/chat",
+            data=body,
+            headers={"Content-Type": "application/json", "X-Hami-Key": self._api_key},
+            method="POST",
         )
-        return response.choices[0].message.content.strip()
+        try:
+            opener = urllib.request.build_opener(_RejectGatewayRedirects())
+            with opener.open(request, timeout=90) as response:
+                data = json.loads(response.read(MAX_HAMI_RESPONSE_BYTES + 1).decode("utf-8"))
+        except Exception as exc:
+            raise RuntimeError("Hami model is unavailable") from exc
+        choices = data.get("choices") if isinstance(data, dict) else None
+        if not isinstance(choices, list) or not choices:
+            raise RuntimeError("Hami model returned an invalid response")
+        message = choices[0].get("message") if isinstance(choices[0], dict) else None
+        answer = message.get("content") if isinstance(message, dict) else None
+        if not isinstance(answer, str) or not answer.strip():
+            raise RuntimeError("Hami model returned an empty response")
+        return answer.strip()
+
+    def complete_json(self, prompt: str, *, system: str = "", schema: dict) -> str:
+        return self.complete(prompt, system=system)
+
+    def availability_status(self) -> dict:
+        if not self._host or not self._api_key:
+            return {"provider": "hami-model", "mode": "LOCAL", "model": self._model, "status": "AI_UNAVAILABLE", "inference_verified": False, "note": "The hami-model gateway is not configured (HAMI_CHAT_HOST / HAMI_CHAT_KEY)."}
+        try:
+            request = urllib.request.Request(
+                f"{self._host}/api/hami-llm/status",
+                headers={"X-Hami-Key": self._api_key},
+                method="GET",
+            )
+            opener = urllib.request.build_opener(_RejectGatewayRedirects())
+            with opener.open(request, timeout=3) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+            data = payload.get("data") if isinstance(payload, dict) else None
+            if not isinstance(data, list) or not data:
+                return {"provider": "hami-model", "mode": "LOCAL", "model": self._model, "status": "MODEL_MISSING", "inference_verified": False}
+            return {"provider": "hami-model", "mode": "LOCAL", "model": self._model, "status": "MODEL_AVAILABLE", "inference_verified": False}
+        except Exception as exc:
+            return {"provider": "hami-model", "mode": "LOCAL", "model": self._model, "status": "AI_UNAVAILABLE", "inference_verified": False, "failure_type": type(exc).__name__}
 
 
 def _extract_idea_text(prompt: str) -> str:
@@ -360,68 +228,20 @@ def _extract_idea_text(prompt: str) -> str:
 
 
 def get_provider() -> AIProvider:
-    """
-    Construct the configured provider without fabricating successful inference.
-
-    AI_PROVIDER=mock   -> deterministic templates, explicitly MOCK
-    AI_PROVIDER=ollama -> Ollama only with an allowed loopback or
-                          token-authenticated HTTPS transport
-    AI_PROVIDER=openai -> AIUnavailableError until paid-call metering and
-                          global spend enforcement are enabled
-    unknown selections never count as real inference; callers must
-    surface unavailable state unless an explicit demo fallback is allowed.
-
-    Construction and invocation failures are translated into an explicit
-    unavailable result by _complete_with_fallback(); mock output is never
-    silently substituted for a requested real-provider answer.
-    """
-    if settings.AI_PROVIDER == "openai":
-        raise AIUnavailableError(
-            "openai",
-            "Paid external completions are disabled until per-call usage metering and global spend enforcement are connected.",
-        )
-    if settings.AI_PROVIDER == "ollama":
-        provider = OllamaProvider()
-        if provider._transport_mode is None:
-            raise AIUnavailableError("ollama", "Use local loopback HTTP or a token-authenticated HTTPS self-hosted gateway.")
-        return provider
-    if settings.AI_PROVIDER == "mock":
+    if settings.AI_PROVIDER.strip().lower() == "mock":
         return MockProvider()
-    # Unknown provider name: explicit mock only when requested; otherwise unavailable
-    return MockProvider()
+    if settings.AI_PROVIDER.strip().lower() == "hami-model":
+        return HamiModelProvider()
+    raise AIUnavailableError(settings.AI_PROVIDER, "No external AI provider is allowed; use hami-model")
 
 
 def get_provider_status() -> dict:
-    """Report provider configuration and reachability without overstating readiness."""
     name = str(settings.AI_PROVIDER).strip().lower()
     if name == "mock":
-        return {"provider": "mock", "mode": "MOCK", "status": "MOCK", "inference_verified": False, "note": "Deterministic templates only. Not real model inference or production intelligence."}
-    if name == "openai":
-        return {
-            "provider": name,
-            "mode": "EXTERNAL",
-            "status": "PAID_PROVIDER_DISABLED",
-            "credential_configured": bool(settings.OPENAI_API_KEY),
-            "inference_verified": False,
-            "note": "Paid completions are blocked until measured usage is recorded and the global spend guard is enforced at the call boundary.",
-        }
-    if name == "ollama":
-        try:
-            status = OllamaProvider().availability_status()
-            status["internal_context_allowed"] = (
-                status.get("mode") != "SELF_HOSTED"
-                or settings.HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA
-            )
-            return status
-        except Exception as exc:
-            return {"provider": name, "mode": "LOCAL", "status": "AI_UNAVAILABLE", "inference_verified": False, "failure_type": type(exc).__name__, "note": "The local Ollama adapter could not be initialized."}
-    try:
-        provider = get_provider()
-        if isinstance(provider, MockProvider):
-            return {"provider": name, "mode": "UNKNOWN", "status": "AI_UNAVAILABLE", "inference_verified": False, "note": "The requested real provider did not resolve to a real adapter."}
-        return {"provider": name, "mode": "EXTERNAL", "status": "CONFIGURED", "inference_verified": False, "note": "The provider client is configured; network reachability, inference success and answer quality have not been verified. Paid calls remain subject to separate authorization gates."}
-    except Exception as exc:
-        return {"provider": name, "mode": "EXTERNAL", "status": "AI_UNAVAILABLE", "inference_verified": False, "failure_type": type(exc).__name__, "note": "The configured provider adapter could not be initialized."}
+        return {"provider": "mock", "mode": "MOCK", "status": "MOCK", "inference_verified": False, "note": "Deterministic templates only. Not model inference."}
+    if name == "hami-model":
+        return HamiModelProvider().availability_status()
+    return {"provider": name, "mode": "NONE", "status": "AI_UNAVAILABLE", "inference_verified": False, "note": "No external AI provider is allowed."}
 
 
 def _complete_with_fallback(
@@ -436,9 +256,9 @@ def _complete_with_fallback(
     """Run completion through configured provider.
 
     When AI_PROVIDER is explicitly "mock": deterministic templates only.
-    Paid OpenAI calls are blocked in get_provider until global metering exists.
-    For a remote self-hosted Ollama endpoint, internal Hami context is blocked
-    unless HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA is explicitly set.
+    hami-model is the owner's own model on the owner's Mac, reached
+    through the guarded gateway — internal Hami context sent to it is
+    not a remote transfer. No borrowed model or paid API.
     Mock fallback additionally requires both caller permission and the demo flag.
     """
     full_prompt = f"{context}\n\n{prompt}" if context else prompt
@@ -467,8 +287,8 @@ def _complete_with_fallback(
             return MockProvider().complete(full_prompt, system=system)
         if completion_observation is not None:
             completion_observation.update({
-                "provider": provider_name, "mode": "SELF_HOSTED" if provider_name == "ollama" and ollama_transport_mode() == "SELF_HOSTED" else ("LOCAL" if provider_name == "ollama" else "EXTERNAL"),
-                "model": settings.OLLAMA_MODEL if provider_name == "ollama" else None,
+                "provider": provider_name, "mode": "LOCAL",
+                "model": settings.HAMI_MODEL_NAME if provider_name == "hami-model" else None,
                 "status": "AI_UNAVAILABLE", "inference_invoked": False,
                 "failure_type": type(e).__name__,
             })
@@ -491,24 +311,6 @@ def _complete_with_fallback(
 
     mode = getattr(provider, "_transport_mode", "EXTERNAL")
     model = getattr(provider, "_model", None)
-    if (
-        mode == "SELF_HOSTED"
-        and (bool(context.strip()) or contains_internal_context)
-        and not settings.HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA
-    ):
-        if completion_observation is not None:
-            completion_observation.update({
-                "provider": provider_name,
-                "mode": mode,
-                "model": model,
-                "status": "blocked_internal_context",
-                "request_attempted": False,
-                "inference_invoked": False,
-            })
-        raise AIUnavailableError(
-            provider_name,
-            "internal Hami context is not authorized for remote transfer; configure the owner-approved data boundary first",
-        )
     try:
         if completion_observation is not None:
             completion_observation.update({
@@ -587,7 +389,7 @@ def _retrieve_context(db, query: str) -> str:
 # Each accepts an optional `db` session: when provided, Forge retrieves
 # relevant memories from its own Knowledge base (see memory_layer.py)
 # and grounds the prompt in them before calling the AI provider — this
-# is what "Ollama retrieves relevant Forge memories before answering"
+# is what "hami-model retrieves relevant Forge memories before answering"
 # means concretely. When db is omitted, these behave exactly as before.
 # ---------------------------------------------------------------------
 

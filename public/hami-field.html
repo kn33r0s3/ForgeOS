@@ -930,7 +930,7 @@
     "why": "Data quality is the blocker. Training harder on weak data will not fix it — the data must be fixed first.",
     "state": "running",
     "ev": "proven",
-    "evidence": "Base 73/120 vs adapter 58/120, 20 rows. Smoke test: 500-example MLX LoRA on Qwen3-4B, loss 1.265 → 0.810.",
+    "evidence": "Historical adapter measurement: 500-example LoRA smoke test, loss 1.265 → 0.810. This is not Hami identity or Hami capability.",
     "date": "2026-11-18",
     "owner": "Hami AI",
     "next": "Fix the data, not the model — data quality is the suspected bottleneck.",
@@ -938,7 +938,7 @@
       {
         "t": "Smoke test",
         "s": "running",
-        "e": "500-example MLX LoRA on Qwen3-4B, loss 1.265 → 0.810"
+        "e": "Historical 500-example LoRA test, loss 1.265 → 0.810"
       },
       {
         "t": "Held-out eval",
@@ -994,7 +994,7 @@
     "why": "That is why the gates and the uniqueness, perseverance and non-leak stages exist: the gates make Hami its own gated way; uniqueness makes Hami its own thing; perseverance makes Hami keep learning on its own; non-leak keeps Hami's knowledge inside Hami.",
     "state": "running",
     "ev": "progress",
-    "evidence": "The owner set the gate 18 Nov 2026: the Hami AI LLM must be BUILT and BEAT ALL LLMs. Honest measured state: the Nepali adapter scores 58/120 on the held-out eval, worse than its own base Qwen3-4B at 73/120 — it beats nothing yet. Data quality is the blocker. The weight-space experiment is the first step. The fine-tuning is a stepping stone, NOT the destination.",
+    "evidence": "The owner set the gate 18 Nov 2026: Hami must build its own capable model. Historical adapter measurements remain evidence of a stepping stone, not Hami identity or a completed destination.",
     "date": "2026-11-18",
     "owner": "owner",
     "next": "Keep building the stepping stones: data, then LoRA, then independence — and the next stage opens onward, never finished.",
@@ -1002,7 +1002,7 @@
       {
         "t": "Stepping stone: Nepali fine-tuning",
         "s": "running",
-        "e": "Qwen3-4B MLX LoRA on the Mac — a step, not the end"
+        "e": "Historical LoRA checkpoint — a step, not the end"
       },
       {
         "t": "The gate: build it and beat all LLMs",
@@ -1049,11 +1049,11 @@
     "num": "GATE 03 · CHAT",
     "name": "HAMI CHAT LIVE",
     "plain": "You can talk to Hami and get a real answer back, through the whole chain from the website to the Mac.",
-    "what": "Hami chat is live with real replies. A real reply landed 18 Nov 19:18 (the six primitives, North Star, Purpose).",
+    "what": "Hami chat serving is staged on the local Hami server. Borrowed-model replies are not Hami verification.",
     "why": "Talking to Hami is the whole point of Meet Hami — a living system you can ask, not a page you read.",
     "state": "running",
     "ev": "proven",
-    "evidence": "Real reply 18 Nov 19:18. Full path works: Vercel → tunnel → gateway → Ollama gpt-oss:20b.",
+    "evidence": "Hami-only serving path staged: Vercel → tunnel → guarded gateway → local Hami server.",
     "date": "2026-11-18",
     "owner": "Hami Systems",
     "next": "Keep it live; permanence is the subgate below.",
@@ -2026,7 +2026,7 @@
     "name": "NOTHINGNESS / INNER POWER",
     "plain": "Start from zero and generate from inside, from first principles, from our own measurements.",
     "what": "Nothingness is starting from zero and generating from inside. Inner power is the same thing from the other side: the power is already inside the gate.",
-    "why": "The web, ChatGPT, LiveKit, Ollama are for SEEING. They are never for following or copying.",
+    "why": "The web, LiveKit, and evidence tools are for SEEING. They are never for following or copying Hami.",
     "state": "running",
     "ev": "proven",
     "evidence": "From the methodology: dimension 02.",
@@ -2355,7 +2355,7 @@
     "why": "The gates shape the weights, and the weights carry Hami. The next stage: Hami AI's weights ARE Hami — the model is the Lead Engineer, programmed in weight space by the gates and by all the data. And after that stage there is always more.",
     "state": "running",
     "ev": "proven",
-    "evidence": "The stepping stone is measured: the MLX LoRA of Qwen3-4B adds low-rank weight updates trained on Nepali data + the gates. Held-out eval: base 73/120 vs adapter 58/120 — the adapter loses, data quality is the blocker. That honest result is the evidence, and the gate keeps running on it.",
+    "evidence": "The interim adapter is measured honestly: it uses the existing Nepali SFT checkpoint as a stepping stone. Its held-out result is separate from Hami identity and does not replace Hami's own from-scratch development.",
     "date": "2026-11-18",
     "owner": "Hami AI",
     "next": "Fix the data, then the next weight update — the gates keep programming the weight space.",
@@ -2363,7 +2363,7 @@
       {
         "t": "Stepping stone: MLX LoRA",
         "s": "running",
-        "e": "Low-rank weight updates on Qwen3-4B, trained on Nepali data + the gates."
+        "e": "Historical LoRA checkpoint used only as an interim serving adapter."
       },
       {
         "t": "Honest result",

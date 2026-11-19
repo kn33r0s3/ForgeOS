@@ -1,20 +1,25 @@
-"""Meet Hami chat endpoint — checkpoint build (16 Nov 2026).
+"""Meet Hami chat endpoint — hami-model build (19 Nov 2026).
 
 Lets the owner talk to Hami AI on the deployed site. The chat request is
-forwarded to the owner's Mac Ollama (gpt-oss:20b) through a Cloudflare
+forwarded to the owner's Mac hami-model server through a Cloudflare
 quick tunnel that points at the guarded gateway (scripts/hami_ollama_gateway.py),
-never at Ollama directly. The gateway only allows POST /api/chat and
-GET /api/tags, requires the X-Hami-Key header, and runs one generation at
-a time — so the public tunnel can never delete, pull, or create models.
+never at any other model directly. The gateway only allows
+POST /api/hami-llm/chat and GET /api/hami-llm/status, requires the
+X-Hami-Key header, and runs one generation at a time. Only hami-model is
+used. If hami-model is down the endpoint reports
+Hami as unavailable; it never falls back to another AI.
 
-Set HAMI_CHAT_OLLAMA_HOST and HAMI_CHAT_KEY in the deployment environment.
+Set HAMI_CHAT_HOST and HAMI_CHAT_KEY in the deployment environment.
 Both are required; the endpoint returns 503 when either is unset.
 
 Checkpoint limits (honest):
-- No database context is attached: the model answers from the system
-  prompt only, not from Hami's evidence store. Retrieval comes next.
+- No database context is attached: the model answers from the prompt only,
+  not from Hami's evidence store. Retrieval comes next.
 - No actions are executed: this endpoint only chats. It cannot contact
   anyone, spend money, or change records.
+- hami-model is an interim Nepali LoRA serving checkpoint. The base and
+  adapter provenance must stay visible; this is not a from-scratch Hami
+  model. It becomes public only while it passes live quality gates.
 """
 
 import json
@@ -28,12 +33,12 @@ from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/hami", tags=["hami"])
 
-MODEL = "gpt-oss:20b"
+MODEL = "hami-model"
 TIMEOUT_SECONDS = 90
 MAX_RESPONSE_BYTES = 1_048_576
 
 HAMI_SYSTEM_PROMPT = (
-    "You are Hami, a living system for understanding and acting on Nepal's economy. "
+    "/no_think You are Hami, a living system for understanding and acting on Nepal's economy. "
     "Your north star: expand the frontier of what can be understood, discovered, created, "
     "coordinated, and accomplished in reality. Your purpose: remove unnecessary limits "
     "caused by ignorance, disconnection, inaccessible capability, missing coordination, "
@@ -70,7 +75,7 @@ class ChatResponse(BaseModel):
 
 
 def _gateway_url() -> str:
-    return os.environ.get("HAMI_CHAT_OLLAMA_HOST", "").strip().rstrip("/")
+    return os.environ.get("HAMI_CHAT_HOST", "").strip().rstrip("/")
 
 
 def _gateway_key() -> str:
@@ -109,6 +114,8 @@ def hami_chat(payload: ChatRequest, response: Response):
             status_code=503,
             detail="Hami chat is not configured; required environment variables are unset.",
         )
+    # The clean adapter was trained and evaluated on {"messages": [...]} with
+    # this system prompt — send it as trained.
     messages: list[dict[str, str]] = [{"role": "system", "content": HAMI_SYSTEM_PROMPT}]
     for item in payload.history[-10:]:
         if item.role in {"user", "assistant"}:
@@ -119,7 +126,7 @@ def hami_chat(payload: ChatRequest, response: Response):
         ensure_ascii=False,
     ).encode("utf-8")
     request = urllib.request.Request(
-        f"{host}/api/chat",
+        f"{host}/api/hami-llm/chat",
         data=body,
         headers={
             "Content-Type": "application/json",
@@ -142,6 +149,18 @@ def hami_chat(payload: ChatRequest, response: Response):
                 raw = response.read(MAX_RESPONSE_BYTES + 1)
             break
         except urllib.error.HTTPError as exc:
+            # The gateway answers 502 with upstream_unavailable when
+            # hami-model itself is down: that is not a transient flap, it
+            # is the model unavailable — report it at once, never retry
+            # and never fall back to another AI.
+            try:
+                err_body = exc.read() or b""
+            except Exception:
+                err_body = b""
+            if b"upstream_unavailable" in err_body:
+                raise HTTPException(
+                    status_code=503, detail="Hami is unavailable."
+                ) from exc
             if exc.code in (502, 503, 504) and attempt < 2:
                 time.sleep(1.0 * (attempt + 1))
                 continue
@@ -150,17 +169,17 @@ def hami_chat(payload: ChatRequest, response: Response):
             ) from exc
         except TimeoutError as exc:
             raise HTTPException(
-                status_code=502, detail="Could not reach Hami AI (TimeoutError)."
+                status_code=503, detail="Hami is unavailable."
             ) from exc
         except Exception as exc:
             if attempt < 2:
                 time.sleep(1.0 * (attempt + 1))
                 continue
             raise HTTPException(
-                status_code=502, detail=f"Could not reach Hami AI ({type(exc).__name__})."
+                status_code=503, detail="Hami is unavailable."
             ) from exc
     if raw is None:
-        raise HTTPException(status_code=502, detail="Could not reach Hami AI.")
+        raise HTTPException(status_code=503, detail="Hami is unavailable.")
     if len(raw) > MAX_RESPONSE_BYTES:
         raise HTTPException(status_code=502, detail="Hami AI's reply was too large.")
     try:
@@ -169,7 +188,24 @@ def hami_chat(payload: ChatRequest, response: Response):
         raise HTTPException(
             status_code=502, detail="Hami AI returned an unreadable reply."
         ) from exc
-    reply = data.get("message", {}).get("content") if isinstance(data, dict) else None
+    # The serving process answers with chat-completion choices.
+    # The model field is the serving name, hami-model; the base + adapter
+    # it is built on are reported by GET /api/hami-llm/status and in docs.
+    choices = data.get("choices") if isinstance(data, dict) else None
+    reply = None
+    if isinstance(choices, list) and choices:
+        first = choices[0]
+        if isinstance(first, dict) and isinstance(first.get("message"), dict):
+            reply = first["message"].get("content")
     if not isinstance(reply, str) or not reply.strip():
         raise HTTPException(status_code=502, detail="Hami AI returned an empty reply.")
+    stripped = reply.strip()
+    for size in range(2, 40):
+        unit = stripped[-size:]
+        if len(stripped) >= size * 3 and stripped.endswith(unit * 3):
+            raise HTTPException(status_code=502, detail="Hami AI returned a looping reply.")
+    if len(stripped) >= 20:
+        tail = stripped[-20:]
+        if len(set(tail)) <= 3:
+            raise HTTPException(status_code=502, detail="Hami AI returned a looping reply.")
     return ChatResponse(reply=reply.strip(), model=MODEL)

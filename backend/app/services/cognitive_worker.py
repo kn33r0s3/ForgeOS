@@ -731,13 +731,14 @@ def run_pending_cognitive_tasks(
     envelope=None,
     repo_root=None,
 ) -> dict[str, Any]:
-    """Run a bounded proposal batch using local or owner-approved self-hosted Ollama.
+    """Run a bounded proposal batch using hami-model (the owner's own model).
 
-    Both provider selections must explicitly choose Ollama. Vercel loopback is
-    rejected; a remote HTTPS gateway requires a bearer token and separate owner
-    approval for internal task-context transfer. The existing owner agent-run
-    gate still applies. Outputs remain PROPOSED: no research truth is mutated,
-    no Actions are executed, and no contact, spending, or publication occurs.
+    Both provider selections must explicitly choose hami-model. The model is
+    reached through the guarded gateway (tunnel on Vercel, loopback locally);
+    it is the owner's own model, so internal task context sent to it is not
+    a remote transfer. The existing owner agent-run gate still applies.
+    Outputs remain PROPOSED: no research truth is mutated, no Actions are
+    executed, and no contact, spending, or publication occurs.
 
     Execution-gate wiring (E7): before running anything the batch asks
     the gate (OP-10) whether HALT is set; while HALT is set nothing runs
@@ -771,44 +772,16 @@ def run_pending_cognitive_tasks(
     from app.config import settings
 
     if (
-        settings.AI_PROVIDER.strip().lower() != "ollama"
-        or settings.COGNITIVE_PROVIDER.strip().lower() != "ollama"
+        settings.AI_PROVIDER.strip().lower() != "hami-model"
+        or settings.COGNITIVE_PROVIDER.strip().lower() != "hami-model"
     ):
         return {
             "status": "disabled",
-            "reason": "explicit_local_ollama_selection_required",
+            "reason": "explicit_hami_model_selection_required",
             "attempted": 0,
             "completed": 0,
             "outcomes": [],
         }
-    import os
-    from app.services import ai_engine
-
-    transport_mode = ai_engine.ollama_transport_mode()
-    if transport_mode is None:
-        return {
-            "status": "unavailable",
-            "reason": (
-                "local_ollama_is_not_available_in_vercel_runtime"
-                if os.getenv("VERCEL")
-                else "ollama_transport_not_safely_configured"
-            ),
-            "attempted": 0,
-            "completed": 0,
-            "outcomes": [],
-        }
-    if (
-        transport_mode == "SELF_HOSTED"
-        and not settings.HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA
-    ):
-        return {
-            "status": "blocked",
-            "reason": "remote_internal_context_not_authorized",
-            "attempted": 0,
-            "completed": 0,
-            "outcomes": [],
-        }
-
     from app.services import operating_v4
 
     try:

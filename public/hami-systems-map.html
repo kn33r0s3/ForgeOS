@@ -232,8 +232,8 @@
         <ul>
           <li><span class="k">M6-H PASSED</span> &mdash; 1,000 publishers, 2,000 viewers, p95 0.34 ms, p99 17.8 ms, zero NACKs. The fix was disabling mDNS.</li>
           <li><span class="k">M7-H PARKED</span> &mdash; p95 passes all 3,000 viewers (median 11.2 ms); p99 fails, only 115 of 3,000 pass (median ~294 ms). The 9-streamer / 4,000-viewer target is NOT proven on one laptop.</li>
-          <li><span class="k">Attempt 13 (queue/009, M7-H GC heap fix) STALLED</span> &mdash; all 3,000 publishers show frames=0 since 19:10:59; scheduler p95 1.9&ndash;10.7 s; heartbeat late up to 15 s; logs went silent 19:22:46. No verdict yet. A subgate, not a dead end.</li>
-          <li><span class="k">Tuned re-run STALLS IDENTICALLY</span> &mdash; fresh tuned binary 19:28:10, re-run started 19:28:22; samples 19:29:49&ndash;19:30:01 show 3,000 publishers, frames=0, staleOver500ms=3000, last send 19:29:16, goroutines frozen at 105,241. The GC heap fix did NOT prevent the stall &mdash; the stall has a different (single common) cause, not the GC heap.</li>
+          <li><span class="k">Attempt 13 (queue/009, M7-H GC heap fix) STALLED — VERDICTS LANDED</span> &mdash; all 3,000 publishers show frames=0 since 19:10:59; scheduler p95 1.9&ndash;10.7 s; heartbeat late up to 15 s. Tuned run FINISHED 19:34:07: 60/3,000 tracks complete. Tuned2 run FINISHED 19:42:15: 171/3,000 tracks complete. All three stalled identically at ~1 min. The triage (queue/010) is now finding the single common cause. A subgate, not a dead end.</li>
+          <li><span class="k">Tuned re-run STALLS IDENTICALLY</span> &mdash; fresh tuned binary 19:28:10, re-run started 19:28:22; samples 19:29:49&ndash;19:30:01 show 3,000 publishers, frames=0, staleOver500ms=3000, last send 19:29:16, goroutines frozen at 105,241. The GC heap fix did NOT prevent the stall &mdash; the stall has a different (single common) cause, not the GC heap. The triage (queue/010) is running now — Copilot is finding that cause and proving the fix with a small 100-publisher repro first.</li>
           <li><span class="k">Target</span> &mdash; 9,000 streamers + 10,000 viewers in ONE room.</li>
         </ul>
       </div>
@@ -251,10 +251,10 @@
         <div class="gate-bar" aria-hidden="true"></div>
         <p class="gate-line">gate: OPEN &mdash; evidence: measured &middot; authorization: public</p>
         <ul>
-          <li><span class="k">Dataset</span> &mdash; alpaca-nepali-sft, 52,005 rows. Rights resolved: CC BY-NC 4.0, research-only, no commercial use.</li>
-          <li><span class="k">Smoke test</span> &mdash; 500-example MLX LoRA on Qwen3-4B, loss 1.265 &rarr; 0.810.</li>
-          <li><span class="k">Held-out eval</span> &mdash; adapter LOSES: base 73/120 vs adapter 58/120 (20 rows). Data quality is the blocker.</li>
-          <li><span class="k">Lamsal corpus</span> &mdash; BLOCKED on IEEE login (the owner creates a free IEEE account).</li>
+          <li><span class="k">Historical dataset</span> &mdash; the earlier Nepali SFT corpus and LoRA experiments remain measured research records, not proof of Hami identity.</li>
+          <li><span class="k">Historical smoke test</span> &mdash; 500-example LoRA experiment: loss 1.265 &rarr; 0.810.</li>
+          <li><span class="k">Held-out eval</span> &mdash; historical adapter result: base 73/120 vs adapter 58/120 (20 rows). This is not Hami identity or live capability proof.</li>
+          <li><span class="k">Course and grammar corpus</span> &mdash; expanding Hami-owned and permissibly sourced training data for the next development track.</li>
         </ul>
       </div>
     </article>
@@ -272,7 +272,7 @@
         <p class="gate-line">gate: OPEN &mdash; evidence: measured &middot; authorization: public</p>
         <ul>
           <li><span class="k">Hami Systems pop-up</span> &mdash; LIVE on Knee Rose; staged on the Hami site (script tag in the shared layout, deploys with the next ForgeOS push).</li>
-          <li><span class="k">Chat</span> &mdash; VERIFIED: a real reply landed 19:18 (the six primitives, North Star, Purpose). The full path works (Vercel &rarr; tunnel &rarr; gateway &rarr; Ollama).</li>
+          <li><span class="k">Chat</span> &mdash; STAGED: the Hami-only path is Vercel &rarr; tunnel &rarr; guarded gateway &rarr; local Hami server. No borrowed-model reply is accepted as Hami verification.</li>
           <li><span class="k">Tunnel</span> &mdash; UP and stable. The earlier failure was latency/timeout, not a dead tunnel (fixed: widget waits 90 s, route retries transient 502s).</li>
           <li><span class="k">Permanence</span> &mdash; BLOCKED on approvals/001: needs the owner&rsquo;s Cloudflare account + zone/hostname for a named tunnel.</li>
         </ul>
@@ -370,7 +370,7 @@
         <p class="gate-line">gate: OPEN &mdash; evidence: measured &middot; authorization: public</p>
         <ul>
           <li><span class="k">One script tag puts the gated Hami pop-up on any site. One Hami backend, one gate, every surface.</span></li>
-          <li><span class="k">The engine is Hami AI (gpt-oss:20b via the gateway + tunnel). The pop-up is what delivers it to the world.</span></li>
+          <li><span class="k">The engine is Hami's local model server through the guarded gateway and tunnel. The pop-up delivers Hami's own replies to the world.</span></li>
         </ul>
       </div>
     </article>

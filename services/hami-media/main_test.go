@@ -4,8 +4,15 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"encoding/json"
+	"errors"
 	"io"
+	"net"
 	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -36,6 +43,7 @@ func TestLocalPairReceivesAudioAndVideoRTP(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	frames, err := readH264Frames(bytes.NewReader(fixture))
 	if err != nil {
 		t.Fatalf("read embedded H.264 test frame: %v", err)
@@ -65,6 +73,230 @@ func TestLocalPairReceivesAudioAndVideoRTP(t *testing.T) {
 	}
 	if result.Video.FirstTimestamp == result.Video.LastTimestamp {
 		t.Fatalf("video RTP timestamp did not advance: %+v", result.Video)
+	}
+}
+
+func TestReadH264FramesPreservesNonIDRSlices(t *testing.T) {
+	fixture, err := base64.StdEncoding.DecodeString(testH264AccessUnit)
+	if err != nil {
+		t.Fatal(err)
+	}
+	idrFrames, err := readH264Frames(bytes.NewReader(fixture))
+	if err != nil {
+		t.Fatalf("read embedded IDR fixture: %v", err)
+	}
+
+	withPFrame := append(append([]byte(nil), fixture...), 0, 0, 0, 1, 0x41, 0x80)
+	frames, err := readH264Frames(bytes.NewReader(withPFrame))
+	if err != nil {
+		t.Fatalf("read H.264 fixture with a non-IDR slice: %v", err)
+	}
+	if len(frames) != len(idrFrames)+1 {
+		t.Fatalf("parsed %d frames, want original %d plus one non-IDR slice",
+			len(frames), len(idrFrames))
+	}
+	if !bytes.HasSuffix(frames[len(frames)-1].Data, []byte{0, 0, 0, 1, 0x41, 0x80}) {
+		t.Fatal("last media sample does not retain the non-IDR slice")
+	}
+}
+
+type stubUDPMuxForTest struct {
+	conn       net.PacketConn
+	closeCalls int
+}
+
+func (m *stubUDPMuxForTest) GetConn(string, net.Addr) (net.PacketConn, error) {
+	return m.conn, nil
+}
+
+func (m *stubUDPMuxForTest) RemoveConnByUfrag(string) {}
+
+func (m *stubUDPMuxForTest) GetListenAddresses() []net.Addr {
+	return []net.Addr{m.conn.LocalAddr()}
+}
+
+func (m *stubUDPMuxForTest) Close() error {
+	m.closeCalls++
+	return nil
+}
+
+func TestCountingUDPMuxCountsPeerWritesWithoutClosingSharedMux(t *testing.T) {
+	sharedSocket, err := net.ListenUDP("udp4", &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	effectiveReadBuffer, err := setUDPConnReadBuffer(sharedSocket, 64*1024)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if effectiveReadBuffer <= 0 {
+		t.Fatalf("effective UDP receive buffer = %d, want positive size", effectiveReadBuffer)
+	}
+	t.Cleanup(func() {
+		if err := sharedSocket.Close(); err != nil {
+			t.Errorf("close shared UDP socket: %v", err)
+		}
+	})
+	receiver, err := net.ListenUDP("udp4", &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := receiver.Close(); err != nil {
+			t.Errorf("close receiver UDP socket: %v", err)
+		}
+	})
+
+	underlying := &stubUDPMuxForTest{conn: sharedSocket}
+	mux := newCountingUDPMux(underlying)
+	conn, err := mux.GetConn("viewer", receiver.LocalAddr())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n, err := conn.WriteTo([]byte{1}, receiver.LocalAddr()); err != nil || n != 1 {
+		t.Fatalf("write through counting mux: n=%d err=%v", n, err)
+	}
+	if err := receiver.SetReadDeadline(time.Now().Add(time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	buffer := make([]byte, 1)
+	if n, _, err := receiver.ReadFrom(buffer); err != nil || n != 1 {
+		t.Fatalf("read through shared socket: n=%d err=%v", n, err)
+	}
+	if got := mux.conn.nonSTUNPacketsWritten.Load(); got != 1 {
+		t.Fatalf("nonSTUNPacketsWritten = %d, want 1", got)
+	}
+	if err := mux.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if underlying.closeCalls != 0 {
+		t.Fatalf("shared mux close calls = %d, want 0", underlying.closeCalls)
+	}
+}
+
+func TestPacketReadCountingConnCountsDatagrams(t *testing.T) {
+	receiver, err := net.ListenUDP("udp4", &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	counted := &packetReadCountingConn{PacketConn: receiver}
+	t.Cleanup(func() {
+		if err := counted.Close(); err != nil {
+			t.Errorf("close counted UDP socket: %v", err)
+		}
+	})
+
+	sender, err := net.DialUDP("udp4", nil, receiver.LocalAddr().(*net.UDPAddr))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := sender.Close(); err != nil {
+			t.Errorf("close sender UDP socket: %v", err)
+		}
+	})
+	if _, err := sender.Write([]byte{1}); err != nil {
+		t.Fatal(err)
+	}
+	if err := counted.SetReadDeadline(time.Now().Add(time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	buffer := make([]byte, 1)
+	if n, _, err := counted.ReadFrom(buffer); err != nil || n != 1 {
+		t.Fatalf("read datagram: n=%d err=%v", n, err)
+	}
+	if got := counted.packetsRead.Load(); got != 1 {
+		t.Fatalf("packetsRead = %d, want 1", got)
+	}
+	if got := counted.nonSTUNPacketsRead.Load(); got != 1 {
+		t.Fatalf("nonSTUNPacketsRead = %d, want 1", got)
+	}
+	if got := counted.stunPacketsRead.Load(); got != 0 {
+		t.Fatalf("stunPacketsRead = %d, want 0", got)
+	}
+	if n, err := counted.WriteTo([]byte{2}, sender.LocalAddr()); err != nil || n != 1 {
+		t.Fatalf("write datagram: n=%d err=%v", n, err)
+	}
+	if got := counted.packetsWritten.Load(); got != 1 {
+		t.Fatalf("packetsWritten = %d, want 1", got)
+	}
+	if got := counted.bytesWritten.Load(); got != 1 {
+		t.Fatalf("bytesWritten = %d, want 1", got)
+	}
+	if got := counted.nonSTUNPacketsWritten.Load(); got != 1 {
+		t.Fatalf("nonSTUNPacketsWritten = %d, want 1", got)
+	}
+	if got := counted.stunPacketsWritten.Load(); got != 0 {
+		t.Fatalf("stunPacketsWritten = %d, want 0", got)
+	}
+	if err := sender.SetReadDeadline(time.Now().Add(time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	nonSTUNBuffer := make([]byte, 1)
+	if n, err := sender.Read(nonSTUNBuffer); err != nil || n != 1 {
+		t.Fatalf("read non-STUN datagram: n=%d err=%v", n, err)
+	}
+
+	stunPacket := []byte{
+		0x00, 0x01, 0x00, 0x00, 0x21, 0x12, 0xa4, 0x42,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00,
+	}
+	if n, err := counted.WriteTo(stunPacket, sender.LocalAddr()); err != nil || n != len(stunPacket) {
+		t.Fatalf("write STUN datagram: n=%d err=%v", n, err)
+	}
+	if err := sender.SetReadDeadline(time.Now().Add(time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	stunBuffer := make([]byte, len(stunPacket))
+	if n, err := sender.Read(stunBuffer); err != nil || n != len(stunPacket) {
+		t.Fatalf("read STUN datagram: n=%d err=%v", n, err)
+	}
+	if got := counted.packetsWritten.Load(); got != 2 {
+		t.Fatalf("packetsWritten = %d, want 2", got)
+	}
+	if got := counted.stunPacketsWritten.Load(); got != 1 {
+		t.Fatalf("stunPacketsWritten = %d, want 1", got)
+	}
+	destination := counted.firstNonSTUNWriteDestination.Load()
+	if destination == nil || *destination != sender.LocalAddr().String() {
+		t.Fatalf("first non-STUN destination = %v, want %s", destination, sender.LocalAddr())
+	}
+}
+
+func TestAggregateSFUSocketCountsDeduplicatesSharedRouterSocket(t *testing.T) {
+	sharedRouterSocket := &packetReadCountingConn{}
+	sharedRouterSocket.packetsWritten.Store(10)
+	sharedRouterSocket.stunPacketsWritten.Store(3)
+	sharedRouterSocket.nonSTUNPacketsWritten.Store(7)
+	otherRouterSocket := &packetReadCountingConn{}
+	otherRouterSocket.packetsWritten.Store(5)
+	otherRouterSocket.stunPacketsWritten.Store(1)
+	otherRouterSocket.nonSTUNPacketsWritten.Store(4)
+
+	clientSockets := []*packetReadCountingConn{
+		{},
+		{},
+		{},
+	}
+	for index, conn := range clientSockets {
+		conn.packetsRead.Store(uint64(index + 2))
+		conn.stunPacketsRead.Store(uint64(index + 1))
+		conn.nonSTUNPacketsRead.Store(uint64(index + 1))
+	}
+
+	totals := aggregateSFUSocketCounts([]viewerEndpoint{
+		{routerSocketConn: sharedRouterSocket, socketConn: clientSockets[0]},
+		{routerSocketConn: sharedRouterSocket, socketConn: clientSockets[1]},
+		{routerSocketConn: otherRouterSocket, socketConn: clientSockets[2]},
+	})
+	if totals.routerSockets != 2 || totals.routerWrites != 15 ||
+		totals.routerSTUNWrites != 4 || totals.routerNonSTUNWrites != 11 {
+		t.Fatalf("unexpected router socket aggregates: %+v", totals)
+	}
+	if totals.clientSockets != 3 || totals.clientReads != 9 ||
+		totals.clientSTUNReads != 6 || totals.clientNonSTUNReads != 6 {
+		t.Fatalf("unexpected client socket aggregates: %+v", totals)
 	}
 }
 
@@ -297,6 +529,350 @@ func TestNACKQueueDropsOldestAtCapacity(t *testing.T) {
 	}
 }
 
+func TestRTPQueueDropsOldestPacketWithoutBlocking(t *testing.T) {
+	queue := make(chan queuedRTP, 2)
+	subscription := &sfuSubscription{active: true, rtpQueue: queue}
+	for sequence := uint16(1); sequence <= 3; sequence++ {
+		dropped, err := subscription.enqueueRTP(&rtp.Packet{
+			Header: rtp.Header{SequenceNumber: sequence},
+		})
+		if err != nil {
+			t.Fatalf("enqueue RTP sequence %d: %v", sequence, err)
+		}
+		if dropped != (sequence == 3) {
+			t.Fatalf("sequence %d dropped=%v, want %v", sequence, dropped, sequence == 3)
+		}
+	}
+	if got := len(queue); got != cap(queue) {
+		t.Fatalf("RTP queue depth = %d, want capacity %d", got, cap(queue))
+	}
+	if got := subscription.rtpQueueEnqueued.Load(); got != 3 {
+		t.Fatalf("RTP enqueued count = %d, want 3", got)
+	}
+	if got := subscription.rtpQueueDropped.Load(); got != 1 {
+		t.Fatalf("RTP queue drop count = %d, want 1", got)
+	}
+	for _, want := range []uint16{2, 3} {
+		entry := <-queue
+		if entry.enqueuedAt.IsZero() {
+			t.Fatal("queued RTP entry has no enqueue timestamp")
+		}
+		if got := entry.packet.SequenceNumber; got != want {
+			t.Fatalf("queued sequence = %d, want %d", got, want)
+		}
+	}
+}
+
+func TestRTPQueueSharesPayloadAndCopiesMutableHeader(t *testing.T) {
+	packet := &rtp.Packet{
+		Header: rtp.Header{
+			SSRC:           11,
+			SequenceNumber: 7,
+			CSRC:           []uint32{22},
+		},
+		Payload: []byte{1, 2, 3},
+	}
+	if err := packet.Header.SetExtension(1, []byte{4, 5}); err != nil {
+		t.Fatalf("set input header extension: %v", err)
+	}
+
+	subscriptions := []*sfuSubscription{
+		{active: true, rtpQueue: make(chan queuedRTP, 1)},
+		{active: true, rtpQueue: make(chan queuedRTP, 1)},
+	}
+	queued := make([]*rtp.Packet, len(subscriptions))
+	for index, subscription := range subscriptions {
+		if _, err := subscription.enqueueRTP(packet); err != nil {
+			t.Fatalf("enqueue packet for subscription %d: %v", index, err)
+		}
+		queued[index] = (<-subscription.rtpQueue).packet
+	}
+
+	if &queued[0].Payload[0] != &packet.Payload[0] ||
+		&queued[1].Payload[0] != &packet.Payload[0] ||
+		&queued[0].Payload[0] != &queued[1].Payload[0] {
+		t.Fatal("queued subscriptions must share the source payload")
+	}
+
+	for index, copy := range queued {
+		if &copy.Header.CSRC[0] == &packet.Header.CSRC[0] {
+			t.Fatalf("subscription %d shares mutable CSRC storage", index)
+		}
+		copy.Header.SSRC = uint32(index + 30)
+		copy.Header.CSRC[0] = uint32(index + 40)
+		if err := copy.Header.SetExtension(1, []byte{byte(index + 60)}); err != nil {
+			t.Fatalf("set subscription %d header extension: %v", index, err)
+		}
+	}
+	if packet.Header.SSRC != 11 || packet.Header.CSRC[0] != 22 ||
+		!bytes.Equal(packet.Header.GetExtension(1), []byte{4, 5}) {
+		t.Fatal("mutating a queued header changed the source header")
+	}
+	if queued[0].Header.SSRC == queued[1].Header.SSRC ||
+		queued[0].Header.CSRC[0] == queued[1].Header.CSRC[0] ||
+		bytes.Equal(queued[0].Header.GetExtension(1), queued[1].Header.GetExtension(1)) {
+		t.Fatal("subscription headers must be independent")
+	}
+}
+
+func TestH264IDRDetectionSupportsSingleNALAggregationAndFUStart(t *testing.T) {
+	tests := []struct {
+		name    string
+		payload []byte
+		want    bool
+	}{
+		{name: "IDR single NAL", payload: []byte{0x65, 0x88}, want: true},
+		{name: "non-IDR single NAL", payload: []byte{0x41, 0x80}},
+		{name: "IDR STAP-A", payload: []byte{0x78, 0, 2, 0x67, 1, 0, 2, 0x65, 2}, want: true},
+		{name: "IDR FU-A start", payload: []byte{0x7c, 0x85}, want: true},
+		{name: "IDR FU-A continuation", payload: []byte{0x7c, 0x45}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := isH264IDRStart(test.payload); got != test.want {
+				t.Fatalf("isH264IDRStart(%x) = %v, want %v", test.payload, got, test.want)
+			}
+		})
+	}
+}
+
+func TestKeyframeRecoverySkipsInterFramesButAllowsParameterSetsAndIDR(t *testing.T) {
+	subscription := &sfuSubscription{h264Video: true}
+	subscription.keyframeNeededAt.Store(1)
+	tests := []struct {
+		name        string
+		payload     []byte
+		wantAllowed bool
+		wantIDR     bool
+	}{
+		{name: "non-IDR slice", payload: []byte{0x41, 0x80}},
+		{name: "SPS", payload: []byte{0x67, 1}, wantAllowed: true},
+		{name: "PPS", payload: []byte{0x68, 1}, wantAllowed: true},
+		{name: "IDR start", payload: []byte{0x65, 0x88}, wantAllowed: true, wantIDR: true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			allowed, idr := subscription.allowRTPDuringKeyframeRecovery(&rtp.Packet{Payload: test.payload})
+			if allowed != test.wantAllowed || idr != test.wantIDR {
+				t.Fatalf("recovery decision = (%v, %v), want (%v, %v)",
+					allowed, idr, test.wantAllowed, test.wantIDR)
+			}
+		})
+	}
+}
+
+func TestStaleRTPIsIntentionallyShedAndMarksKeyframeRecovery(t *testing.T) {
+	router := &sfuRouter{}
+	subscription := &sfuSubscription{active: true, h264Video: true}
+	router.forwardQueuedRTP(subscription, queuedRTP{
+		packet:     &rtp.Packet{Payload: []byte{0x41, 0x80}},
+		enqueuedAt: time.Now().Add(-nackMaxQueueAge - time.Second),
+	})
+	if subscription.keyframeNeededAt.Load() == 0 {
+		t.Fatal("stale H.264 packet did not mark the subscription as needing a keyframe")
+	}
+	if router.rtpQueueDropped.Load() != 1 || router.rtpIntentionalShed.Load() != 1 {
+		t.Fatalf("stale RTP counters: queueDrops=%d intentionalShed=%d, want 1 each",
+			router.rtpQueueDropped.Load(), router.rtpIntentionalShed.Load())
+	}
+	if router.rtpDropped.Load() != 0 || len(router.errorsSnapshot()) != 0 {
+		t.Fatalf("intentional stale shed was recorded as an error: dropped=%d errors=%v",
+			router.rtpDropped.Load(), router.errorsSnapshot())
+	}
+}
+
+func TestKeyframeRecoveryDurationIsRecordedAfterRecovery(t *testing.T) {
+	subscription := &sfuSubscription{h264Video: true}
+	if !subscription.markNeedsKeyframe() {
+		t.Fatal("first keyframe-needed transition was not recorded")
+	}
+	if subscription.markNeedsKeyframe() {
+		t.Fatal("duplicate keyframe-needed transition replaced the recovery start")
+	}
+	duration, recovered := subscription.completeKeyframeRecovery()
+	if !recovered || duration < 0 {
+		t.Fatalf("keyframe recovery duration = %s, recovered=%v", duration, recovered)
+	}
+	router := &sfuRouter{}
+	router.recordRTPKeyframeRecovery(duration)
+	if router.rtpRecoverySamples.Load() != 1 || router.rtpRecoveryNanos.Load() != uint64(duration) ||
+		router.rtpRecoveryMaxNanos.Load() != uint64(duration) {
+		t.Fatalf("recovery counters samples=%d totalNs=%d maxNs=%d, duration=%d",
+			router.rtpRecoverySamples.Load(), router.rtpRecoveryNanos.Load(),
+			router.rtpRecoveryMaxNanos.Load(), duration)
+	}
+}
+
+func TestRecoveryKeyframeRequestsAreLimitedPerPublisher(t *testing.T) {
+	router := &sfuRouter{}
+	start := time.Now()
+	if !router.allowKeyframeRequest("publisher-a", start) {
+		t.Fatal("first keyframe request for publisher was suppressed")
+	}
+	if router.allowKeyframeRequest("publisher-a", start.Add(time.Second-time.Nanosecond)) {
+		t.Fatal("second request inside one second was allowed")
+	}
+	if !router.allowKeyframeRequest("publisher-a", start.Add(time.Second)) {
+		t.Fatal("request at the one-second boundary was suppressed")
+	}
+	if !router.allowKeyframeRequest("publisher-b", start.Add(time.Millisecond)) {
+		t.Fatal("independent publisher request was suppressed")
+	}
+}
+
+func TestMeasurementPassAllowsIntentionalRTPSheddingButRejectsWriteErrors(t *testing.T) {
+	result := sfuProofResult{
+		PublisherState:                 peerConnectionConnected,
+		UnauthorizedSubscriptionDenied: true,
+		CleanupVerified:                true,
+		RTPQueueDrops:                  2,
+		RTPIntentionalShed:             2,
+		Viewers: []sfuViewerResult{{
+			Latency:        &Summary{Pass: true},
+			OnlyRequested:  true,
+			PeerConnection: peerConnectionConnected,
+			FeedbackForwarded: sfuFeedbackCounts{
+				NACKReceived:      1,
+				NACKRetransmitted: 1,
+				NACKForwarded:     1,
+				PLIForwarded:      1,
+				FIRForwarded:      1,
+			},
+		}},
+	}
+	if !sfuMeasurementPass(result, 1, true) {
+		t.Fatal("measurement pass rejected intentional RTP shedding")
+	}
+	result.RTPWriteErrors = 1
+	if sfuMeasurementPass(result, 1, true) {
+		t.Fatal("measurement pass accepted an RTP write error")
+	}
+}
+
+func TestCachedPacketsReturnIndependentCopies(t *testing.T) {
+	stored := &rtp.Packet{
+		Header:  rtp.Header{SequenceNumber: 42},
+		Payload: []byte{1, 2, 3},
+	}
+	track := &sfuPublishedTrack{
+		packetCache: map[uint16]*rtp.Packet{42: stored},
+	}
+
+	packets, missing := track.cachedPackets([]uint16{42, 43, 42})
+	if len(packets) != 1 || len(missing) != 1 || missing[0] != 43 {
+		t.Fatalf("cached packets=%v, missing=%v; want one packet and missing sequence 43",
+			packets, missing)
+	}
+	if packets[0] == stored {
+		t.Fatal("cached packet was returned without cloning")
+	}
+	packets[0].Payload[0] = 9
+	if stored.Payload[0] != 1 {
+		t.Fatal("modifying a returned packet changed the cached packet")
+	}
+}
+
+func TestProofFailureIsWrittenAsJSON(t *testing.T) {
+	const wantError = "feedback wait timed out"
+	var output bytes.Buffer
+	if err := writeProofError(&output, errors.New(wantError)); err != nil {
+		t.Fatalf("encode proof error: %v", err)
+	}
+
+	var got proofErrorResult
+	if err := json.Unmarshal(output.Bytes(), &got); err != nil {
+		t.Fatalf("decode proof error JSON: %v", err)
+	}
+	if got.Error != wantError {
+		t.Fatalf("proof error = %q, want %q", got.Error, wantError)
+	}
+}
+
+func TestWaitForSFUFeedbackReturnsPartialCountsOnContextTimeout(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
+	defer cancel()
+
+	counts, err := waitForSFUFeedback(
+		ctx,
+		make(chan sfuFeedbackEvent),
+		[]sfuMediaSource{{key: sfuTrackKey{TrackID: "track-1"}}},
+		nil,
+		map[string]uint64{"track-1": 1},
+	)
+	if err == nil || !strings.Contains(err.Error(), "timed out waiting for translated") {
+		t.Fatalf("wait error = %v, want context timeout", err)
+	}
+	if got := counts["track-1"]; got != (sfuFeedbackCounts{}) {
+		t.Fatalf("partial feedback counts = %+v, want the observed zero counts", got)
+	}
+}
+
+func TestIncompleteM7HViewerIDsSelectsOneUnmetTrack(t *testing.T) {
+	viewers := []viewerEndpoint{
+		{id: "viewer-1", key: sfuTrackKey{TrackID: "track-1"}},
+		{id: "viewer-1-duplicate", key: sfuTrackKey{TrackID: "track-1"}},
+		{id: "viewer-2", key: sfuTrackKey{TrackID: "track-2"}},
+		{id: "viewer-3", key: sfuTrackKey{TrackID: "track-3"}},
+		{id: "viewer-4", key: sfuTrackKey{TrackID: "track-4"}},
+		{id: "viewer-5", key: sfuTrackKey{TrackID: "track-5"}},
+		{id: "viewer-6", key: sfuTrackKey{TrackID: "track-6"}},
+		{id: "viewer-complete", key: sfuTrackKey{TrackID: "track-complete"}},
+	}
+	expected := map[string]uint64{
+		"track-1": 1, "track-2": 1, "track-3": 1, "track-4": 1,
+		"track-5": 1, "track-6": 1, "track-complete": 1,
+	}
+	counts := map[string]sfuFeedbackCounts{
+		"track-complete": {NACKForwarded: 1, PLIForwarded: 1, FIRForwarded: 1},
+	}
+
+	got := incompleteM7HViewerIDs(viewers, counts, expected)
+	want := []string{"viewer-1"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("incomplete viewers = %v, want %v", got, want)
+	}
+}
+
+func TestM7HStatsHandlerStopsAfterRequestCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	request := httptest.NewRequest(
+		http.MethodPost,
+		"/stats",
+		strings.NewReader(`{"viewer_ids":["viewer-1"],"include_ice_candidate_pairs":true}`),
+	).WithContext(ctx)
+	request.Header.Set("Authorization", "Bearer test-token")
+	response := httptest.NewRecorder()
+
+	router := &sfuRouter{}
+	router.mu.Lock()
+	server := &m7hRemoteSFUServer{
+		router: router,
+		viewers: map[string]viewerEndpoint{
+			"viewer-1": {id: "viewer-1", key: sfuTrackKey{TrackID: "track-1"}},
+		},
+	}
+	started := make(chan struct{})
+	done := make(chan struct{})
+	go func() {
+		close(started)
+		server.handleStats("test-token")(response, request)
+		close(done)
+	}()
+	<-started
+	select {
+	case <-done:
+	case <-time.After(200 * time.Millisecond):
+		router.mu.Unlock()
+		<-done
+		t.Fatal("canceled stats request waited for a router feedback snapshot")
+	}
+	router.mu.Unlock()
+	if response.Body.Len() != 0 {
+		t.Fatalf("canceled stats response body = %q, want no response", response.Body.String())
+	}
+}
+
 func TestNACKWorkerStopsAfterSubscriptionCloses(t *testing.T) {
 	subscription := &sfuSubscription{
 		active:    true,
@@ -342,6 +918,71 @@ func TestNACKSelectionDeduplicatesCapsAndPrioritizesRecentSequence(t *testing.T)
 	}
 }
 
+func TestNACKExpectedSequenceFilterPreservesOnlyProofRequests(t *testing.T) {
+	expected := map[uint16]struct{}{
+		0:  {},
+		20: {},
+	}
+	pairs := rtcp.NackPairsFromSequenceNumbers([]uint16{65535, 0, 20, 100})
+	if !nackContainsExpectedSequence(pairs, expected) {
+		t.Fatal("NACK pair list did not retain expected wrapped and direct sequences")
+	}
+	if nackContainsExpectedSequence(pairs, map[uint16]struct{}{101: {}}) {
+		t.Fatal("NACK pair list matched an unrequested sequence")
+	}
+	if nackContainsExpectedSequence(pairs, nil) {
+		t.Fatal("NACK pair list matched an empty expectation set")
+	}
+}
+
+func TestNACKRTCPPacketsSplitAtReportLimitWithoutLosingSequences(t *testing.T) {
+	sequences := make([]uint16, maxSequencesPerNACK)
+	for index := range sequences {
+		sequences[index] = uint16(index * 17)
+	}
+
+	packets := makeNACKRTCPPackets(1, 2, sequences)
+	if len(packets) != 3 {
+		t.Fatalf("got %d NACK packets, want 3", len(packets))
+	}
+
+	var forwarded []uint16
+	compoundSize := 0
+	for index, packet := range packets {
+		nack, ok := packet.(*rtcp.TransportLayerNack)
+		if !ok {
+			t.Fatalf("packet %d has type %T, want *rtcp.TransportLayerNack", index, packet)
+		}
+		if len(nack.Nacks) > maxNACKPairsPerRTCPPacket {
+			t.Fatalf("packet %d has %d NACK pairs, limit is %d",
+				index, len(nack.Nacks), maxNACKPairsPerRTCPPacket)
+		}
+		for _, pair := range nack.Nacks {
+			forwarded = append(forwarded, pair.PacketList()...)
+		}
+		raw, err := rtcp.Marshal([]rtcp.Packet{packet})
+		if err != nil {
+			t.Fatalf("marshal NACK packet %d: %v", index, err)
+		}
+		if len(raw) >= 1500 {
+			t.Fatalf("NACK packet %d is %d bytes, exceeds Pion's 1500-byte read buffer",
+				index, len(raw))
+		}
+		compoundSize += len(raw)
+	}
+	if len(forwarded) != len(sequences) {
+		t.Fatalf("forwarded %d sequences, want %d", len(forwarded), len(sequences))
+	}
+	for index, sequence := range sequences {
+		if forwarded[index] != sequence {
+			t.Fatalf("forwarded sequence %d = %d, want %d", index, forwarded[index], sequence)
+		}
+	}
+	if compoundSize <= 1500 {
+		t.Fatalf("combined RTCP size = %d bytes, want more than Pion's 1500-byte receive buffer", compoundSize)
+	}
+}
+
 func TestPrometheusMetricsExposeForwardingAndResourceSignals(t *testing.T) {
 	subscription := &sfuSubscription{
 		nackQueue: make(chan queuedNACK, nackQueueSize),
@@ -359,7 +1000,12 @@ func TestPrometheusMetricsExposeForwardingAndResourceSignals(t *testing.T) {
 		},
 	}
 	router.rtpForwarded.Store(12)
+	router.rtpQueueDropped.Store(4)
+	router.rtpIntentionalShed.Store(6)
 	router.rtpDropped.Store(2)
+	router.rtpRecoverySamples.Store(2)
+	router.rtpRecoveryNanos.Store(uint64(500 * time.Millisecond))
+	router.rtpRecoveryMaxNanos.Store(uint64(300 * time.Millisecond))
 	router.rtpForwardNanos.Store(uint64(25 * time.Millisecond))
 	router.rtpForwardSamples.Store(12)
 
@@ -370,6 +1016,11 @@ func TestPrometheusMetricsExposeForwardingAndResourceSignals(t *testing.T) {
 	for _, metric := range []string{
 		"hami_sfu_rtp_forward_seconds_sum",
 		"hami_sfu_rtp_forward_errors_total 2",
+		"hami_sfu_rtp_queue_dropped_total 4",
+		"hami_sfu_rtp_intentional_shed_total 6",
+		"hami_sfu_rtp_keyframe_recoveries_total 2",
+		"hami_sfu_rtp_keyframe_recovery_seconds_sum 0.5",
+		"hami_sfu_rtp_keyframe_recovery_seconds_max 0.3",
 		"hami_sfu_nack_queue_depth 1",
 		"hami_sfu_nack_dropped_queue_full_total 1",
 		"hami_process_cpu_seconds_total",
@@ -446,5 +1097,145 @@ func TestPairNegotiationTimeoutNamesPairAndStates(t *testing.T) {
 		if !strings.Contains(err.Error(), expected) {
 			t.Errorf("negotiation error %q does not include %q", err, expected)
 		}
+	}
+}
+
+func TestM7HSFUReceiveStallDetectorRequiresArmedConsecutiveSamples(t *testing.T) {
+	detector := m7hSFUReceiveStallDetector{publisherCount: 3000}
+	sendCtx := context.Background()
+
+	for sample := 1; sample <= 10; sample++ {
+		if detector.observeDuringSend(sendCtx, 0, 3000) {
+			t.Fatalf("startup zero-packet sample %d triggered a stall", sample)
+		}
+	}
+	if detector.observeDuringSend(sendCtx, 1, 3000) {
+		t.Fatal("packet-bearing sample triggered a stall")
+	}
+	if detector.observeDuringSend(sendCtx, 0, 2999) {
+		t.Fatal("partially stale sample triggered a stall")
+	}
+	for sample := 1; sample < 5; sample++ {
+		if detector.observeDuringSend(sendCtx, 0, 3000) {
+			t.Fatalf("starved sample %d triggered before the fifth consecutive sample", sample)
+		}
+	}
+	if !detector.observeDuringSend(sendCtx, 0, 3000) {
+		t.Fatal("fifth consecutive zero-packet all-stale sample did not trigger")
+	}
+}
+
+func TestM7HSFUReceiveStallIgnoresExpiredSendContext(t *testing.T) {
+	sendCtx, cancel := context.WithCancel(context.Background())
+	detector := m7hSFUReceiveStallDetector{publisherCount: 3000}
+	if detector.observeDuringSend(sendCtx, 1, 3000) {
+		t.Fatal("packet-bearing sample triggered a stall")
+	}
+	cancel()
+
+	for sample := 1; sample <= 10; sample++ {
+		if detector.observeDuringSend(sendCtx, 0, 3000) {
+			t.Fatalf("expired send context triggered on sample %d", sample)
+		}
+	}
+}
+
+func TestM7HPublisherSendStallRequiresActiveSendContext(t *testing.T) {
+	sendCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	if !m7hPublisherSendStallDetected(sendCtx, 3000, 0, 3000) {
+		t.Fatal("active all-stale publisher sample did not trigger")
+	}
+	if m7hPublisherSendStallDetected(sendCtx, 3000, 1, 3000) {
+		t.Fatal("publisher sample with active sends triggered a stall")
+	}
+	if m7hPublisherSendStallDetected(sendCtx, 3000, 0, 2999) {
+		t.Fatal("partially stale publisher sample triggered a stall")
+	}
+
+	cancel()
+	if m7hPublisherSendStallDetected(sendCtx, 3000, 0, 3000) {
+		t.Fatal("normal send-context expiry triggered a stall")
+	}
+}
+
+func TestM7HRemoteSFUGoroutineProfileWritesLocalFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "goroutine.pprof")
+	request := httptest.NewRequest(http.MethodGet, "/goroutine-profile", nil)
+	request.Header.Set("Authorization", "Bearer test-token")
+	request.Header.Set("X-M7H-Goroutine-Profile-Path", path)
+	response := httptest.NewRecorder()
+
+	(&m7hRemoteSFUServer{}).handleGoroutineProfile("test-token")(response, request)
+
+	if response.Code != http.StatusNoContent {
+		t.Fatalf("profile endpoint status = %d, body = %q", response.Code, response.Body.String())
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("stat local goroutine profile: %v", err)
+	}
+	if info.Size() == 0 {
+		t.Fatal("local goroutine profile is empty")
+	}
+	if got := info.Mode().Perm(); got != 0o600 {
+		t.Fatalf("local goroutine profile permissions = %04o, want 0600", got)
+	}
+}
+
+func TestM7HRemoteSFUGoroutineProfileRejectsNonTemporaryPath(t *testing.T) {
+	request := httptest.NewRequest(http.MethodGet, "/goroutine-profile", nil)
+	request.Header.Set("Authorization", "Bearer test-token")
+	request.Header.Set("X-M7H-Goroutine-Profile-Path", "/etc/hami-goroutine.pprof")
+	response := httptest.NewRecorder()
+
+	(&m7hRemoteSFUServer{}).handleGoroutineProfile("test-token")(response, request)
+
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("profile endpoint status = %d, want %d", response.Code, http.StatusBadRequest)
+	}
+}
+
+func TestM7HRemoteSFUCPUProfileWritesPrivateLocalFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "cpu.pprof")
+	request := httptest.NewRequest(http.MethodGet, "/cpu-profile", nil)
+	request.Header.Set("Authorization", "Bearer test-token")
+	request.Header.Set("X-M7H-CPU-Profile-Path", path)
+	request.Header.Set("X-M7H-CPU-Profile-Duration", "100ms")
+	response := httptest.NewRecorder()
+
+	(&m7hRemoteSFUServer{}).handleCPUProfile("test-token")(response, request)
+
+	if response.Code != http.StatusNoContent {
+		t.Fatalf("profile endpoint status = %d, body = %q", response.Code, response.Body.String())
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("stat local CPU profile: %v", err)
+	}
+	if info.Size() == 0 {
+		t.Fatal("local CPU profile is empty")
+	}
+	if got := info.Mode().Perm(); got != 0o600 {
+		t.Fatalf("local CPU profile permissions = %04o, want 0600", got)
+	}
+}
+
+func TestM7HRemoteSFUCPUProfileRejectsDurationOverLimit(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "cpu.pprof")
+	request := httptest.NewRequest(http.MethodGet, "/cpu-profile", nil)
+	request.Header.Set("Authorization", "Bearer test-token")
+	request.Header.Set("X-M7H-CPU-Profile-Path", path)
+	request.Header.Set("X-M7H-CPU-Profile-Duration", (m7hCPUProfileMaxWindow + time.Second).String())
+	response := httptest.NewRecorder()
+
+	(&m7hRemoteSFUServer{}).handleCPUProfile("test-token")(response, request)
+
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("profile endpoint status = %d, want %d", response.Code, http.StatusBadRequest)
+	}
+	if _, err := os.Stat(path); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("invalid duration created a profile: stat error = %v", err)
 	}
 }

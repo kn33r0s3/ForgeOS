@@ -13,12 +13,11 @@ ai_engine.py:
                               crude but real bag-of-words vector that
                               cosine similarity can compare. This is
                               the $0-guaranteed default.
-  - OllamaEmbeddingProvider : a real local embedding model (e.g.
-                              nomic-embed-text) via the same Ollama
-                              server used for AI_PROVIDER=ollama.
-                              Meaningfully better semantic search,
-                              still free, still local — just requires
-                              `ollama pull nomic-embed-text` once.
+  - HashEmbeddingProvider is now the ONLY embedding provider.
+                              The external embedding provider is gone:
+                              hami-model generates text, it does not
+                              produce embedding vectors, and no embedding
+                              endpoint exists on the serving path.
 
 Embeddings from different providers/models live in different vector
 spaces and are NOT comparable to each other. Every stored Knowledge
@@ -31,16 +30,12 @@ from __future__ import annotations
 
 import hashlib
 import json
-import logging
 import math
 from abc import ABC, abstractmethod
 from typing import Optional
 
 from app.config import settings
 from app.services.pattern_engine import tokenize
-
-
-logger = logging.getLogger(__name__)
 
 
 class EmbeddingProvider(ABC):
@@ -94,82 +89,18 @@ class HashEmbeddingProvider(EmbeddingProvider):
         return vector
 
 
-class OllamaEmbeddingProvider(EmbeddingProvider):
-    """Real local embedding model via Ollama's /api/embeddings
-    endpoint. Stdlib only (urllib/json) — no extra pip dependency."""
-
-    def __init__(self):
-        self._host = settings.OLLAMA_HOST.rstrip("/")
-        self._model = settings.OLLAMA_EMBEDDING_MODEL
-
-    @property
-    def model_name(self) -> str:
-        return f"ollama:{self._model}"
-
-    def embed(self, text: str) -> list[float]:
-        import urllib.request
-
-        payload = {"model": self._model, "prompt": text}
-        request = urllib.request.Request(
-            f"{self._host}/api/embeddings",
-            data=json.dumps(payload).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
-        )
-        try:
-            with urllib.request.urlopen(request, timeout=30) as response:
-                data = json.loads(response.read().decode("utf-8"))
-        except Exception as exc:
-            raise RuntimeError(
-                f"Ollama embedding request failed — is `ollama serve` running "
-                f"with model '{self._model}' pulled? ({exc})"
-            ) from exc
-        embedding = data.get("embedding")
-        if not embedding:
-            # A 200 with no embedding vector (e.g. a proxy/gateway HTML
-            # body) must fail LOUDLY so get_embedding() falls back to the
-            # hash provider. Returning [] silently would store a
-            # zero-vector row tagged "ollama:<model>" that matches
-            # nothing forever (memory_layer would keep it on the
-            # skip-re-embed path since content "unchanged").
-            raise RuntimeError(
-                f"Ollama embedding request for model '{self._model}' "
-                "returned no embedding vector in the response body."
-            )
-        return embedding
-
-
 def get_embedding_provider() -> EmbeddingProvider:
-    """Factory, mirroring ai_engine.get_provider(). EMBEDDING_PROVIDER=
-    "ollama" upgrades to a real model; anything else (including an
-    unset/invalid value) uses the always-free hash provider."""
-    if settings.EMBEDDING_PROVIDER == "ollama":
-        return OllamaEmbeddingProvider()
+    """Factory, mirroring ai_engine.get_provider(). Hash is the only
+    embedding provider; EMBEDDING_PROVIDER is always "hash"."""
     return HashEmbeddingProvider()
 
 
 def get_embedding(text: str) -> tuple[list[float], str]:
-    """Embed text with the configured provider, falling back to the
-    hash provider on any failure (Ollama not running, model not
-    pulled, etc.) so indexing/search never breaks. Returns
-    (vector, model_name) — model_name must be stored alongside the
-    vector so future searches know which space it's in."""
+    """Embed text with the hash provider. Returns (vector,
+    model_name) — model_name must be stored alongside the vector so
+    future searches know which space it's in."""
     provider = get_embedding_provider()
-    if isinstance(provider, HashEmbeddingProvider):
-        return provider.embed(text), provider.model_name
-    try:
-        return provider.embed(text), provider.model_name
-    except Exception as exc:
-        # Silent fallback keeps indexing working, but rows written during
-        # an Ollama outage are tagged "hash-…" and memory_layer never
-        # re-embeds unchanged content — so log the outage LOUDLY; the
-        # operator (owner) needs to know the memory index degraded.
-        logger.warning(
-            "Ollama embedding failed (%s) — falling back to hash provider; "
-            "stored rows are tagged with the hash model, not ollama",
-            exc,
-        )
-        fallback = HashEmbeddingProvider()
-        return fallback.embed(text), fallback.model_name
+    return provider.embed(text), provider.model_name
 
 
 def cosine_similarity(vector_a: list[float], vector_b: list[float]) -> float:

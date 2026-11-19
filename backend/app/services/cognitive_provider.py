@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 import re
 from dataclasses import dataclass
 from typing import Any, Literal, Mapping, Protocol, Sequence
@@ -268,18 +267,18 @@ _PROPOSAL_ENVELOPE_SCHEMA = {
 }
 
 
-class OllamaCognitiveProvider:
-    """Real local-model adapter reusing ai_engine's Ollama client, never the mock path."""
+class HamiCognitiveProvider:
+    """Hami-model adapter reusing ai_engine's HamiModelProvider, never the mock path."""
 
-    mode: Literal["LOCAL", "SELF_HOSTED"] = "LOCAL"
+    mode: Literal["LOCAL"] = "LOCAL"
 
-    def __init__(self, implementation: Any, *, mode: Literal["LOCAL", "SELF_HOSTED"] = "LOCAL"):
+    def __init__(self, implementation: Any):
         self._implementation = implementation
-        self.mode = mode
-        self.name = "ollama"
+        self.mode = "LOCAL"
+        self.name = "hami-model"
         model = str(getattr(implementation, "_model", "")).strip()
         if not model:
-            raise CognitiveProviderUnavailable("Ollama model identity is missing")
+            raise CognitiveProviderUnavailable("hami-model identity is missing")
         self.version = model
         self.last_call_metadata: dict[str, Any] = {}
 
@@ -319,7 +318,7 @@ class OllamaCognitiveProvider:
             )
         except Exception as exc:
             raise CognitiveProviderError(
-                f"Local Ollama provider call failed ({type(exc).__name__})"
+                f"hami-model provider call failed ({type(exc).__name__})"
             ) from exc
         metadata = getattr(self._implementation, "last_call_metadata", {})
         if isinstance(metadata, dict):
@@ -390,7 +389,7 @@ class OllamaCognitiveProvider:
             )
         except Exception as exc:
             raise CognitiveProviderError(
-                f"Local Ollama goal-planning call failed ({type(exc).__name__})"
+                f"hami-model goal-planning call failed ({type(exc).__name__})"
             ) from exc
         metadata = getattr(self._implementation, "last_call_metadata", {})
         if isinstance(metadata, dict):
@@ -416,32 +415,17 @@ def get_cognitive_provider(provider_name: str | None = None) -> CognitiveProvide
     selected = (provider_name or settings.COGNITIVE_PROVIDER).strip().lower()
     if selected == "mock":
         return MockCognitiveProvider()
-    if selected == "ollama":
-        if settings.AI_PROVIDER.strip().lower() != "ollama":
+    if selected == "hami-model":
+        if settings.AI_PROVIDER.strip().lower() != "hami-model":
             raise CognitiveProviderUnavailable(
-                "Set AI_PROVIDER=ollama and COGNITIVE_PROVIDER=ollama to enable the local cognitive adapter."
+                "Set AI_PROVIDER=hami-model and COGNITIVE_PROVIDER=hami-model to enable the hami-model cognitive adapter."
             )
         from app.services import ai_engine
-        transport_mode = ai_engine.ollama_transport_mode()
-        if transport_mode == "SELF_HOSTED" and not settings.HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA:
-            raise CognitiveProviderUnavailable(
-                "Remote cognitive execution may receive Hami task context. Set "
-                "HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA=true only after approving that data boundary."
-            )
-        if transport_mode is None:
-            if os.getenv("VERCEL"):
-                raise CognitiveProviderUnavailable(
-                    "Local Ollama cognition is unavailable in Vercel when only localhost is configured. Set OLLAMA_HOST to an "
-                    "authenticated HTTPS self-hosted gateway and set OLLAMA_API_KEY."
-                )
-            raise CognitiveProviderUnavailable(
-                "Configure loopback HTTP locally or an authenticated HTTPS self-hosted Ollama gateway with OLLAMA_API_KEY."
-            )
         try:
             implementation = ai_engine.get_provider()
         except Exception as exc:
             raise CognitiveProviderUnavailable(
-                f"Local Ollama adapter could not be constructed ({type(exc).__name__})."
+                f"hami-model adapter could not be constructed ({type(exc).__name__})."
             ) from exc
         if isinstance(implementation, ai_engine.MockProvider):
             raise CognitiveProviderUnavailable(
@@ -451,12 +435,7 @@ def get_cognitive_provider(provider_name: str | None = None) -> CognitiveProvide
             raise CognitiveProviderUnavailable(
                 "The selected AI adapter does not support schema-constrained JSON output."
             )
-        return OllamaCognitiveProvider(implementation, mode=transport_mode)
-    if selected in {"gemini", "google"}:
-        raise CognitiveProviderUnavailable(
-            "Gemini cognitive provider is unavailable: the repository has no "
-            "GEMINI_API_KEY setting or Gemini client dependency; no provider call was made."
-        )
+        return HamiCognitiveProvider(implementation)
     raise CognitiveProviderUnavailable(
-        f"Unsupported cognitive provider '{selected}'; configure 'mock' or install an adapter."
+        f"Unsupported cognitive provider '{selected}'; configure 'mock' or 'hami-model'."
     )

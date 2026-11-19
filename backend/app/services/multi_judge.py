@@ -176,7 +176,7 @@ def _default_judges(evidence: list[models.Evidence] | None = None) -> list[Judge
     # Prefer local execution. Paid judge calls remain blocked even if the old
     # opt-in flag or an API key is set: this route has no per-call usage ledger
     # connected to the global spend guard. Do not add a direct paid adapter here.
-    candidates = [("local-qwen3-coder", "ollama", settings.OLLAMA_MODEL)]
+    candidates = [("hami-model", "hami-model", settings.HAMI_MODEL_NAME)]
 
     permitted_ids = tuple(item.id for item in permitted) if permitted is not None else None
     for name, provider, model in candidates:

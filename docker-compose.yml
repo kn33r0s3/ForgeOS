@@ -2,11 +2,12 @@ name: forgeos
 
 x-forgeos-environment: &forgeos-environment
   DATABASE_URL: ${DATABASE_URL:-sqlite:////app/storage/forge.db}
-  AI_PROVIDER: ${AI_PROVIDER:-mock}
+  AI_PROVIDER: ${AI_PROVIDER:-hami-model}
   AI_FALLBACK_TO_MOCK: ${AI_FALLBACK_TO_MOCK:-false}
   EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-hash}
-  OLLAMA_HOST: ${OLLAMA_HOST:-http://host.docker.internal:11434}
-  OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434/v1}
+  HAMI_MODEL_HOST: ${HAMI_MODEL_HOST:-http://host.docker.internal:11436}
+  HAMI_CHAT_HOST: ${HAMI_CHAT_HOST:-http://host.docker.internal:11435}
+  HAMI_CHAT_KEY: ${HAMI_CHAT_KEY:-}
   EVIDENCE_TRIAGE_URL: ${EVIDENCE_TRIAGE_URL:-}
 
 services:

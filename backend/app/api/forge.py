@@ -431,27 +431,17 @@ def ask_forge(request: Request, payload: schemas.AskRequest, db: Session = Depen
     Ask Forge a question. Forge is not a chatbot — it retrieves
     relevant memories from its own Knowledge base FIRST (beliefs and
     patterns it has actually formed and evidence-linked), then answers
-    grounded in only that, via whichever AI provider is configured
-    (free mock, free local Ollama, or optional paid OpenAI). If nothing
+    grounded in Hami's own local model only. If nothing
     relevant exists yet, it says so rather than guessing.
 
-    Owner-only: an unauthenticated caller could trigger AI provider
-    calls (paid OpenAI path, or local Ollama compute) at the owner's
-    expense, and read internal memory through the answers."""
+    Owner-only: an unauthenticated caller could trigger Hami model
+    compute at the owner's expense and read internal memory through answers."""
     require_owner_api_key(request)
     provider_status = ai_engine.get_provider_status()
-    if provider_status.get("provider") != "ollama" or provider_status.get("status") != "MODEL_AVAILABLE":
+    if provider_status.get("provider") != "hami-model" or provider_status.get("status") != "MODEL_AVAILABLE":
         raise HTTPException(
             status_code=503,
-            detail="A reachable zero-cost local model is not available. No template or paid-provider answer was generated.",
-        )
-    if provider_status.get("mode") == "SELF_HOSTED" and provider_status.get("internal_context_allowed") is not True:
-        raise HTTPException(
-            status_code=403,
-            detail=(
-                "The self-hosted model is reachable, but sharing Hami's internal knowledge with a remote model is disabled. "
-                "Review the data boundary before setting HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA=true."
-            ),
+            detail="Hami model is not available. No template or fallback answer was generated.",
         )
     try:
         result = ai_engine.answer_question(payload.question, db)

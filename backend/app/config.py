@@ -3,8 +3,8 @@ Hami configuration.
 
 Centralizes all environment-driven settings so every module reads
 config from one place. This keeps the system modular: swapping the
-AI provider, the database, or future services (crawler, Reddit API,
-Ollama) only means touching this file plus the relevant service.
+database or a future service only means touching this file plus the
+relevant service. There is exactly one AI: hami-model, on the owner's Mac.
 """
 
 import json
@@ -78,41 +78,33 @@ class Settings(BaseSettings):
     )
 
     # --- AI ---
-    # Forge runs at $0 by default and always can — paid AI is optional
-    # acceleration, never a dependency. Three interchangeable providers:
-    #   "mock"   -> deterministic offline templates. Default. Zero cost,
-    #                zero setup, zero external calls of any kind.
-    #   "ollama" -> real local/self-hosted inference through ai_engine:
-    #                loopback HTTP on a non-serverless runtime, or an
-    #                authenticated HTTPS gateway with OLLAMA_API_KEY.
-    #   "openai" -> deliberately blocked until each paid call records
-    #                usage and the shared global spend guard is enforced.
+    # Exactly one AI: hami-model, Hami's own model on the owner's Mac.
+    # No borrowed model or external AI dependency anywhere.
+    #   "mock"      -> deterministic offline templates. Default. Zero cost,
+    #                   zero setup, zero external calls of any kind.
+    #   "hami-model" -> real inference through the guarded gateway:
+    #                   loopback HTTP to the hami-model server on the Mac.
     # The default "mock" is deterministic template behavior, not intelligence.
+    # AI_FALLBACK_TO_MOCK stays False by default: production never silently
+    # fabricates intelligence, and a down hami-model reports unavailable.
     AI_PROVIDER: str = os.getenv("AI_PROVIDER", "mock")
     # Explicit opt-in only: when True, real-provider failures may use MockProvider.
     # Default False so production never silently fabricates intelligence.
     AI_FALLBACK_TO_MOCK: bool = os.getenv("AI_FALLBACK_TO_MOCK", "false").lower() in ("1", "true", "yes")
 
-    OLLAMA_HOST: str = os.getenv("OLLAMA_HOST", "http://localhost:11434")
-    OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "qwen3-coder:latest")
-    # Required for non-loopback HTTPS self-hosted gateways; never commit the secret.
-    OLLAMA_API_KEY: str = os.getenv("OLLAMA_API_KEY", "")
-    # Separate authorization: gateway authentication alone does not authorize
-    # sending Hami's internal Knowledge records to a remote model host.
-    HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA: bool = os.getenv(
-        "HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA", "false"
-    ).strip().lower() in ("1", "true", "yes")
-    # Compatibility settings for the standalone Qwen worker, which uses
-    # Ollama's OpenAI-compatible endpoint directly.
-    OLLAMA_BASE_URL: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
-    QWEN_MODEL_NAME: str = os.getenv("QWEN_MODEL_NAME", "qwen3-coder:latest")
+    # hami-model on the owner's Mac: the only model. The gateway
+    # (scripts/hami_ollama_gateway.py) is its only caller; the server
+    # listens on 127.0.0.1:11436 and serves only hami-model.
+    HAMI_MODEL_HOST: str = os.getenv("HAMI_MODEL_HOST", "http://127.0.0.1:11436")
+    HAMI_MODEL_NAME: str = os.getenv("HAMI_MODEL_NAME", "hami-model")
+    # The guarded gateway is the ONLY caller of the model server. The
+    # backend (Vercel) reaches it through the tunnel; local code reaches
+    # it on loopback. Same env vars the chat route uses — no new secret.
+    HAMI_MODEL_GATEWAY_HOST: str = os.getenv("HAMI_CHAT_HOST", "http://127.0.0.1:11435")
+    HAMI_MODEL_GATEWAY_KEY: str = os.getenv("HAMI_CHAT_KEY", "")
 
-    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
-    OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-    # Paid judgment calls are opt-in; an API key alone is not authorization.
-    FORGEOS_OPENAI_JUDGE_ENABLED: bool = os.getenv(
-        "FORGEOS_OPENAI_JUDGE_ENABLED", "false"
-    ).lower() in ("1", "true", "yes")
+    # No paid judge: any judgment call a judge makes must come from
+    # hami-model.
 
     # The proposal-only cognitive worker is offline by default. External
     # providers require a separate adapter and explicit configuration.
@@ -166,15 +158,14 @@ class Settings(BaseSettings):
 
     # --- Forge Memory Layer (embeddings/search) ---
     # Same $0-first pattern as AI_PROVIDER: "hash" needs nothing (pure
-    # Python, no network, no model) and always works. "ollama" uses a
-    # real local embedding model via the same Ollama server as
-    # AI_PROVIDER=ollama, for meaningfully better semantic search —
-    # still free, still local. Mixing the two is avoided by tagging
-    # every stored embedding with the model that produced it (see
+    # Python, no network, no model) and always works. Every stored
+    # embedding is tagged with the model that produced it (see
     # embedding_engine.py); switching this setting doesn't corrupt old
     # embeddings, it just stops comparing against them until re-synced.
-    EMBEDDING_PROVIDER: str = os.getenv("EMBEDDING_PROVIDER", "hash")  # "hash" | "ollama"
-    OLLAMA_EMBEDDING_MODEL: str = os.getenv("OLLAMA_EMBEDDING_MODEL", "nomic-embed-text")
+    # A hami-model embeddings endpoint is the future route; until it
+    # exists, "hash" is the only embedding provider.
+    EMBEDDING_PROVIDER: str = os.getenv("EMBEDDING_PROVIDER", "hash")  # "hash" only, until hami-model gains an embeddings endpoint
+    # No Ollama embedding model: "hash" is pure Python, no network, no model.
     HASH_EMBEDDING_DIM: int = _int_env("HASH_EMBEDDING_DIM", 128)
 
     # --- CORS ---

@@ -1,54 +1,37 @@
-import os
-import requests
 from typing import Optional
+
 from pydantic import BaseModel, Field
 
-class QwenWorkerRequest(BaseModel):
-    prompt: str = Field(..., description="The prompt or task instruction for the Qwen worker.")
+
+class HamiWorkerRequest(BaseModel):
+    prompt: str = Field(..., description="The prompt or task instruction for Hami.")
     system_instruction: Optional[str] = Field(None, description="Optional system role/instructions.")
     temperature: float = Field(0.2, ge=0.0, le=1.0)
 
-class QwenWorkerResponse(BaseModel):
+
+class HamiWorkerResponse(BaseModel):
     success: bool
     output: str
-    model: str
+    model: str = "hami-model"
     error: Optional[str] = None
 
-class QwenWorkerService:
+
+class HamiWorkerService:
     def __init__(self, base_url: Optional[str] = None, model_name: Optional[str] = None):
-        self.base_url = base_url or os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
-        self.model_name = model_name or os.getenv("QWEN_MODEL_NAME", "qwen3-coder:latest")
+        self.base_url = (base_url or "").strip().rstrip("/")
+        self.model_name = model_name or "hami-model"
 
-    def execute_task(self, request: QwenWorkerRequest) -> QwenWorkerResponse:
-        endpoint = f"{self.base_url.rstrip('/')}/chat/completions"
-        
-        messages = []
-        if request.system_instruction:
-            messages.append({"role": "system", "content": request.system_instruction})
-        messages.append({"role": "user", "content": request.prompt})
-
-        payload = {
-            "model": self.model_name,
-            "messages": messages,
-            "temperature": request.temperature,
-            "stream": False
-        }
-
-        try:
-            response = requests.post(endpoint, json=payload, timeout=60)
-            response.raise_for_status()
-            data = response.json()
-            
-            content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
-            return QwenWorkerResponse(
-                success=True,
-                output=content,
-                model=self.model_name
-            )
-        except Exception as e:
-            return QwenWorkerResponse(
+    def execute_task(self, request: HamiWorkerRequest) -> HamiWorkerResponse:
+        if not self.base_url:
+            return HamiWorkerResponse(
                 success=False,
                 output="",
-                model=self.model_name,
-                error=str(e)
+                model="hami-model",
+                error="Hami model endpoint is not configured.",
             )
+        return HamiWorkerResponse(
+            success=False,
+            output="",
+            model="hami-model",
+            error="Hami worker HTTP adapter is not connected.",
+        )

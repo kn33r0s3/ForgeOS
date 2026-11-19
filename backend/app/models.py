@@ -1095,7 +1095,7 @@ class Prediction(Base):
 # embedded copy of a Belief's or Pattern's current statement, kept up
 # to date by belief_engine.py / pattern_engine.py whenever the source
 # changes. This is what memory_layer.py searches over, and what gets
-# retrieved as context before an AI provider (including a local Ollama
+# retrieved as context before an AI provider (including the local Hami
 # model) answers a question — see ai_engine.answer_question().
 # ---------------------------------------------------------------------
 
@@ -1116,7 +1116,7 @@ class Knowledge(Base):
     source_id = Column(Integer, nullable=False, index=True)  # id within that source table
     confidence_score = Column(Float, nullable=False, default=50.0)  # mirrors the source's current confidence
     embedding = Column(Text, nullable=True)  # JSON-encoded list[float]
-    embedding_model = Column(String, nullable=True)  # e.g. "hash-128" or "ollama:nomic-embed-text" — see embedding_engine.py
+    embedding_model = Column(String, nullable=True)  # e.g. "hash-128" — see embedding_engine.py
     created_at = Column(DateTime, default=utcnow)
     updated_at = Column(DateTime, default=utcnow)
 

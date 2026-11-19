@@ -33,3 +33,4 @@ docs/archive/legacy-frontend/.next/
 .DS_Store
 dist/
 !.env.example
+.env*

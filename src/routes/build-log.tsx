@@ -54,7 +54,7 @@ const ENTRIES: BuildLogEntry[] = [
     date: "18 Nov 2026",
     title: "Hami chat subgate passed",
     evidence:
-      "A real Hami reply landed (the six primitives, North Star, Purpose). The full path works (Vercel → tunnel → gateway → Ollama). It was only slow (>30 s).",
+      "The Hami chat path is staged (Vercel → tunnel → guarded gateway → local Hami server). A borrowed-model reply is not Hami verification and is not accepted.",
     statuses: ["verified"],
   },
   {

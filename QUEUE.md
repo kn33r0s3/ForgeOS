@@ -1,4 +1,208 @@
-## Current continuation — 2026-11-19 — LiveKit capacity + D95 fish-superzone / market-state reconciliation — run-start main 39706d6cb58119b9d0d01f897bfb869a00576861
+## Current continuation — 2026-11-19 18:23 +0545 — local M7-H cost work
+
+1. M7-H is NOT accepted; the local 250/500/1,000 cost runs are TEST evidence,
+   not capacity acceptance. Payload sharing remains. Subscriber-snapshot
+   caching and the minimal viewer API were measured and rejected for no
+   repeatable cost reduction.
+2. Next: implement the 200ms queue dissolve rule only after validating
+   recovery with a normal H.264 inter-frame fixture. Existing
+   `/tmp/test-video.h264` has one SPS, one PPS, and one IDR; it cannot prove
+   P-frame recovery. Keep the 5s to 200ms `nackMaxQueueAge` change in the same
+   controlled step, add explicit intentional-shed and time-to-recover evidence,
+   and coalesce upstream keyframe requests to one per publisher per second.
+3. No open GitHub issues were found. CI and secret scan pass at exact main
+   head `c8493cd712ededfa29801c00eab6a7ce67448524`; production verification
+   failed HTTP 402, so production is NOT VERIFIED. No commit, push, or deploy.
+4. Go tests/vet/build passed; `npm test` is 295/295 and `npm run gates` is
+   GREEN. The old v4 stats run has no final summary; its logs stop at
+   173,168ms with all publishers stale.
+
+## Previous continuation — 2026-11-19 17:27 +0545 — v4 stats timeout experiment
+
+1. v3 trace-off send stayed active through 120,005ms (14,947 frames/no
+   stale), with a brief 55-stale jitter spike at 109,222ms that recovered by
+   110,003ms. All-stale at 121,003ms was post-deadline.
+2. Feedback timed out at 380/3,000 (`nackZero=611`, `pliZero=2620`,
+   `firZero=2620`, `maxN=146`, `maxP=1`, `maxF=1`); p95/p99 NOT MEASURABLE.
+3. The 2s `/stats` request was accepted at 17:25:34.267; the viewer-map
+   snapshot ended 532ms later with canceled context, before feedback
+   counters. Whether dispatch, map-lock wait, or scheduler delay dominates
+   is UNKNOWN.
+4. The diagnostic timeout is now 5s, with client and server phase timings.
+   v4 is running with the same local-only 3,000/3,000 trace-off setup. Inspect
+   its feedback-snapshot and candidate phases before deciding the next step.
+5. Go tests/vet, npm test (295), and gates (GREEN) passed. M7-H remains NOT
+   accepted; production NOT VERIFIED.
+
+## Earlier continuation — 2026-11-19 17:18 +0545 — v2 stall/feedback result; v3 timeout phase run active
+
+1. The v2 local trace-off 3,000/3,000 run showed a partial active-send stall
+   before the 120s deadline: 14,992 frames/no stale at 108,005ms, 5,717
+   frames/1,562 stale at 109,005ms, 7,638/1,372 stale at 110,004ms, and
+   813 stale through 120,007ms. Oldest last send age was 11.815s. The
+   121,012ms all-stale reading was post-deadline.
+2. Feedback timed out at 396/3,000 (`nackZero=1565`, `pliZero=2604`,
+   `firZero=2604`, `maxN=99`, `maxP=1`, `maxF=1`); p95/p99 remain
+   **NOT MEASURABLE**. All 6,000 connections had connected then died,
+   median lifetime 176,409ms.
+3. The 3,000 injection calls returned without error, with no skipped peers;
+   sampled SFU counters were NACK received/forwarded 283/246 and PLI/FIR
+   received/forwarded 0. Pion's NACK responder passes the original RTCP
+   batch and does not consume PLI/FIR; the drop point remains unknown.
+4. The 2s `/stats` request expired, with SFU per-viewer counters logged only
+   near shutdown. Handler now checks cancellation early, snapshots viewer
+   references separately from router feedback locks, and emits phase timings.
+   Go tests/vet, npm test (295), gates (GREEN), and diff check passed.
+5. Same-condition v3 local run is active with mux disabled and trace logging
+   off. Inspect its request/map/feedback timing lines, then attribute the
+   PLI/FIR loss. At 109,222ms it briefly had 55 stale publishers, recovered
+   by 110,003ms, and still sent 14,947 frames/no stale at 120,005ms; the
+   121,003ms all-stale sample was post-deadline. Feedback wait remains active.
+   M7-H remains NOT accepted; production NOT VERIFIED.
+
+## Earlier continuation — 2026-11-19 17:05 +0545 — feedback timeout snapshot completed
+
+1. The trace-off 3,000/3,000 run again sent through the 120-second deadline;
+   the zero-frame/all-stale sample was post-deadline. It failed feedback at
+   355/3,000, so M7-H remains NOT accepted and p95/p99 are NOT MEASURABLE.
+2. The SFU eventually logged that five sampled incomplete subscriptions
+   received/forwarded NACK but no PLI/FIR; RTP queue/write/router errors were
+   zero. The client stats request timed out after 2 seconds and no
+   candidate-pair response was captured.
+3. The timeout diagnostic has been narrowed to one viewer, records injection
+   attribution, logs SFU per-viewer feedback before candidate stats, and
+   avoids candidate collection after HTTP request cancellation. A new
+   3,000-peer run is in progress.
+   At 17:10, harness samples showed an active-send regression before the
+   deadline: about 15,000 frames/s through 108,005ms, then 5,717 frames with
+   1,562 stale at 109,005ms; 813 publishers remained stale through 120,007ms,
+   with the oldest send 11.815s old. The timeout result is pending and the
+   cause is unknown.
+4. `npm test`, `npm run gates`, Go tests/vet/build, and diff checks passed
+   before this run. Exact-head production verification failed HTTP 402; no
+   production claim.
+
+## Earlier continuation — 2026-11-19 16:48 +0545 — feedback timeout snapshot pending
+
+1. A local trace-off 3,000/3,000 run remained active at elapsed 104,003ms
+   (`frames=14998`, `staleOver500ms=0`), unlike the earlier traced run's
+   all-stale sample at 104,004ms. This comparison suggests logger contention
+   but does not prove causation. The trace-off log was 2,356,879 bytes /
+   9,830 lines versus 11,217,950 bytes / 78,810 lines.
+2. The same run had severe jitter near the 120-second send deadline and then
+   timed out feedback at 261/3,000. p95/p99 are **NOT MEASURABLE**; M7-H
+   remains NOT accepted.
+3. The feedback-timeout path now preserves partial counts and samples at
+   most five incomplete viewers from the existing SFU stats endpoint. The
+   corresponding local 3,000-peer run is still in progress.
+4. Inspect the new per-viewer feedback/candidate-pair/socket evidence before
+   changing transport or fanout. Existing M7-H already uses one viewer per
+   track, 32 feedback-injection workers, and a bounded 64-packet
+   drop-oldest RTP queue.
+5. Validate `npm test`, `npm run gates`, Go test/vet/build, and
+   `git diff --check`. Exact-head production verification failed HTTP 402;
+   no production claim.
+
+## Earlier continuation — 2026-11-19 16:02 NPT — send deadline corrected; ICE loss narrowed
+
+1. **P0 — M7-H NOT accepted.** `-duration 65s` is the local media-send
+   lifetime. In a verified 3,000/3,000 run, publishers were still sending
+   14,956 frames at elapsed 65,003ms; at 66,004ms the expected post-deadline
+   sample was `frames=0, staleOver500ms=3000`. The last observed send was
+   15:47:32.998470 +0545. Prior 65-second post-send profiles do not prove an
+   active-send stall.
+2. **Guard verified:** both harness and SFU stall-profile triggers require an
+   active send context. The run produced no trigger and no profiles. It still
+   exited 1 after feedback timeout at 353/3,000; p95/p99 are
+   **NOT MEASURABLE**, so no M7-H pass.
+3. Three 120-second runs failed during `wait-connected` at viewers 702, 1271,
+   and 1351. Two instrumented retries followed: viewer 912 had no candidate-
+   pair stats at failure; viewer 1450 had 2 local/2 remote candidates and a
+   nominated, succeeded loopback host pair (10 sent, 5 received), followed
+   by both peers disconnecting after brief connectivity. SFU scheduler p95
+   upper bounds reached 1,342ms and max 3,758ms with ~80k goroutines;
+   correlation only, not causation. No candidate-pair stats does not prove
+   candidate absence.
+4. **Next:** add SFU-side candidate-pair/socket snapshots on ICE state
+   transitions and correlate with scheduler samples before changing Pion or
+   protected tuning. Capture stall profiles only while `sendContext` is live.
+5. **Boundaries:** preserve dirty worktree and protected constants. No Cloud,
+   Docker, commit, push, deployment, or production claim.
+
+Evidence: `/tmp/hami-media-011-active-send65-harness.log`,
+`/tmp/hami-media-011-candidate-counts-harness.log`, and
+`/tmp/hami-media-011-candidate-counts-sfu.log`; build metadata was verified
+before both runs. Full findings are in the newest
+`docs/CAPABILITY_QUEUE.md` entries.
+
+---
+
+## Current continuation — 2026-11-19 15:08 NPT — fresh-connection retry blocked
+
+1. **P0 — M7-H remains NOT accepted.** Fresh-connection retry used verified
+   mux-off/socket-counter flags and separate logs. It exited 1 negotiating
+   remote viewer `hami-sfu-viewer-25` before profile capture. SFU showed
+   3,000 publishers and zero packets / 3,000 stale at elapsed 21,000ms, but
+   the harness did not reach `frames=0`; no profiles exist.
+   The SFU peer was checking at 15:06:43.263876, socket-closed still
+   connecting at 15:07:13.395281, and failed at 15:07:14.302713; the harness
+   peer state callbacks appeared at 15:07:27.132558. The 43.869s gap is
+   observed but unexplained.
+2. **Next:** instrument existing `/viewer` request/response timing against
+   those SFU callbacks before another profile-isolation run. Do not claim the
+   SFU sample proves the M7-H cause or that fresh connections fix it.
+3. **Boundaries:** preserve existing dirty worktree. No Cloud, Docker,
+   protected tuning, contact, commit, push, deploy, or production verification.
+
+Evidence: `/tmp/hami-media-011-profile-freshconn-retry2-harness.log`,
+`/tmp/hami-media-011-profile-freshconn-retry2-sfu.log`, and
+`/tmp/hami-media-011-sfu-starvation-result`.
+
+## Current continuation — 2026-11-19 14:58 NPT — M7-H profile request timing
+
+1. **P0 — M7-H local reliability, NOT accepted.** Latest valid run reproduced
+   the 3,000/3,000 harness zero-frame/all-stale and SFU zero-packet/all-stale
+   signatures and captured four profiles. Feedback timed out at 55/3,000;
+   p95/p99 **NOT MEASURABLE**. A traced second profile request was written
+   immediately, then another connection/write sequence appeared at +2m15.831;
+   the handler entered +2m16.368. Profile writing itself took 0.378s. Latest
+   SFU traces show NACK/UDP `WriteToInet4` frames, but not explicit
+   `fdMutex`/`rwlock` frames (earlier profiles did). This narrows but does not
+   prove the cause; the NACK/UDP path remains correlation, not causation.
+2. **Next:** one fresh-connection profile isolation run, with distinct harness
+   and SFU logs, after peer negotiation completes. The first such attempt
+   timed out negotiating publisher 2862 before profiling; no conclusion.
+   Then perform one controlled intervention of the measured SFU candidate.
+3. **Other tracks remain independent.** The clean Nepali SFT same-set result
+   remains base 96 vs adapter 94; do not infer a win. D95 and other Hami-wide
+   research are not gated by M7-H.
+4. **Boundaries:** main head remains `c8493cd7`; preserve the dirty worktree.
+   No Cloud, Docker, paid service, protected tuning change, contact, commit,
+   push, deploy, or production verification.
+
+Evidence: `/tmp/hami-media-011-profile-httptrace2-harness.log`,
+`/tmp/hami-media-011-profile-httptrace2-sfu.log`, and the four
+`/tmp/hami-media-011-profile-httptrace2-profile-*.pprof` files. The exact
+build flags, pprof results, failed fresh-connection attempt, and measured
+timings are in the existing result/pprof records and the latest HANDOFF.
+
+## Current continuation — 2026-11-19 13:43 NPT — main `c8493cd712ededfa29801c00eab6a7ce67448524`
+
+1. **P0 — M7-H local diagnostic, NOT accepted.** Three runs now reproduce the stall; the latest harness and SFU both reached their zero/all-stale signatures and all four goroutine profiles returned. Feedback still timed out after 5 minutes at 32/3,000 tracks; p95/p99 are **NOT MEASURABLE**. The first SFU profile request took 59.638s; the second took 2m29.798s, with a 2m29.282s gap before its current handler-start log. SFU profiles show UDP `fdMutex.rwlock`/ICE writes, including a NACK-responder caller in the first; this is correlation, not a proven cause. `stall-plus-30s` is only a stage label; actual second snapshot was +3m29s. Next: instrument request arrival before authorization and profile-write boundaries, then run one controlled SFU UDP-write/NACK intervention. Do not claim a root cause or acceptance.
+2. **P0 — Guarded local SFT evaluation — DONE, essentially a tie.** Base 96/300 vs adapter 94/300 on 50 held-out rows; pairs base 18, adapter 19, ties 13. Dataset rights and source lineage remain unresolved; local research only.
+3. **P0 — Preserve exact-head CI and production boundary.** Fix commit `c8493cd7` is on `main`; exact-head CI passed 11/11. Deploy verifier `44476847027` failed production-content fetch with HTTP 402. Production is not verified; no manual deploy.
+4. **P0 — Meet Hami access boundary.** SSO and domain mapping remain owner-controlled; do not create share links, disable SSO, attach domains or decrypt secrets.
+5. **P1 — D95 PIU and producer-to-market reconciliation.** Retrieve the PIU FY2082/83 annual-progress and cost-benefit PDFs, FY2083/84 post-harvest support proposal and closed Pangasius beneficiary-selection attachment. Preserve the 1,006/1,516ha and 132/438-organization mismatch. Recheck body-level Butwal/Bhairahawa fish prices; no contact or application.
+6. **P1 — Continue D93 and Hami-wide discovery independently.** Recover NDRRMA #02/#04 and Chumnubri/route evidence through source-linked paths; keep unresolved states UNKNOWN and respect source-rights/authorization limits.
+
+Evidence: `/tmp/hami-media-011-sfu-starvation-result` and
+`/tmp/hami-media-011-sfu-starvation-pprof.md`. Local Go tests, `npm test`,
+`npm run gates`, and `git diff --check` passed. No Cloud/Docker test, commit,
+push, deploy, external contact, or production verification occurred.
+
+---
+
+## Previous continuation — 2026-11-19 — LiveKit capacity + D95 fish-superzone / market-state reconciliation — run-start main 39706d6cb58119b9d0d01f897bfb869a00576861
 
 1. **P0 — LiveKit capacity/reliability.** Resume from the actual M7-H attempt-2 raw log: 3,000 publishers and 3,000 viewers in one room; feedback wait timed out after only 256/3,000 tracks completed feedback. Diagnose the feedback lifecycle/queueing and preserve per-track evidence before scaling again. The exact-head CI smoke of 9 publishers/100 subscribers is a regression check, not M7-H proof. Preserve M0–M9 and the 9,000-publisher/10,000-viewer objective; no Cloud spend or production action without its gates.
 2. **P0 — Meet Hami access boundary.** Existing owner-facing route/SSO and domain mapping remain an owner-controlled verification item. Do not create share links, disable SSO, attach domains or decrypt secrets.
@@ -1190,3 +1394,4 @@ The 2026-10-11 single-instance integrity audit has now been spot-checked against
 - Database durability/read-after-write, final persisted CycleRun status/stages attributable to cron, real model inference, and fresh REAL economic outcomes remain UNKNOWN. Health-watch requires two consecutive failing polls; this pass did not run it, change its counter, or alert. DNS/403 observation failures are not application-health failures.
 - No external contact/message, intake/outbound activation, payment/money action, paid infrastructure, credential or permission change occurred.
 - Next: re-resolve main and finish exact-head CI/verifier for `12173967…`; after natural 05:45 and 11:45 NPT runs, correlate authorized invocation evidence with a persisted CycleRun, trigger, final status, stage outcomes, and read-after-write. Retry ordinary health GETs from working DNS; Vercel access only through normal authorized consent. Any new continuity commit needs its own exact-head gates.
+## Current continuation — 2026-11-19 16:02 NPT — send deadline corrected; ICE loss narrowed

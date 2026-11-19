@@ -112,14 +112,14 @@ function ForgeKnowledgeChat({ apiKey }: { apiKey: string }) {
 
   const providerName = providerStatus?.provider.trim().toLowerCase() ?? "";
   const providerHealth = providerStatus?.status.trim().toUpperCase() ?? "";
-  const approvedZeroCostProvider = providerName === "mock" || providerName === "ollama";
-  const paidProvider = providerName === "openai";
+  const approvedZeroCostProvider = providerName === "mock" || providerName === "hami-model";
+  const paidProvider = false;
   const mockProvider = providerName === "mock" &&
     (providerHealth === "READY" || providerHealth === "MOCK");
   const remoteContextSharingBlocked = providerStatus?.mode === "SELF_HOSTED" &&
     providerStatus.internal_context_allowed !== true;
   const providerCanAnswer = providerStatus !== null &&
-    providerName === "ollama" && providerHealth === "MODEL_AVAILABLE" && !remoteContextSharingBlocked;
+    providerName === "hami-model" && providerHealth === "MODEL_AVAILABLE";
   const canAsk = !providerLoading && !providerError && providerCanAnswer;
 
   async function submitQuestion(event: FormEvent<HTMLFormElement>) {
@@ -235,16 +235,9 @@ function ForgeKnowledgeChat({ apiKey }: { apiKey: string }) {
                   This environment is using deterministic test templates. Hami will not present them as intelligence or enable questions until a real, reachable local model is available.
                 </p>
               </>
-            ) : remoteContextSharingBlocked ? (
+            ) : providerHealth === "MODEL_AVAILABLE" && providerName === "hami-model" ? (
               <>
-                <p className="mt-1 text-sm font-semibold text-ink">Remote inference is reachable; internal knowledge sharing is off.</p>
-                <p className="mt-1 text-sm leading-5 text-muted">
-                  For privacy, Hami will not send stored Knowledge to a self-hosted HTTPS model until the owner explicitly enables HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA after reviewing the gateway's data handling.
-                </p>
-              </>
-            ) : providerHealth === "MODEL_AVAILABLE" && providerName === "ollama" ? (
-              <>
-                <p className="mt-1 text-sm font-semibold text-ink">{providerStatus?.mode === "SELF_HOSTED" ? "The authenticated self-hosted model is installed and reachable." : "The local model is installed and reachable."}</p>
+                <p className="mt-1 text-sm font-semibold text-ink">Hami's local model is reachable.</p>
                 <p className="mt-1 text-sm leading-5 text-muted">
                   This checks the endpoint and configured model, not generation quality. A completed request is not proof that its claims are correct.
                 </p>
@@ -318,7 +311,7 @@ function ForgeKnowledgeChat({ apiKey }: { apiKey: string }) {
               </div>
               {turn.providerObservation?.inference_invoked ? (
                 <p className="mt-2 text-xs leading-5 text-muted">
-                  Observed model call: {turn.providerObservation.mode === "SELF_HOSTED" ? "self-hosted Ollama" : "local Ollama"}
+                  Observed model call: {turn.providerObservation.mode === "LOCAL" ? "Hami local model" : "Hami model"}
                   {turn.providerObservation.model ? " · " + turn.providerObservation.model : ""}
                   {typeof turn.providerObservation.total_duration_ms === "number" ? " · " + Math.round(turn.providerObservation.total_duration_ms) + " ms" : ""}
                   {typeof turn.providerObservation.prompt_eval_tokens === "number" && typeof turn.providerObservation.completion_eval_tokens === "number" ? " · " + (turn.providerObservation.prompt_eval_tokens + turn.providerObservation.completion_eval_tokens) + " tokens" : ""}

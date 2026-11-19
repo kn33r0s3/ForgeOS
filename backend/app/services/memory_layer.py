@@ -12,7 +12,7 @@ changes (form_belief_from_pattern, adjust_confidence, and
 run_pattern_detection all call sync_* below).
 
 This is what gets searched before an AI provider — including a local
-Ollama model — answers a question, so Forge grounds its answers in its
+Hami model — answers a question, so Forge grounds its answers in its
 own accumulated, evidence-linked reasoning instead of the model's
 general training data. See ai_engine.answer_question().
 
@@ -48,8 +48,7 @@ def _upsert(
 ) -> models.Knowledge:
     """Create or update the Knowledge row for a given (source_type,
     source_id). Re-embeds only when the content actually changed, since
-    embedding a hash vector is cheap but an Ollama embedding call isn't
-    free in time even if it's free in money."""
+    feature hashing is cheap and requires no external embedding service."""
     existing = (
         db.query(models.Knowledge)
         .filter(models.Knowledge.source_type == source_type, models.Knowledge.source_id == source_id)

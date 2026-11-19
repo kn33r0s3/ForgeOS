@@ -1,7 +1,5 @@
-# OPTIONAL. Only install this if you're intentionally using
-# AI_PROVIDER=openai for paid acceleration. Forge does not need this
-# package to run — the free "mock" and "ollama" providers use zero
-# extra dependencies (Ollama is talked to over stdlib urllib, no SDK).
-#
-#   pip install -r requirements-optional.txt
-openai==1.51.0
+# OPTIONAL AI packages — currently none.
+# hami-model (the owner's own model) needs no extra dependency: it is
+# reached over stdlib urllib through the guarded gateway. The OpenAI
+# package was removed with the OpenAI provider; do not re-add it.
+# The "mock" provider also uses zero extra dependencies.

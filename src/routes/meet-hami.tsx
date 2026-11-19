@@ -190,10 +190,10 @@ function MeetHamiPage() {
         </div>
 
         <p className="mt-8 text-xs leading-5 text-muted">
-          Checkpoint build: Hami answers from its doctrine and the owner&apos;s
-          Mac model (gpt-oss:20b). It does not yet read Hami&apos;s evidence
-          database — that comes next. It cannot contact anyone, spend money,
-          or change records; it only talks here.
+          Hami uses its own local model serving path. If the model is
+          unavailable, Hami reports unavailable; it does not switch to another
+          AI. It does not yet read Hami&apos;s evidence database or execute
+          actions; actions remain with the owner&apos;s authorized tools.
         </p>
       </Container>
     </main>

@@ -1,13 +1,978 @@
-## 2026-11-19 12:46 NPT — CI failure repaired locally; exact-head run pending
+## 2026-11-19 19:12 +0545 — isolated two-second samples preserve clean NACK behavior
+
+- **Existing seam and scope:** repeated the 1,000-viewer local baseline twice
+  and sampled one process per run for two seconds: SFU PID 88511, then harness
+  PID 7833. No ForgeOS source changed.
+- **Exact sampling commands:**
+  `sample 88511 2 1 -fullPaths -file /tmp/hami-cost-interframe-profile-sfuonly-1000-sfu.sample`
+  and
+  `sample 7833 2 1 -fullPaths -file /tmp/hami-cost-interframe-profile-harnessonly-1000-harness.sample`.
+- **Outcome:** both runs were `TEST`, local-only, 1,000 publishers connected,
+  all 1,000 viewers received RTP, cleanup verified, and `measurement_pass=false`.
+  Each had exactly 1,000 NACKs received and 1,000 retransmitted, zero RTP queue
+  drops, and zero write errors. The isolated two-second captures did not
+  reproduce the 67,033/1,033 NACK imbalance from the earlier simultaneous
+  ten-second sampling; the cause remains unproven.
+- **Observed stacks (not CPU percentages):** the SFU sample includes
+  `nackWorker -> forwardQueuedRTP -> writeRTP -> TrackLocalStaticRTP.WriteRTP`
+  and ICE UDP reads. The harness sample includes
+  `sendPublisherVideo -> TrackLocalSample.WriteSample -> H264Payloader.Payload`
+  and RTP/ICE receive work. These short native samples localize active paths
+  but do not rank their total CPU contribution.
+- **Next step:** use a bounded Go-native CPU profile in the existing M7-H
+  diagnostic path, and reject any profile run that disturbs the 1,000/1,000
+  NACK ratio or connected-viewer state. Do not select or claim a code
+  optimization from the current stack samples alone.
+- **Raw evidence:** `/tmp/hami-cost-interframe-profile-sfuonly-1000.{log,stdout}`,
+  `/tmp/hami-cost-interframe-profile-sfuonly-1000-sfu.sample`,
+  `/tmp/hami-cost-interframe-profile-harnessonly-1000.{log,stdout}`, and
+  `/tmp/hami-cost-interframe-profile-harnessonly-1000-harness.sample`.
+  No commit, push, deployment, Cloud, or paid service.
+- **Quick CI/live/issue check (19:12 +0545):** `gh issue list --state open`
+  returned `[]`. On exact `main` HEAD
+  `c8493cd712ededfa29801c00eab6a7ce67448524`, ForgeOS CI and secrets scan
+  succeeded; independent deploy verification failed (run 44476847027).
+  `hami-sigma.vercel.app/api/health` and `kn33r0s3.vercel.app/` returned HTTP
+  200; `haminp.vercel.app/` returned HTTP 402. No issue or deployment was
+  changed; production is not verified.
+- **Local gates:** `npm test` failed at `src/lib/features.test.ts:227` because
+  its line-258 ForgeBot assertion expects copy not present in the current dirty
+  `src/components/forge/forge-console.tsx`. This is unrelated to the M7-H
+  measurement and was left untouched. `npm run gates` was not run: its
+  `scripts/gates.mjs` invokes `gates-report.mjs`, which rewrites the already
+  dirty `docs/GATES.md`; preserving that user work takes priority.
+
+## 2026-11-19 19:00 +0545 — M7-H cost "interframe-baseline" trio independently verified by Muse from raw logs; agrees with the 18:57 same-input A/B, bounds the interframe-1,000 signal
+
+- **What:** `/tmp/hami-cost-interframe-baseline-{250,500,1000}.log` (185,787 / 292,623 / 503,633 B), binary `/tmp/hami-media-cost-interframe-baseline` (18,376,946 B, built 18:51:30 +0545). Finished 18:52:37 (250, harness PID 7484, SFU PID 7485), 18:53:45 (500, harness PID 10518, SFU PID 10519), 18:54:53 (1,000, harness PID 13532, SFU PID 13533). The 18:57 entry below (written while this run worked) already records the A/B: "dissolve" = 200 ms RTP queue / keyframe-recovery path; baseline = same source with only `readH264Frames` changed to accept the normal H.264 fixture (`/tmp/hami-cost-interframe-20261119.h264`); the same-input comparison supersedes the earlier allkey comparison for cost attribution.
+- **Independent verification by Muse (first-to-last runtime-sample method; re-validated this run against the allkey-500 log on disk — reproduces 0.151303 / 2,868,277 / 74.2740 / 146,999 exactly):** CPU 0.174566 / 0.169486 / 0.144909; heap 4,438,494 / 5,344,835 / 3,848,833*; goroutines 74.5480 / 74.2740 / 74.1370; frames 73,501 / 146,999 / 293,992. Fixed-60s heap (SFU 60000 + harness 59000) is 4,391,967 / 5,261,026 / 5,182,223 — identical to the 18:57 A/B baseline column, confirming both computations. CPU differs from the A/B's 0.177593 / 0.171697 / 0.144198 only by the normalization (nominal 60 s here vs 58.5 s there) plus last-sample choice — same ordering, same conclusion.
+- **Caveat (heap):** the 1,000-rung first-to-last heap (3,848,833) is depressed by a teardown GC — SFU heap 4,550 MB at elapsedMs=60000 → 4,603 at 61000 → 4,115 at 62000 (gcCycles=1) → 3,216 at 63000. Use the fixed-60s 5,182,223 for comparison, as the A/B does.
+- **Cleanliness — baseline-1,000 does NOT reproduce the interframe-1,000 signal:** NACK received = retransmitted at all rungs (250/250, 500/500, 1,000/1,000), PLI/FIR all forwarded, `rtpQueueDrops=0`, `rtpWriteErrors=0`, `routerErrors=0`; 0 never-connected, 0 died, all survived (500 / 1,000 / 2,000); SFU exited `err=<nil>` all three. The interframe-1,000 over-retransmit (1,003 recv / 1,138 retrans) and 12 drops — recorded in the A/B as 12 drops / 138 intentional sheds / 3 keyframe recoveries on the candidate — are specific to the dissolve candidate at 1,000, not a general 1,000-rung effect. Socket counters disabled in all three logs.
+- **Work after this entry:** the 19:03 process-partition screen and the
+  19:07-19:12 profiling checks are recorded below; the next staged action is
+  now a bounded Go-native CPU profile, not another independent-instance
+  sharding run.
+- **Gateway status correction:** `/tmp/hami-gateway.log` remains frozen at
+  13,843 B with EADDRINUSE, but the 19:09 live-chat evidence for `hami-model`
+  contradicts the inference that the old gateway is still serving. Whether
+  and how it restarted remains unconfirmed; do not report the gateway as
+  blocked based only on the stale log.
+- **Queue note:** the 18:53 entry this run first read was replaced by the 18:57 A/B entry before this run could append — no 18:53 entry remains in the queue. Its interframe-trio numbers survive in the 18:57 A/B candidate column (different method) and in the per-run logs under `hidden_files/`.
+
+## 2026-11-19 19:07 +0545 — 1,000-viewer CPU sample captured; no dominant app hotspot established
+
+- **Existing seam and owner action:** profiled the existing local M7-H
+  1,000-viewer path using macOS `/usr/bin/sample`; no ForgeOS source was
+  changed. The owner still authorizes each run and profile capture.
+- **Exact run/profile commands:** ran the existing baseline binary with:
+
+  ```sh
+  cd /tmp/hami-media-interframe-baseline/services/hami-media && ulimit -n 65536 && M7H_TRACE_PC_STATE=0 /tmp/hami-media-cost-interframe-baseline -mode=m7h -duration=60s -video-file=/tmp/hami-cost-interframe-20261119.h264 -m7h-viewers=1000 > /tmp/hami-cost-interframe-profile-1000.stdout 2> /tmp/hami-cost-interframe-profile-1000.log
+  sample 34001 10 1 -fullPaths -file /tmp/hami-cost-interframe-profile-1000-sfu.sample
+  sample 34000 10 1 -fullPaths -file /tmp/hami-cost-interframe-profile-1000-harness.sample
+  ```
+
+  Harness PID 34000 and SFU PID 34001 were sampled for 10 seconds each.
+- **Observed run state:** `TEST`, local-only, 1,000 publisher peers connected,
+  all 1,000 viewers received RTP, cleanup verified, zero queue drops and write
+  errors; `measurement_pass=false`. Media duration was 61,016 ms and total
+  sent frames were 290,715, below the unprofiled runs, so this profiling run
+  is diagnostic and is not a cost comparator. Its feedback diagnosis was
+  anomalous: 67,033 NACKs received but only 1,033 retransmitted, unlike the
+  clean 1,000/1,000 runs. See the 19:09 cross-check and 19:12 isolated-sample
+  control; sampling overhead is a hypothesis, not a proven cause.
+- **Sample evidence:** SFU sampled stacks included
+  `nackWorker -> forwardQueuedRTP -> writeRTP ->
+  TrackLocalStaticRTP.WriteRTP` through Pion's SRTP/ICE write path and
+  `forwardTrack -> TrackRemote.ReadRTP`. Harness samples included
+  `sendPublisherVideo -> TrackLocalStaticSample.WriteSample/WriteRTP` and
+  `readPublisherFeedback`. Most sampled activity was runtime, wait, or
+  network-related; this 10-second macOS sample did not establish one dominant
+  application CPU hotspot.
+- **Next step:** add a bounded Go-native CPU profile through the existing M7-H
+  diagnostics seam (no new file or parallel subsystem), verify it with
+  `go tool pprof`, then profile one fixed 1,000-viewer run before choosing the
+  next code optimization. Existing source has heap/goroutine profiling but no
+  `pprof.StartCPUProfile` or CPU-profile flag; keep the NACK ratio at 1,000 /
+  1,000 and discard perturbed profiles.
+- **Raw evidence:** `/tmp/hami-cost-interframe-profile-1000.{log,stdout}`,
+  `/tmp/hami-cost-interframe-profile-1000-sfu.sample`, and
+  `/tmp/hami-cost-interframe-profile-1000-harness.sample`. No commit, push,
+  deployment, Cloud, or paid service.
+
+## 2026-11-19 19:03 +0545 — local multi-instance sharding screen did not lower CPU cost
+
+- **Existing seam and scope:** ran the existing M7-H binary as one local
+  1,000-viewer harness/SFU pair, then as two independent 500-viewer pairs and
+  four independent 250-viewer pairs. This is a process-partition screening
+  measurement, not a single M7-H proof routed across multiple SFUs; no source
+  or deployment code changed. Each run used the same no-dissolve baseline
+  binary, normal inter-frame fixture, 60-second duration, and local-only mode.
+- **Per-process samples:** CPU is the first-to-nearest-60s
+  `processCPUSeconds` delta, normalized by the sampled wall interval and total
+  viewer-minutes; HeapAlloc and goroutines are the corresponding end-window
+  samples. The SFU and harness processes are shown separately so the split
+  remains auditable.
+
+  | Layout / shard | Viewers | SFU CPU delta s | SFU HeapAlloc B | SFU goroutines | Harness CPU delta s | Harness HeapAlloc B | Harness goroutines |
+  | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+  | 1x1,000 | 1,000 | 76.545 | 4,212,244,312 | 38,067 | 71.150 | 679,677,472 | 36,070 |
+  | 2x500, shard 1 | 500 | 48.689 | 2,227,990,968 | 19,067 | 45.836 | 304,054,400 | 18,067 |
+  | 2x500, shard 2 | 500 | 48.590 | 2,321,504,344 | 19,067 | 46.008 | 348,363,200 | 17,802 |
+  | 4x250, shard 1 | 250 | 28.614 | 835,098,936 | 9,567 | 26.054 | 176,741,320 | 9,070 |
+  | 4x250, shard 2 | 250 | 26.023 | 1,099,090,040 | 9,566 | 25.699 | 222,616,752 | 9,068 |
+  | 4x250, shard 3 | 250 | 28.572 | 1,166,824,048 | 9,567 | 26.698 | 130,230,536 | 9,070 |
+  | 4x250, shard 4 | 250 | 29.234 | 895,717,520 | 9,566 | 27.130 | 143,360,728 | 9,068 |
+
+  | Layout | Aggregate CPU s / viewer-minute | Aggregate HeapAlloc B / viewer | Aggregate goroutines / viewer | Frames |
+  | --- | ---: | ---: | ---: | ---: |
+  | 1x1,000 control | 0.151482 | 4,891,922 | 74.137 | 298,983 |
+  | 2x500 | 0.192308 (+26.95% CPU) | 5,201,913 (+6.34% heap) | 74.003 | 299,045 |
+  | 4x250 | 0.223624 (+47.62% CPU) | 4,669,680 (-4.54% heap) | 74.542 | 299,000 |
+
+- **Outcome:** neither tested partition lowered CPU cost; 4x250 traded 4.54%
+  lower sampled heap for 47.62% more CPU, while 2x500 increased both CPU and
+  heap. All seven runs were `TEST`, local-only, cleanup-verified, with zero RTP
+  write errors or queue drops; `measurement_pass=false` remains a cost-run
+  result, not a capacity acceptance. Do not implement multi-instance
+  sharding as a cost optimization on this evidence.
+- **Architecture check / next experiment:** the existing `sfuProofConfig`
+  carries one `remoteSFU` client (`services/hami-media/main.go:2840`), and
+  M7-H creates one client per proof (`main.go:6078-6084`). The independent
+  process screen above therefore does not prove single-proof routing across
+  SFUs. Keep the one canonical proof path. The follow-up profiling results
+  are recorded in the 19:07-19:12 entries; short isolated samples preserve
+  clean NACK counts, while the long simultaneous capture was anomalous. Next,
+  add a bounded Go-native CPU profile to the existing diagnostic seam and use
+  only clean local `TEST` evidence before selecting another optimization.
+- **Raw evidence:** control
+  `/tmp/hami-cost-interframe-shard-single-1000.{log,stdout}`; two-shard
+  `/tmp/hami-cost-interframe-shard-2x500-{1,2}.{log,stdout}`; four-shard
+  `/tmp/hami-cost-interframe-shard-4x250-{1,2,3,4}.{log,stdout}`. No commit,
+  push, deployment, Cloud, or paid service.
+
+## 2026-11-19 19:09 +0545 — Sharding cross-check agrees with 19:03; profile-1000 landed with a NACK storm (verified by Muse from raw logs)
+
+- **Independent cross-check of the 19:03 sharding screen (this run, fixed-60s A/B method on all 7 logs):** single-1000 CPU 0.150351 / heap 4,825,100 / gor 74.1370 / frames 293,991; 2x500 aggregate CPU 0.191065 (+27.1%) / heap 5,226,060 (+8.3%) / gor 74.2740 / frames 299,023; 4x250 aggregate CPU 0.220854 (+46.9%) / heap 4,688,171 (-2.8%) / gor 74.5420 / frames 294,000. Agrees with the 19:03 entry to within ~1.3% on every aggregate; same conclusion — sharding raises CPU per viewer, heap flat. Two method notes: (a) 2x500 goroutines read 74.2740 here vs 74.003 in the 19:03 entry — one shard's harness goroutines drop late (teardown); (b) frames here are log send-sample sums vs the 19:03 stdout `video_frames_sent` (298,983 / 299,045 / 299,000) — the log-sum misses ~5,000 frames on the single and 4x250 runs; neither changes the conclusion.
+- **Profile-1000 finished 19:07:33 +0545 (harness PID 34000, SFU PID 34001):** `/tmp/hami-cost-interframe-profile-1000.{log,stdout}` (524,189 / 1,805,952 B) + `/tmp/hami-cost-interframe-profile-1000-{sfu,harness}.sample` (1,718,060 / 1,535,886 B, written 19:07:00-19:07:01). Fixed-60s CPU 0.159821 (+6.3% vs the 1x1000 control — profiling overhead, expected direction); heap 4,288,196; gor 74.1370; frames 285,727 (log-sum, -2.8% vs control). Clean exit `err=<nil>`; 0 never-connected, 0 died, 2,000 survived; `rtpQueueDrops=0`, `rtpWriteErrors=0`, `routerErrors=0`.
+- **NACK anomaly in the profile run — read the sample output as a perturbed regime, not the clean 1,000-viewer regime:** `totalNACKReceived=67,033` vs `totalNACKRetransmitted=1,033` (forwarded 67,009, duplicates skipped 25, enqueued 67,033, dropped 0). Every clean run reads 1,000/1,000. The profile run's viewers NACK-stormed ~67x while the SFU retransmitted ~1x. Cause NOT established from the log (profiling overhead delaying frames is the leading hypothesis, not a verdict). A hot spot measured under a NACK storm may not be the hot spot of the clean run. Go-native `pprof top` was not run: these macOS sample files are not Go pprof profiles, and no `pprof.StartCPUProfile` capture exists yet.
+- **Gateway log frozen, but the "restart has not happened" inference is SUPERSEDED (correction, same run):** `/tmp/hami-gateway.log` is still 13,843 B (EADDRINUSE only) — that fact stands — but the 19:07 flush update's live proof chain (three POSTs to the live chat returning model "hami-model", which the old gateway code cannot emit) contradicts the inference that the restart never happened. Mechanism/deploy route still NOT confirmed from logs. Do not repeat "gateway still blocked" as a verdict; the frozen log's silence no longer proves it.
+- **Live site:** `/api/health` cached copy 18:34 NPT still returns the standing degraded payload (`{"status":"degraded","ready":false,"ok":false,"version":"2.3.0","commit":"c8493cd7","db":"not_configured"}`) — no new outage signal; not a fresh live check.
+
+## 2026-11-19 18:57 +0545 — M7-H queue-dissolve same-input A/B completed
+
+- **Existing seam and owner action:** compared the existing 200 ms RTP queue/keyframe-recovery path against the pre-dissolve M7-H source. The owner still must start each local measurement; this change removes no run authorization or external permission dependency.
+- **Fair baseline:** the isolated baseline copy in `/tmp/hami-media-interframe-baseline/services/hami-media` changed only `readH264Frames` to preserve non-IDR slices, making it accept the same normal H.264 fixture while leaving queue-age and recovery behavior unchanged. Built with Go 1.27.4 darwin/arm64 using `cd /tmp/hami-media-interframe-baseline/services/hami-media && gofmt -w main.go && go build -o /tmp/hami-media-cost-interframe-baseline .` (exit 0). The candidate binary was `/tmp/hami-media-cost-dissolve`.
+- **Run command template (executed serially once each with N=250, 500, 1,000):**
+  `cd /tmp/hami-media-interframe-baseline/services/hami-media && ulimit -n 65536 && M7H_TRACE_PC_STATE=0 /tmp/hami-media-cost-interframe-baseline -mode=m7h -duration=60s -video-file=/tmp/hami-cost-interframe-20261119.h264 -m7h-viewers=<N> > /tmp/hami-cost-interframe-baseline-<N>.stdout 2> /tmp/hami-cost-interframe-baseline-<N>.log`
+  The candidate used the same flags and fixture with
+  `/tmp/hami-media-cost-dissolve` and output prefix
+  `/tmp/hami-cost-dissolve-interframe-<N>`. All six commands exited 0.
+- **Calculation:** used the nearest runtime samples at SFU elapsed 60,000 ms and harness elapsed 59,000 ms (59,001 ms at candidate 1,000); subtracted each role's first 1,000 ms process-CPU sample and normalized the combined delta by the 58.5-second average interval to viewer-minutes. HeapAlloc and goroutines sum the two role samples and divide by viewer count. This avoids comparing the normal inter-frame input against the all-keyframe-only baseline.
+
+  | Viewers | Build | CPU s / viewer-minute | HeapAlloc bytes / viewer | Goroutines / viewer | CPU vs baseline | Heap vs baseline |
+  | ---: | --- | ---: | ---: | ---: | ---: | ---: |
+  | 250 | No-dissolve baseline | 0.177593 | 4,391,967 | 74.548 | — | — |
+  | 250 | 200 ms dissolve | 0.188214 | 3,819,589 | 74.548 | +5.98% | -13.03% |
+  | 500 | No-dissolve baseline | 0.171697 | 5,261,026 | 74.274 | — | — |
+  | 500 | 200 ms dissolve | 0.177857 | 4,134,722 | 74.274 | +3.59% | -21.41% |
+  | 1,000 | No-dissolve baseline | 0.144198 | 5,182,223 | 74.137 | — | — |
+  | 1,000 | 200 ms dissolve | 0.148968 | 4,042,295 | 74.137 | +3.31% | -22.00% |
+
+- **Result and limitation:** the candidate lowers sampled HeapAlloc/viewer at all three rungs but raises CPU/viewer-minute at all three; goroutines are unchanged. This is a memory/CPU trade-off, not a proven aggregate cost reduction (there is no authorized CPU-vs-memory weighting). All runs are `TEST`, local-only, and `measurement_pass=false`; cleanup was verified with zero RTP write errors. Baseline queue drops were 0; candidate had 0/0/12 queue drops, 0/0/138 intentional sheds, and 0/0/3 keyframe recoveries at 250/500/1,000. The 1,000-run's drops and recovery are observed behavior, not proof that queue shedding caused the cost delta. The earlier comparison to all-keyframe input was not a fair same-input A/B and is superseded for cost attribution.
+- **Raw evidence:** baseline `/tmp/hami-cost-interframe-baseline-{250,500,1000}.{log,stdout}`; candidate `/tmp/hami-cost-dissolve-interframe-{250,500,1000}.{log,stdout}`; shared fixture `/tmp/hami-cost-interframe-20261119.h264`. No commit, push, deployment, Cloud, paid service, or production claim.
+- **Current status and next staged experiment:** retain the measured implementation as a memory-reduction/queue-recovery trade-off, not as a net cost win. The independent-instance sharding screen and its negative CPU result are recorded in the later 19:03 entry. Routine local runs remain owner-authorized; no unattended or external action is authorized.
+- **Quick live/GitHub check (18:57 +0545):** `gh issue list --state open --limit 100 --json number,title,state,updatedAt` returned `[]`. `https://hami-sigma.vercel.app/api/health` and `https://kn33r0s3.vercel.app/` returned HTTP 200; `https://haminp.vercel.app/` returned HTTP 402, so not all known sites are live/healthy. No issue was modified and no deployment was attempted.
+
+## 2026-11-19 18:47 +0545 — M7-H cost "dissolve" set: 500 + 1,000 verified by Muse from raw logs; interframe-250 running
+
+- **What:** `/tmp/hami-cost-dissolve-allkey-500.log` (1,278 lines, harness PID 53045, SFU PID 53046, finished 18:44:20) and `/tmp/hami-cost-dissolve-allkey-1000.log` (2,285 lines, harness PID 59077, SFU PID 59078, finished 18:45:40). Same binary `/tmp/hami-media-cost-dissolve` as the 250 run (name only; what "dissolve"/"allkey" change is still NOT stated in any log).
+- **Verified by Muse from the raw .log** (same first-to-last runtime-sample method as the 18:44 entry: CPU = harness + SFU processCPUSeconds delta; HeapAlloc/goroutines = combined at last sample; frames summed from publisher send samples):
+
+  | Viewers | CPU s / viewer-minute | HeapAlloc bytes / viewer | Goroutines / viewer | Frames |
+  | --- | ---: | ---: | ---: | ---: |
+  | 500 | 0.151303 | 2,868,277 | 74.2740 | 146,999 |
+  | 1,000 | 0.130264 | 3,194,236 | 74.1370 | 293,996 |
+
+- **Cleanliness:** NACK received = retransmitted at both rungs (500/500, 1,000/1,000), PLI/FIR all forwarded, duplicates/capped/dropped 0, `rtpQueueDrops=0`, `rtpWriteErrors=0`, `routerErrors=0`; attribution: 0 never-connected, 0 died, 1,000/2,000 survived, all connected at wait-end; SFU exited `err=<nil>` both. Socket aggregates all zero — counters disabled (resolved 18:26: source default OFF; protected list stale). Neither log emits `cleanup_verified`/`measurement_pass` lines — do not claim them.
+- **Reading:** CPU reads ABOVE the viewer-api set at both rungs (500: 0.151 vs 0.145; 1,000: 0.130 vs 0.119) — no CPU improvement established from "dissolve" at 500/1,000 either. Heap/viewer dips at 500 (2.87M vs 3.36M viewer-api) but not at 1,000 (3.19M vs 3.34M), and the 250 rung read 6% ABOVE — no consistent heap improvement; treat as run-to-run variation, not a dissolve effect. Goroutines identical to viewer-api at both rungs; frames identical. No diagnosis change. The allkey trio (250/500/1,000) is now fully verified: dissolve changes nothing measurable vs viewer-api.
+- **In progress:** `/tmp/hami-cost-dissolve-interframe-250.log` started 18:45:54 +0545 (250 publishers, runtime samples live through 18:46:07+ at last read) — a new "interframe" variant; no result yet. Next self-watch run verifies it the same way when it lands.
+- **Gateway still blocked:** unchanged since 18:44 (old gateway PID 5050 still holds 11435; `/tmp/hami-gateway.log` 13,843 B, EADDRINUSE only). The 025c gateway restart has not happened.
+
+## 2026-11-19 18:44 +0545 — M7-H cost "dissolve" set: 250 run verified by Muse from raw logs; 500 running
+
+- **What:** new binary `/tmp/hami-media-cost-dissolve` (18,394,338 B, built 18:41:09 +0545), outputs `/tmp/hami-cost-dissolve-allkey-250.{log,stdout}`. 250-publisher/250-viewer 60 s TEST run, harness PID 38059, SFU PID 38060, finished 18:42:29. **What "dissolve" changes is NOT stated in the log** — the binary name differs from the staged forwardTrack order (`/tmp/hami-media-cost-forwardtrack`, `/tmp/next-order-m7h-forwardtrack-slice.md`), which does not use the word "dissolve". Do NOT claim this run is the forwardTrack slice fix. "allkey" likewise unexplained in the log.
+- **Verified by Muse from the raw .log** (same first-to-last runtime-sample method as the 18:07/18:21 entries): CPU **0.151** s/viewer-min (SFU Δ19.652 + harness Δ18.006 over the run); HeapAlloc **3,439,633** B/viewer at last sample (SFU 701,663,384 + harness 158,244,808); goroutines **74.5480**/viewer (9,567 + 9,070) — identical to 18:07/18:21; frames **74,751** sent (1,250/s = 5 fps; one more full second of samples than the 73,501 in the earlier 250 runs, same rate).
+- **Cleanliness:** NACK received 250 = retransmitted 250, PLI/FIR forwarded 250/250, duplicates skipped 0, capped 0, dropped 0, `rtpQueueDrops=0`, `rtpWriteErrors=0`, `routerErrors=0`; attribution: 0 never-connected, 0 died, 500 survived, 500 connected at wait-end; all viewers everConnected, firstFailed=never; SFU exited `err=<nil>`. Socket aggregates all zero — counters disabled (the 18:26 finding stands; protected list still says ON).
+- **Reading:** CPU and goroutines match the 18:07/18:21 250 rungs within noise (0.151 vs 0.151–0.155; 74.5480 exact) — no CPU improvement established at 250 from this variant. Heap reads ~6% above the 18:21 250 rung (3.44M vs 3.24M), inside the ~5% repeat noise seen at 500; SFU heap climbs ~linearly all run (114 MB → 702 MB) with almost no GC cycles — same shape as the earlier cost runs, not a new leak signal on its own. No diagnosis change.
+- **Set in progress:** `/tmp/hami-cost-dissolve-allkey-500.log` started 18:43:17 +0545 (23,488 B at 18:43:35); 1,000 presumably to follow. Next self-watch run verifies the 500/1,000 numbers the same way.
+- **Gateway still blocked:** `/tmp/hami-gateway.log` unchanged (13,843 B, EADDRINUSE only); old gateway PID 5050 still holds 11435. The 025c gateway restart has not happened; the dissolve cost set is Copilot's current work.
+
+## 2026-11-19 18:39 +0545 — MLX server (11436) answers /v1/models; gateway restart still blocked
+
+- **New file /tmp/hami-models.json (250 B, written 18:38:27 +0545):** verbatim `{"object":"list","data":[{"id":"/Users/nirojpaudyal/Downloads/New Folder With Items/hami-nepali-sft/hf-cache/hub/models--mlx-community--Qwen3-4B-4bit/snapshots/4dcb3d101c2a062e5c1d4bb173588c54ea6c4d25","object":"model","created":1795092807}]}` — the MLX server's /v1/models response, saved to disk. Proves something queried the model server on 11436 and it answered at ~18:38. Who curled it is NOT in the file (no order/script names it). The id names the base Qwen3-4B-4bit snapshot path only; it does NOT prove the clean adapter is loaded.
+- **Gateway still NOT restarted:** /tmp/hami-gateway.log unchanged (13,843 B, only the EADDRINUSE traceback) — the new gateway (MLX /v1/chat/completions + /v1/models on 11436) has not bound 11435; the old gateway (PID 5050, pre-edit code) still holds the port.
+- **Live site 18:39 +0545:** /api/health still `{"status":"degraded","ready":false,"ok":false,"version":"2.3.0","commit":"c8493cd7","db":"not_configured"}` — byte-identical to 17:56/18:11/18:26/18:34. Standing state, not a new outage.
+- **Next:** kill/restart the old gateway so the new one binds 11435, then re-test live chat (last error 502 at 18:35); confirm the Vercel env var points at the new tunnel URL.
+
+## 2026-11-19 18:35 +0545 — Live chat re-test: error CHANGED from 429 to 502; still no model reply
+
+- **Re-test (hami-sigma.vercel.app, one test question "who are you — hami llm, ollama, or qwen?", browser task ran 18:34–18:35):** the chat answered with an error again, but a different one — verbatim `hami: "Hami AI answered with HTTP 502."` No model name anywhere. The 429 from 18:31 did NOT persist; the failure moved. Gate line shown above the reply: "gate: OPEN — evidence: hami engine · authorization: public chat". Only this one question was sent.
+- **Reading:** 502 is a bad-gateway failure somewhere on the Vercel → tunnel → gateway → Ollama path, not a rate limit. Cause NOT established: the new-tunnel log (/tmp/hami-tunnel-new.log) ends at registration 12:39:07Z with no disconnect lines after it, so the tunnel shows no failure in its own log — but the log has also had no new entries since registration, so it cannot prove the tunnel is still up either. Whether Vercel HAMI_CHAT_OLLAMA_HOST points at the new tunnel URL is still NOT verified from Vercel. The old gateway (PID 5050, pre-edit code) still holds 11435 and the gateway log has no request-level logging, so the 429/502 source cannot be read from it. Next: re-test after a longer pause; if 502 persists, check the gateway and Ollama are actually answering locally (127.0.0.1:11435 and Ollama) and confirm the Vercel env var value.
+
+## 2026-11-19 18:31 +0545 — Tunnel rotated 18:24, new tunnel verified serving; live chat answers HTTP 429, not a model reply
+
+- **Tunnel rotation (verified from raw logs):** old quick tunnel `https://unlike-genome-tracks-striking.trycloudflare.com` (running since 17 Nov 08:28 UTC, served real /api/chat requests) got SIGTERM and shut down gracefully 12:38:56Z (18:23:56 NPT). New quick tunnel started 12:39:01Z: `https://tours-let-appliance-bulk.trycloudflare.com` → `http://127.0.0.1:11435`, registered 12:39:07Z, all pre-checks PASS. Who/what restarted it is NOT in the logs — no order file or script names it.
+- **New tunnel verified serving the gateway:** browser check 18:28–18:30 on `https://tours-let-appliance-bulk.trycloudflare.com/api/hami-llm/status` returned body exactly `{"error":"unauthorized"}` — the gateway itself answers unauthenticated (expected: the endpoint needs X-Hami-Key). Numeric HTTP status not visible in the browser view, so no code claimed. First load showed Cloudflare "Your request was blocked."; a fresh browser route cleared it.
+- **Live chat check 18:31 +0545 (hami-sigma.vercel.app, one test question "who are you — hami llm, ollama, or qwen?"):** the chat answered, but with an error, not a model reply — widget showed "… hami is thinking (via the hami engine)", then `hami: "Hami AI answered with HTTP 429."` No model name anywhere. At 16:02 the same question got a real (lying) reply from gpt-oss:20b, so the chat stopped answering between 16:02 and 18:31.
+- **Reading:** the 429 is NOT a dead-tunnel failure — the request reached a live backend that answered 429 (rate-limited / too many requests). Whether the Vercel HAMI_CHAT_OLLAMA_HOST env var now points at the new tunnel URL is NOT verified from Vercel; the 429 proves the path reaches something live, but not which URL it used. Cause of the 429 not established (gateway/Ollama rate limit, Vercel-side limit, or trycloudflare limit — one observation only, no retry run). Next: re-test the chat after a pause; if 429 persists, check the gateway log for the 429 source and confirm the Vercel env var value.
+
+## 2026-11-19 18:26 +0545 — Protected constants verified in latest main.go snapshot; socket-counter flag RESOLVED
+
+- **Snapshot:** `services/hami-media/main.go`, 8,101 lines, 271,742 B, uploaded from the Mac 18:24 +0545.
+- **mux ENABLED:** `routerUDPMuxMode = "enabled"` (line 80), linker-overridable, validated at startup. OK.
+- **Socket counters — FLAG RESOLVED, protected list is stale:** source default is DISABLED — `routerSocketWriteMode = "disabled"` (line 83), `clientSocketReadMode = "disabled"` (line 86), plain package vars, no env-var override in main.go, validated to "disabled"|"enabled" at startup. A default `go build` therefore runs with counters OFF, exactly as the 18:07/18:21 cost logs show. The cost binaries did NOT deviate; the watch's protected list ("both socket counters ON") does not match the source default. Enabling needs `-ldflags "-X main.routerSocketWriteMode=enabled -X main.clientSocketReadMode=enabled"` or a source change. Until then the `whole-run socket aggregates` lines stay empty — they are NOT traffic evidence.
+- **NACK queue fix (512/5/512):** `sfuNACKHistoryPackets = 512` (line 47), `nackMaxQueueAge = 5 * time.Second` (line 61), `nackQueueSize = 512` (line 60), `maxSequencesPerNACK = 512` (line 57). OK.
+- **RTCP chunking (253):** `maxNACKPairsPerRTCPPacket = math.MaxUint8 - 2` = 253 (line 59). OK.
+- **60 s per-pair timeout:** `peerPairNegotiationTimeout = 60 * time.Second` (line 62). OK.
+- **RTP queue:** `sfuRTPQueueSize = 64` (line 61). **5 fps:** M7-H acceptance 5 fps, explicit 200 ms pacing (lines 5828-5830). OK.
+- **Staged forwardTrack order premise confirmed:** `forwardTrack` (line 4985) still allocates a fresh subscriber slice per packet (`make([]*sfuSubscription, 0, len(source.subscribers))` + copy, ~5013-5017); the 17:54 payload-copy fix is present in `enqueueRTP` (line 5101): `packetCopy.Header = packet.Header.Clone()`, `packetCopy.Raw = nil` (lines 5116-5118). No forwardTrack binary/log in /tmp yet — order staged, not yet run; feed owned by the Copilot watch.
+- **SFT note (verified from raw file):** `/tmp/ksft-eval-run.out` (13:11 +0545) shows the clean-adapter eval script FAILED with exit 13 — it copied `0002500_adapters.safetensors` but MLX `load` wanted `adapters.safetensors`. The 94-vs-96 result recorded in MEMORY came from the later fixed re-run (the correctly named `adapters.safetensors`, 29,384,266 B, exists). No new SFT result since.
+- **Live site 18:26 +0545:** `https://hami-sigma.vercel.app/api/health` still `{"status":"degraded","ready":false,"db":"not_configured"}`, version 2.3.0, commit c8493cd7 — byte-identical to the 17:56 and 18:11 checks. Standing state, NOT a new outage. (Page copy crawled 12:15 UTC.)
+
+## 2026-11-19 18:21 +0545 — M7-H cost-viewer-api set (250/500/1,000), verified by Muse from raw logs
+
+- **What:** three fresh 60 s local TEST runs with the `hami-media-cost-viewer-api` binary, outputs `/tmp/hami-cost-viewer-api-{250,500,1000}.log` (the matching `.stdout` files are empty — all output went to `.log`). Finished 18:18:43 (250), 18:20:01 (500), 18:21:19 (1,000) +0545. Which binary was run is NOT stated in the logs — `/tmp/hami-media-cost-viewer-api` was built 12:32:31Z, just before the 250 run started, consistent but not stated; same caveat as the 18:07 set.
+- **Verified by Muse from the raw .log files** (same first-to-last runtime-sample method as the 18:07/18:11 entries: CPU = harness + SFU processCPUSeconds delta; HeapAlloc/goroutines = combined at last sample; frames summed from publisher send samples):
+
+  | Viewers | CPU s / viewer-minute | HeapAlloc bytes / viewer | Goroutines / viewer | Frames |
+  | --- | ---: | ---: | ---: | ---: |
+  | 250 | 0.150859 | 3,238,161.0 | 74.5480 | 73,501 |
+  | 500 | 0.144688 | 3,363,953.4 | 74.2740 | 147,000 |
+  | 1,000 | 0.118679 | 3,336,470.6 | 74.1370 | 293,993 |
+
+- **Cleanliness:** NACK received = retransmitted at every rung (250/250, 500/500, 1,000/1,000), PLI/FIR all forwarded, `rtpQueueDrops=0`, `rtpWriteErrors=0`, `routerErrors=0`; attribution lifetime: 0 never-connected, 0 died, all survived (500/1,000/2,000 conns), 2,000 connected at wait-end on the 1,000 run; SFU exited `err=<nil>` on all three. These logs emit NO `cleanup_verified` / `measurement_pass` lines (binary variant difference) — do not claim them.
+- **FLAG — socket counters DISABLED, standing state, contradicts the protected list:** all three logs open with `router socket write counter mode: disabled` + `client socket read counter mode: disabled` — and the 18:07 snapshot-500 log shows the same. So the cost binaries have run with counters OFF since at least 18:03; this is NOT a new change by this run. But the watch's protected-settings list says both socket counters ON. Consequence: the `whole-run socket aggregates` lines are empty (`routerSockets=0`, all write/read counts 0) — they are NOT traffic evidence. Reconcile: either the protected list is stale on this point, or the cost binaries deviate. Do not use the aggregates as zeros until this is settled.
+- **Reading:** confirms the 18:07 set within noise on CPU and heap at all three rungs; goroutines identical to 18:07 at every rung; frames identical at 250/500, ~1.7% lower at 1,000 (293,993 vs 298,987 — first seconds partial). No diagnosis change. Next step remains the `forwardTrack` per-packet subscriber-slice allocation removal (order staged at `/tmp/next-order-m7h-forwardtrack-slice.md`; Copilot's cost-viewer turn ended 18:21:19, feed owned by the Copilot watch).
+
+## 2026-11-19 18:11 +0545 — M7-H cost snapshot 500-viewer REPEAT, verified by Muse from raw logs
+
+- **What:** repeat of the 500 rung, outputs `/tmp/hami-cost-snapshot-500-repeat.{log,stdout}`, finished 18:09:42 +0545. Which binary was snapshotted is NOT stated in the logs — same caveat as the 18:07 set.
+- **Verified by Muse from the raw files** (same first-to-last runtime-sample method as the 18:07 entry: CPU = harness + SFU processCPUSeconds delta; HeapAlloc/goroutines = combined at last sample; frames summed from publisher send samples): CPU **0.145748** s/viewer-min (vs 0.148646 first 500 run; vs 0.109602 baseline / ~0.111 optimized at 17:54 — still above both, run-to-run noise, no CPU improvement established); HeapAlloc **3,512,212.5** B/viewer (vs 3,335,223.7 first run, ~5% higher); goroutines **74.2740**/viewer (identical to the first 500 run — same harness shape); frames **147,000** (identical to the first 500 run).
+- **Cleanliness:** all 1,000 conns survived (500 viewers + 500 publishers), 0 never-connected, 0 died, 1,000 connected at wait-end; NACK received 500 = retransmitted 500, zero drops; RTP queue drops 0, write errors 0; `cleanup_verified=true`; `measurement_pass=false` (cost run, not M7-H acceptance); SFU HTTP serve closed normally (`err=http: Server closed`).
+- **Reading:** the repeat confirms the 18:07 500 rung within noise on CPU and exactly on goroutines and frames; heap reads ~5% higher. No diagnosis change. Next step remains the `forwardTrack` per-packet subscriber-slice allocation removal (order staged at `/tmp/next-order-m7h-forwardtrack-slice.md`).
+- **Live site check 18:11 +0545:** `https://hami-sigma.vercel.app/api/health` still `{"status":"degraded","ready":false,"db":"not_configured"}`, version 2.3.0, commit c8493cd7 — byte-identical payload to the 17:56 check. Standing state, NOT a new outage.
+
+## 2026-11-19 18:07 +0545 — M7-H cost snapshot re-run (250/500/1,000), verified by Muse from raw logs
+
+- **What:** after the 17:54 baseline/optimized A/B, three fresh 60 s local TEST runs, outputs `/tmp/hami-cost-snapshot-{250,500,1000}.{log,stdout}` (runs finished 18:02, 18:04, 18:05 +0545). Which binary was snapshotted is NOT stated in the logs — do not assume it is the optimized build.
+- **Verified by Muse from the raw .log/.stdout files** (CPU = first-to-last runtime-sample processCPUSeconds delta, harness + SFU; HeapAlloc/goroutines = combined harness + SFU at the last sample; frames from the evidence JSON / send samples):
+
+  | Viewers | CPU s / viewer-minute | HeapAlloc bytes / viewer | Goroutines / viewer | Frames |
+  | --- | ---: | ---: | ---: | ---: |
+  | 250 | 0.154948 | 3,242,537.9 | 74.5480 | 73,501 |
+  | 500 | 0.148646 | 3,335,223.7 | 74.2740 | 147,000 |
+  | 1,000 | 0.118937 | 3,190,272.4 | 74.1370 | 298,987 |
+
+- **Cleanliness:** all three runs connected every publisher/viewer, cleanup verified, zero RTP queue drops, zero write errors, `measurement_pass=false` (cost runs, not M7-H acceptance). Router feedback diagnosis: NACK received = retransmitted at every rung (250/250, 500/500, 1,000/1,000), zero drops; 1,000-run SFU exited `err=<nil>`.
+- **Reading:** goroutines/viewer match the 17:54 table exactly at all three rungs (74.5480 / 74.2740 / 74.1370) — same harness shape. Heap/viewer sits inside the baseline↔optimized band at every rung. CPU reads higher than both earlier builds at 250/500 (0.155 vs 0.118 baseline / 0.102 optimized; 0.149 vs 0.110 / 0.111) and between them at 1,000 — run-to-run noise, no CPU improvement established from this set. Method note: CPU here is first-to-last sample delta; the 17:54 table sums per-second windows, so compare bands, not last digits.
+
+## 2026-11-19 17:54 +0545 — M7-H payload-copy baseline and A/B measured
+
+- **Existing seam/history:** continued the local M7-H split-process harness
+  and its runtime probe in `services/hami-media/main.go`; the proof's
+  3,000-pair rung was hard-coded, so the existing path could not measure the
+  requested 250/500/1,000 viewer points. Added `-m7h-viewers` (one publisher
+  and one viewer per pair, bounded to 1–3,000) and sampled `HeapAlloc` in the
+  existing per-second probe. Then changed only `sfuSubscription.enqueueRTP`:
+  shallow-copy each packet, deep-copy the mutable RTP header via
+  `Header.Clone()`, share the payload read-only, and clear deprecated `Raw`.
+  No forwarding behavior or architecture changed.
+- **Owner dependency:** the owner still starts each local run. The new flag
+  removes the need to edit source for each scale rung; it does not automate
+  run authorization or any real-world transaction. Next remove the
+  per-packet subscriber-slice allocation in `forwardTrack`, updating the
+  immutable subscriber snapshot only on subscribe/unsubscribe.
+- **CPU measurement correction:** the Go runtime CPU metric emitted impossible
+  samples, including `cpuCores=75.152` on the first diagnostic run, so those
+  values were discarded and that run was repeated. CPU now uses the existing
+  process's OS user+system time from `syscall.Getrusage(RUSAGE_SELF)`.
+  CPU-seconds/viewer-minute below sums harness + SFU CPU deltas over
+  timestamped, approximately 1-second sample windows and normalizes to one
+  viewer-minute. Heap is combined harness + SFU `runtime.MemStats.HeapAlloc`
+  at the nearest end sample (not forced-GC/live-only); goroutines are the
+  combined count at that sample.
+- **Baseline conditions:** `TEST`, local-only, 60-second M7-H media duration,
+  default router transport settings, `/tmp/test-video.h264`, one viewer per
+  publisher, 5 fps. No Cloud, Docker, paid service, production claim,
+  commit, or push. Each result had connected publisher peers, verified
+  cleanup, zero RTP queue drops and write errors. `measurement_pass=false`
+  is retained as reported; these lower scale rungs are cost measurements,
+  not M7-H acceptance.
+- **Run command template:** `ulimit -n 65536 && M7H_TRACE_PC_STATE=0
+  /tmp/hami-media-cost-baseline -mode=m7h -duration=60s
+  -video-file=/tmp/test-video.h264 -m7h-viewers=<N> >
+  /tmp/hami-cost-baseline-<N>.stdout 2>
+  /tmp/hami-cost-baseline-<N>.log`.
+  Built with Go 1.27.4 darwin/arm64 using
+  `cd services/hami-media && go build -o /tmp/hami-media-cost-baseline .`.
+- **Results (raw logs/stdout in `/tmp/hami-cost-baseline-{250,500,1000}.{log,stdout}`):**
+
+  | Run | Viewers / publishers | CPU s / viewer-minute | HeapAlloc bytes / viewer | Goroutines / viewer | Frames | Cleanup |
+  | --- | ---: | ---: | ---: | ---: | ---: | --- |
+  | 1 | 250 / 250 | 0.118273 | 3,387,585.7 (3.2307 MiB) | 74.5360 | 74,750 | verified |
+  | 2 | 500 / 500 | 0.109602 | 3,302,907.2 (3.1499 MiB) | 74.2220 | 149,469 | verified |
+  | 3 | 1,000 / 1,000 | 0.131543 | 3,552,836.4 (3.3882 MiB) | 74.1370 | 298,996 | verified |
+
+- **Pion ownership evidence:** installed `github.com/pion/webrtc/v4 v4.2.26`
+  `TrackRemote.ReadRTP` allocates a fresh receive buffer per packet, and RTP
+  `Packet.Unmarshal` leaves `Payload` backed by that buffer. Pion's
+  `TrackLocalStaticRTP.WriteRTP` copies the packet struct and mutates the
+  copied header's SSRC/PT; Pion `rtp.Header.Clone()` deep-copies CSRCs and
+  extension payloads. TWCC can update extensions, so each queued header stays
+  independent. The SRTP path marshals the shared payload into its own buffer.
+  Focused coverage verifies shared payload identity and independent mutable
+  headers/extensions.
+- **After-change results:** same 60s local TEST command, binary
+  `/tmp/hami-media-cost-optimized`, outputs
+  `/tmp/hami-cost-optimized-{250,500,1000}.{log,stdout}`. CPU s/viewer-minute,
+  HeapAlloc bytes/viewer, and goroutines/viewer were:
+
+  | Run | Viewers | CPU s / viewer-minute | HeapAlloc bytes / viewer | Goroutines / viewer |
+  | --- | ---: | ---: | ---: | ---: |
+  | 1 | 250 | 0.102115 (-13.66%) | 3,007,182.5 (-11.23%) | 74.5480 |
+  | 2 | 500 | 0.111477 (+1.71%) | 3,365,142.2 (+1.88%) | 74.2740 |
+  | 3 | 1,000 | 0.099523 (-24.34%) | 3,121,747.9 (-12.13%) | 74.1370 |
+
+  Because the first 500-pair result was slightly adverse, one reversed-order
+  repeat was run for both builds. Baseline repeat:
+  `/tmp/hami-cost-baseline-500-repeat.{log,stdout}` = 0.149349 CPU s/viewer-min
+  and 3,443,993.8 HeapAlloc bytes/viewer. Optimized repeat:
+  `/tmp/hami-cost-optimized-500-repeat.{log,stdout}` = 0.150374 and
+  2,812,352.8 bytes/viewer. Across the two 500 runs, median CPU was
+  0.129476 baseline vs 0.130926 optimized (+1.12%, no CPU improvement
+  established); median HeapAlloc was 3,373,450.5 baseline vs 3,088,747.5
+  optimized (-8.44%).
+  Goroutines were unchanged within sampling variation. All runs connected,
+  cleaned up, and had zero RTP queue drops/write errors; lower-rung
+  `measurement_pass=false` is not M7-H acceptance.
+- **Decision:** retain the change for its lower HeapAlloc/viewer at all three
+  rungs on the two-run 500 median, with large CPU reductions at 250/1,000.
+  Do not claim a CPU improvement at 500 or an acceptance pass. The initial
+  CPU readings based on Go runtime `cpu-seconds` were killed as an invalid
+  measurement after `cpuCores=75.152`; use OS user+system process CPU instead.
+- **Validation:** the focused shared-payload/header test passed under `-race`;
+  `go test ./...`, `go vet ./...`, and optimized `go build` passed;
+  `npm test` passed 295/295; `npm run gates` reported GREEN.
+- **Subscriber-snapshot A/B (rejected):** evaluated a candidate that cached
+  each track's subscriber list and refreshed it on membership changes. The
+  pre-change comparator is the payload-sharing build above. CPU is process
+  CPU-seconds per viewer-minute over the common wall-clock sample window;
+  HeapAlloc and goroutine counts sum the harness and SFU at the nearest shared
+  end sample.
+
+  | Viewers | Payload-only CPU / HeapAlloc bytes per viewer | Snapshot CPU / HeapAlloc bytes per viewer | Goroutines per viewer |
+  | ---: | ---: | ---: | ---: |
+  | 250 | 0.102115 / 3,007,182.5 | 0.157862 / 3,203,647.2 | 74.548 |
+  | 500 | 0.111477 / 3,365,142.2 | 0.150523 / 3,265,116.4 | 74.274 |
+  | 1,000 | 0.099523 / 3,121,747.9 | 0.117076 / 3,115,936.4 | 74.137 |
+
+  To check 500-viewer noise, a back-to-back payload-only control measured
+  0.147683 CPU / 3,160,245.0 bytes per viewer; two snapshot runs measured
+  0.150523 / 3,265,116.4 and 0.146666 / 3,436,986.6. The snapshot median
+  was 0.148594 CPU and 3,351,051.5 bytes per viewer: no repeatable cost
+  reduction. All runs were local `TEST`s, completed cleanup, and had zero
+  RTP queue drops and write errors; `measurement_pass=false` is not M7-H
+  acceptance. The snapshot candidate and its focused test were removed;
+  `forwardTrack` again builds the subscriber slice under the existing router
+  read lock. Raw logs/stdout are `/tmp/hami-cost-snapshot-{250,500,1000}.*`,
+  `/tmp/hami-cost-snapshot-control-500.*`, and
+  `/tmp/hami-cost-snapshot-500-repeat.*`.
+
+  Exact measurement command template:
+  `cd services/hami-media && ulimit -n 65536 && M7H_TRACE_PC_STATE=0
+  /tmp/hami-media-cost-subscriber-snapshot -mode=m7h -duration=60s
+  -video-file=/tmp/test-video.h264 -m7h-viewers=<N> >
+  /tmp/hami-cost-snapshot-<N>.stdout 2> /tmp/hami-cost-snapshot-<N>.log`.
+  The repeated 500-viewer control used the same command with
+  `/tmp/hami-media-cost-optimized` and
+  `/tmp/hami-cost-snapshot-control-500.{stdout,log}`; the second candidate
+  run used the snapshot binary and `-m7h-viewers=500`, writing
+  `/tmp/hami-cost-snapshot-500-repeat.{stdout,log}`.
+- **Viewer-side API A/B (rejected):** applied the existing
+  `newM7HPublisherAPIWithoutNACKResponder` interceptor registry to M7-H
+  receive-only viewers, including the per-viewer-UDP-mux path. It retained
+  NACK generation and receiver behavior while avoiding the default registry.
+  At all scales every viewer was connected and received its requested H.264
+  track; cleanup succeeded with zero RTP queue drops and write errors.
+
+  | Viewers | Payload-only CPU / HeapAlloc bytes per viewer | Minimal-viewer-API CPU / HeapAlloc bytes per viewer | Goroutines per viewer |
+  | ---: | ---: | ---: | ---: |
+  | 250 | 0.102115 / 3,007,182.5 | 0.153538 / 3,199,074.7 | 74.548 |
+  | 500 | 0.111477 / 3,365,142.2 | 0.146486 / 3,293,766.3 | 74.274 |
+  | 1,000 | 0.099523 / 3,121,747.9 | 0.116882 / 3,266,837.6 | 74.137 |
+
+  The viewer goroutine counts were identical at 500 and 1,000 and unchanged
+  within sampling variation at 250; CPU and heap did not improve consistently.
+  A 500-viewer payload-only control was 0.147683 CPU / 3,160,245.0 bytes per
+  viewer, versus 0.146486 / 3,293,766.3 with the reduced registry. The API
+  experiment was removed; the default viewer registry is restored. Raw files:
+  `/tmp/hami-cost-viewer-api-{250,500,1000}.{log,stdout}`.
+
+  Exact command template:
+  `cd services/hami-media && ulimit -n 65536 && M7H_TRACE_PC_STATE=0
+  /tmp/hami-media-cost-viewer-api -mode=m7h -duration=60s
+  -video-file=/tmp/test-video.h264 -m7h-viewers=<N> >
+  /tmp/hami-cost-viewer-api-<N>.stdout 2> /tmp/hami-cost-viewer-api-<N>.log`.
+- **Queue-dissolve implementation completed:** the existing
+  `sfuSubscription.rtpQueue` / `nackWorker` path timestamps queued RTP, drops
+  stale entries at 200 ms, keeps H.264 viewers in keyframe-needed state until
+  an IDR start, coalesces recovery requests per publisher, and reports
+  intentional shed separately from write errors with recovery time. Its
+  same-input cost result and trade-off are recorded in the 18:57 entry above.
+  The normal fixture `/tmp/hami-cost-interframe-20261119.h264` was generated
+  locally with AVFoundation (357,961 bytes; 3 IDR and 87 non-IDR NALs); the
+  original `/tmp/test-video.h264` remains the all-keyframe fixture. No Cloud,
+  Docker, external service, or paid tier was used.
+- **Owner dependency:** the owner still authorizes and launches each local
+  run. This change bounds stale per-viewer work and measures recovery; it does
+  not authorize unattended execution or a real-world action. The one-SFU
+  config seam and independent-instance sharding screen are now recorded above.
+  Next, profile the existing single-process 1,000-viewer path before selecting
+  another cost optimization; do not add a competing routing model or automate
+  beyond the recorded local-run authorization.
+- **Validation and lesson:** after reverting both rejected Go experiments,
+  `cd services/hami-media && go test -count=1 ./...`, `go vet ./...`, and
+  `go build -o /tmp/hami-media-cost-final .` passed. `npm test` passed 295/295
+  and `npm run gates` reported GREEN. The first npm test run was 294/295
+  because `src/lib/features.test.ts` still required OpenAI/Ollama source
+  strings; the current local-only backend truth is `hami-model` (confirmed in
+  `backend/app/services/ai_engine.py`). Updated only those obsolete assertions;
+  no runtime provider behavior changed.
+- **Production and economic evidence:** M7-H remains unaccepted; no real
+  transaction occurred, so `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` is
+  **NOT MEASURABLE**. At 17:59 NPT, exact-head CI and secret scan passed
+  for `c8493cd712ededfa29801c00eab6a7ce67448524`; independent deployment
+  verification failed while fetching production content. Read-only probes:
+  `haminp.vercel.app/` and `/api/health` returned 402; `hami-sigma.vercel.app/`
+  and `/api/health`, `/ledger`, `/build-log`, `/meet-hami`, and
+  `/hami-field.html` returned 200, while `/hami-field` returned 404;
+  `kn33r0s3.vercel.app/` and `/hami-field.html` returned 200. No open GitHub
+  issues were found. No push, deploy, or issue edits were made. Current
+  worktree changes are not live; production remains **NOT VERIFIED**.
+
+## 2026-11-19 17:27 +0545 — v3 stats canceled during map snapshot; v4 uses 5s bound
+
+- **Existing seam/history:** continued the existing local M7-H `/stats`
+  handler and timeout path. The current handler is still uncommitted in this
+  work cycle; `git log -S` finds no committed prior handler revision.
+- **Completed v3 run:** the trace-off 3,000/3,000 send stage remained active
+  through 120,005ms (14,947 frames, zero stale); at 109,222ms it briefly
+  had 55 stale publishers and recovered by 110,003ms. All-stale at 121,003ms
+  was post-deadline. Feedback timed out at 380/3,000
+  (`nackZero=611`, `pliZero=2620`, `firZero=2620`, `maxN=146`,
+  `maxP=1`, `maxF=1`); all 6,000 peers connected then died, median lifetime
+  184,932ms. p95/p99 are **NOT MEASURABLE**.
+- **Stats phase evidence:** the 2s request was canceled before reaching
+  feedback counters. SFU log recorded `phase=accepted` at 17:25:34.267 and
+  `phase=viewer-map-snapshot` at 17:25:34.800 (`elapsedMs=532`,
+  `contextErr=context canceled`); there was no feedback-snapshot phase.
+  The handler therefore had not produced candidate or per-viewer results.
+  Do not attribute the delay solely to the router lock; request scheduling,
+  server-map contention, and runtime scheduling remain distinguishable
+  hypotheses.
+- **Next diagnostic change:** increase only this bounded local timeout from
+  2s to 5s and log client start/elapsed time. The new v4 run can now show
+  whether feedback snapshot begins, and whether candidates complete within
+  the larger explicit bound. Timeout errors remain explicit.
+- **Validation:** Go tests and vet passed; `npm test` passed (295);
+  `npm run gates` reported GREEN; v4 built with Go 1.27.4 darwin/arm64,
+  and `go version -m` verified the same mux-off/socket-counter/4 MB flags.
+- **Current run:** v4 local 3,000/3,000 trace-off run active. Logs:
+  `/tmp/hami-media-011-feedback-timeout-stats-v4-harness.log` and
+  `/tmp/hami-media-011-feedback-timeout-stats-v4-sfu.log`.
+- **Owner dependency / next removable dependency:** the owner still launches
+  the local proof; this change adds request timing and a bounded extra
+  diagnostic window. Next inspect v4's client and server phases, then locate
+  the PLI/FIR loss boundary. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` is
+  **NOT MEASURABLE**.
+- **Boundary:** local-only; no Cloud, Docker, paid service, protected tuning,
+  commit, push, deployment, external contact, or production claim.
+
+## 2026-11-19 17:18 +0545 — v2 confirms partial active-send stall; canceled stats path narrowed
+
+- **Existing seam/history:** continued the existing local M7-H feedback
+  injection and `/stats` handler in `services/hami-media/main.go`; no new
+  route or subsystem. `git log --follow`, `git log -S`, and `git blame` show
+  the current handler is uncommitted in this work cycle rather than a
+  previously committed implementation. Pion `v4.2.26` default video codecs
+  advertise `ccm fir`, `nack`, and `nack pli`. Its `v0.1.51` NACK responder
+  only handles RR/SR and NACK and returns the original RTCP batch, so it
+  does not explain PLI/FIR disappearing in the SFU `ReadRTCP` path.
+- **Completed v2 run:** built
+  `/tmp/hami-media-011-feedback-timeout-stats-v2` with Go 1.27.4,
+  darwin/arm64, mux disabled, socket counters enabled, and 4 MB receive
+  buffer; `go version -m` verified the exact linker flags. Run command:
+  `ulimit -n 65536 && M7H_TRACE_PC_STATE=0 M7H_SFU_LOG=/tmp/hami-media-011-feedback-timeout-stats-v2-sfu.log /tmp/hami-media-011-feedback-timeout-stats-v2 -mode m7h -duration 120s -video-file /tmp/test-video.h264 -m7h-goroutine-profile /tmp/hami-media-011-feedback-timeout-v2-profile > /tmp/hami-media-011-feedback-timeout-stats-v2-harness.log 2>&1`.
+- **Active-send regression evidence:** at 108,005ms the harness sent 14,992
+  frames with no stale publishers. At 109,005ms it sent 5,717 frames with
+  1,562 stale; at 110,004ms 7,638 / 1,372 stale. From 111,015ms to
+  120,007ms, 813 publishers remained stale; at the last pre-deadline sample
+  the oldest send was 11.815s old. The zero-frame/all-stale reading at
+  121,012ms was post-deadline. This exposes an intermittent partial
+  active-send stall not seen in the preceding completed trace-off run.
+- **Feedback attribution:** the 5-minute wait failed at 396/3,000
+  (`nackZero=1565`, `pliZero=2604`, `firZero=2604`, `maxN=99`,
+  `maxP=1`, `maxF=1`); p95/p99 are **NOT MEASURABLE**. All 6,000 peers
+  connected then died (median lifetime 176,409ms). Injection completed
+  3,000 `sendViewerFeedback` calls with no errors, no skipped peers, 112ms
+  total write time, and 8ms maximum. Yet the sampled SFU viewer
+  `hami-sfu-viewer-1` recorded NACK received 283 / forwarded 246, and
+  PLI/FIR received and forwarded 0. This narrows the loss to after
+  `WriteRTCP` returned successfully and before SFU subscription accounting;
+  it does not distinguish packet loss from later transport/runtime behavior.
+- **Stats timeout:** the harness's two-second `/stats` request expired.
+  The SFU logged the selected viewer counters near shutdown but returned no
+  candidate-pair evidence. The prior handler took the server map read lock
+  while querying router counters, and checked cancellation only after that
+  work. The in-place correction now returns immediately for canceled
+  requests, releases the server map lock before router snapshots, checks
+  cancellation between snapshots, and logs request/map/feedback phase
+  timings. A focused test holds the router lock and verifies an already
+  canceled stats request does not wait for it.
+- **Validation:** `cd services/hami-media && go test ./...` passed;
+  `go vet ./...` passed; `npm test` passed (295 tests); `npm run gates`
+  reported GREEN; `git diff --check` passed. The updated diagnostic binary
+  v3 built successfully and its metadata confirmed the same flags.
+- **Current run:** v3 local-only 3,000/3,000 run is in progress. Harness and
+  SFU logs are `/tmp/hami-media-011-feedback-timeout-stats-v3-harness.log`
+  and `/tmp/hami-media-011-feedback-timeout-stats-v3-sfu.log`. Use its
+  phase timings to determine whether `/stats` arrives late or stalls while
+  taking the viewer/router snapshot.
+- **Interim v3 send phase (17:23):** the 109,222ms sample briefly had 55
+  stale publishers during a jitter spike, then recovered by 110,003ms
+  (`frames=12598`, no stale publishers). It was still sending 14,947 frames
+  with no stale publishers at 120,005ms; all 3,000 stale at 121,003ms was
+  post-deadline. Thus the v2 partial stall did not recur in this run's send
+  phase. Its 5-minute feedback wait and new `/stats` phase timing are still
+  pending.
+- **Owner dependency / next removable dependency:** the owner still has to
+  launch and interpret a local run. This change removes canceled-request
+  lock work and adds phase timing; the remaining dependency is a verified
+  explanation for the partial send stall and missing PLI/FIR. Next, inspect
+  v3 timings and isolate the RTCP transport stage without changing M7-H
+  acceptance criteria. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains
+  **NOT MEASURABLE**.
+- **Boundary:** local-only; no Cloud, Docker, paid service, protected tuning,
+  commit, push, deployment, external contact, or production claim.
+
+## 2026-11-19 17:05 +0545 — trace-off send replicated; missing PLI/FIR isolated to SFU receipt
+
+- **Existing seam/history:** continued M7-H's existing sender, RTCP
+  injection, `waitForSFUFeedback`, and remote `/stats` path in
+  `services/hami-media/main.go`. `sendViewerFeedback` writes PLI/FIR before
+  NACK; `forwardFeedback` counts PLI/FIR before SSRC translation. The
+  small-scale `TestLocalSFURoutesAuthorizedStreamsAndRTCP` still verifies the
+  existing two-viewer path. No replacement subsystem was introduced.
+- **Repeat measurement:** with `M7H_TRACE_PC_STATE=0`, the local
+  3,000/3,000 run was still sending at elapsed 104,006ms
+  (`frames=15001`, `staleOver500ms=0`) and at 120,007ms
+  (`frames=14860`, `staleOver500ms=0`). Zero frames/all stale appeared at
+  121,007ms, after the 120-second send deadline. At 117,007ms there was
+  temporary jitter (14,144 frames, 37 stale, 2,950 ticks >50ms, max
+  529.084ms) that recovered by 118,008ms. This is a second trace-off run
+  without the earlier 104-second full stall; it still does not prove that
+  callback logging caused that earlier stall.
+- **Feedback failure:** wait timed out at 355/3,000
+  (`nackZero=612`, `pliZero=2643`, `firZero=2643`, `maxN=397`,
+  `maxP=1`, `maxF=1`). At wait-end, all 6,000 peer connections had connected
+  then died; none were currently connected; median connected lifetime was
+  243,756ms. p95/p99 are **NOT MEASURABLE**; M7-H is not accepted.
+- **New evidence:** the 2-second harness `/stats` request expired, but the
+  SFU later logged the selected five-viewer aggregate: NACK received 3,179,
+  forwarded 2,932, PLI/FIR received and forwarded 0, RTP queue drops 0,
+  RTP write errors 0, router errors 0. The sample is useful evidence that
+  PLI/FIR were not observed at those five SFU subscriptions; it does not
+  establish the exact loss point for all viewers. The SFU log was emitted
+  over two minutes after the harness-side deadline; a later runtime sample
+  had 102,005 goroutines, scheduler p95 upper bound 5,369ms, and max
+  42,950ms. This supports a scheduler/diagnostic-latency concern, not a
+  proven cause of the feedback loss. Candidate pairs were not returned.
+- **Diagnostic correction:** the timeout path now samples one incomplete
+  viewer, logs injection timing on failure, and the SFU logs per-viewer
+  feedback before candidate collection. The handler checks request
+  cancellation before and during candidate-pair collection to avoid
+  continuing expensive stats work after the client gives up. A new
+  cancellation test passes. The updated 3,000-peer run is in progress.
+- **Interim run evidence (17:10):** the updated binary's metadata confirms
+  Go 1.27.4, darwin/arm64, mux disabled, socket counters enabled, and a 4 MB
+  receive buffer. Harness send samples remained near 15,000 frames/s through
+  108,005ms. At 109,005ms this fell to 5,717 with 1,562 stale publishers;
+  at 110,004ms it was 7,638 with 1,372 stale. From 111,015ms through
+  120,007ms, 813 publishers remained stale and the oldest last-send time
+  stayed at 17:07:04.743253; at 120,007ms it was 11.815s old. This is a
+  partial active-send stall before the 120-second deadline, distinct from
+  the later all-stale post-deadline sample. The timeout diagnostics and final
+  feedback verdict have not yet completed; no cause is established.
+- **Validation:** `cd services/hami-media && go test ./... && go vet ./...`
+  passed; diagnostic `go build` passed with Go 1.27.4 darwin/arm64 and the
+  mux-off/socket-counter/4 MB receive-buffer linker flags. `npm test` passed
+  (295 tests); `npm run gates` reported GREEN; `git diff --check` passed.
+- **Hypothesis check:** M7-H already has one viewer per track, 32 feedback
+  injection workers, and a bounded 64-packet drop-oldest RTP queue. These
+  are not missing mechanisms in this proof. Peer relaying remains untested
+  and unjustified by this evidence.
+- **Next dependency:** use the one-viewer timeout log and injection
+  attribution to distinguish failed RTCP write, viewer-side send, SFU
+  receipt, and publisher delivery. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION`
+  is **NOT MEASURABLE**; no verified real transaction occurred.
+- **Boundary:** local-only; no Cloud, Docker, paid service, protected tuning,
+  commit, push, deployment, external contact, or production claim.
+
+## 2026-11-19 16:48 +0545 — callback-log suppression improves active-send continuity; feedback remains open
+
+- **Existing seam/history:** continued the existing M7-H send sampler and
+  `attachPCStateLogging` in `services/hami-media/main.go`; the timeout
+  diagnostic reuses `waitForSFUFeedback` and the existing remote `/stats`
+  endpoint. `git blame` and `git log -S'feedback wait timed out after'`
+  confirm the wait/error path is the existing proof seam. No parallel SFU,
+  media queue, or feedback engine was added.
+- **Measured increment:** with per-peer callback tracing disabled, a local
+  3,000-publisher/3,000-viewer run remained actively sending at elapsed
+  104,003ms (`frames=14998`, `staleOver500ms=0`, `maxTickLateMs=14.211`).
+  The earlier run with callback tracing active had all publishers stale and
+  zero frames at 104,004ms. This is one A/B-like comparison, not proof that
+  logging caused the earlier stall. The trace-off harness log fell from
+  11,217,950 bytes / 78,810 lines to 2,356,879 bytes / 9,830 lines; there
+  were no per-peer connection-state log lines.
+- **Remaining failure:** the trace-off run accumulated substantial send
+  jitter near the 120-second deadline (at 119,232ms: 4,659 ticks over 50ms,
+  52 over 1s, max tick lateness 1,538.389ms). It was still sending at
+  120,004ms. Zero frames/all stale appeared only after the send deadline.
+  Feedback then timed out at 261/3,000 tracks (`nackZero=514`,
+  `pliZero=2739`, `firZero=2739`, `maxN=304`, `maxP=1`, `maxF=1`).
+  p95/p99 are **NOT MEASURABLE**; M7-H is not accepted.
+- **Diagnostic increment:** `waitForSFUFeedback` now returns its observed
+  partial counts on timeout. The existing failure path requests SFU feedback,
+  candidate-pair and socket snapshots for at most five incomplete viewers.
+  The timeout summary is unchanged; this is observability, not a proof fix.
+  Focused tests and `go test ./...` / `go vet ./...` passed before the final
+  log-field adjustment; a same-condition 3,000-peer run is currently
+  executing, followed by final validation.
+- **Hypothesis check:** M7-H already uses one viewer per track, a 32-worker
+  feedback-injection pool, and a bounded 64-packet RTP queue that drops its
+  oldest packet when full. These suggestions therefore do not describe
+  missing mechanisms in this proof. Per-peer Pion transport work remains;
+  client-assisted relaying is untested and not justified by this evidence.
+- **Owner dependency / next removable dependency:** the operator still has to
+  launch a local run and interpret missing RTCP. This change removes manual
+  aggregation of a small timeout sample. The next dependency is identifying
+  whether feedback is absent at the viewer, lost in SFU forwarding, or not
+  observed by the publisher. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` is
+  **NOT MEASURABLE**; this work has no verified real transaction.
+- **In-progress run:** binary build uses
+  `-X main.routerUDPMuxMode=disabled`,
+  `-X main.routerSocketWriteMode=enabled`,
+  `-X main.clientSocketReadMode=enabled`, and
+  `-X main.clientSocketReadBufferSize=4194304`. Harness command:
+  `M7H_TRACE_PC_STATE=0 M7H_SFU_LOG=/tmp/hami-media-011-feedback-timeout-stats-sfu.log /tmp/hami-media-011-feedback-timeout-stats -mode m7h -duration 120s -video-file /tmp/test-video.h264 -m7h-goroutine-profile /tmp/hami-media-011-feedback-timeout-profile > /tmp/hami-media-011-feedback-timeout-stats-harness.log 2>&1`.
+- **Boundary:** local-only; no Cloud, Docker, paid service, protected tuning,
+  commit, push, deployment, external contact, or production claim.
+
+## 2026-11-19 16:02 +0545 — M7-H negotiation narrowed to transient ICE loss
+
+- **Existing seam/history:** continued the existing remote-viewer negotiation
+  in `services/hami-media/main.go::negotiateViewers` and reused the existing
+  `iceCandidatePairDiagnostics` helper. Its source history is still
+  uncommitted in this worktree; no alternate subsystem or new file was added.
+- **Capability increment:** on a remote-viewer `wait-connected` deadline,
+  the harness now logs local/remote SDP candidate counts, peer connection /
+  ICE / gathering states, and candidate-pair state and packet counters.
+  This automates the evidence check that previously required manually
+  correlating peer-state logs. The instrumentation is only emitted for an
+  actual wait-connected deadline; it does not change negotiation behavior.
+- **Build / run:** `go test ./...`, `go vet ./...`, and the build passed.
+  `go version -m /tmp/hami-media-011-candidate-diagnostics` verified
+  `routerUDPMuxMode=disabled`, socket counters enabled, and the 4 MB receive
+  buffer. Exact local command:
+  `ulimit -n 65536; M7H_SFU_LOG=/tmp/hami-media-011-candidate-counts-sfu.log /tmp/hami-media-011-candidate-diagnostics -mode m7h -duration 120s -video-file /tmp/test-video.h264 -m7h-goroutine-profile /tmp/hami-media-011-candidate-counts-profile > /tmp/hami-media-011-candidate-counts-harness.log 2>&1`.
+- **Measured evidence:** two instrumented 120-second retries followed the
+  first three failures. The first failed at `hami-sfu-viewer-912` in
+  `wait-connected` (offer 0ms, request 66ms, answer 3ms, connect 63,487ms);
+  its final stats contained `candidatePairs=[]`, which does not prove no
+  candidates existed. The next failed before media sending at
+  `hami-sfu-viewer-1450` (elapsed 60,100ms; offer 8ms, request 4,089ms,
+  SetRemoteDescription 662ms, connection wait 55,331ms). It logged 2 local
+  and 2 remote candidates and a nominated, succeeded host-to-host pair
+  (`127.0.0.1:55077` ↔ `127.0.0.1:63311`; 10 packets sent, 5 received;
+  36/25 requests, 13/25 responses). Both sides briefly connected, then
+  disconnected; the SFU peer was connected for 17.276s before its
+  disconnected state. This is transient ICE connectivity, not a proven root
+  cause.
+- **Correlated load, not causation:** during elapsed 20–26 seconds, the SFU
+  recorded about 80,000 goroutines and scheduler p95 upper bounds of
+  235–1,342ms (max up to 3,758ms). These measurements make scheduler
+  pressure a candidate for the connection loss, but do not prove it caused
+  the ICE disconnect. No media frames were sent and no M7-H p95/p99 was
+  measured.
+- **Owner dependency / next removable dependency:** a local operator still
+  needs a successful 3,000/3,000 negotiation and valid active-send run.
+  Routine manual candidate-pair inference is removed for future timeout
+  runs; external permission and economic-owner dependencies are unchanged.
+  Next, capture equivalent SFU-side pair/socket counters at the
+  connected/disconnected transitions and correlate them with scheduler
+  samples before changing Pion or tuning.
+- **Boundary:** local-only; no Cloud, Docker, paid service, protected tuning
+  change, commit, push, deployment, external contact, or production claim.
+  `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+
+## 2026-11-19 15:53 +0545 — M7-H send-deadline false positive corrected
+
+- **Existing seam/history:** traced the existing M7-H `sendContext` and
+  goroutine-profile detectors in `services/hami-media/main.go`
+  (`runLocalSFUProofWithConfig`, `m7hPublisherSendStallDetected`,
+  `m7hSFUReceiveStallDetector.observeDuringSend`, and
+  `startM7HGoroutineProfileCapture`). The `-duration` flag is the local media
+  send lifetime; `sendContext` expires at that duration. Before the guard,
+  the detector interpreted the expected post-send all-zero sample as a stall.
+- **Verified correction:** both harness and SFU stall triggers now require an
+  active send context. The regression tests cover active and expired send
+  contexts; `go test ./...`, `go vet ./...`, and the diagnostic build passed.
+  The binary `/tmp/hami-media-011-active-send` was verified with
+  `go version -m` before the run.
+- **Measured run:** with `-duration 65s`, the local 3,000-publisher /
+  3,000-viewer run still sent 14,956 frames at elapsed 65,003ms. The last
+  observed send was `2026-11-19T15:47:32.998470+05:45`; at elapsed 66,004ms
+  the sample was `frames=0, staleOver500ms=3000`, as expected after the
+  configured send lifetime. No profile trigger was logged and no profile
+  files were created. Harness and SFU logs:
+  `/tmp/hami-media-011-active-send65-harness.log` and
+  `/tmp/hami-media-011-active-send65-sfu.log`.
+- **Correction to prior evidence:** the earlier 65-second zero-frame
+  samples and profiles captured after the send deadline are not evidence of
+  an active-send stall. Their parked goroutine stacks cannot establish the
+  active-stream root cause. Treat attempt-13 “same ~1-minute stall,”
+  determinism, and GC-exclusion claims as unsupported unless each run's
+  actual send deadline is reconciled with its last-send timestamp; the
+  existing `queue/010-attempt13-tuned-stall-triage.md` does not record enough
+  command detail to establish that comparison.
+- **Remaining result:** the latest run exited 1 after the 5-minute feedback
+  wait with 353/3,000 tracks complete. p95/p99 are **NOT MEASURABLE** and
+  M7-H is not accepted. Three later 120-second attempts failed during remote
+  viewer negotiation at different viewers (702, 1271, 1351) before media
+  sending; these do not test sustained active sending.
+- **Owner dependency / next removable dependency:** a local operator still
+  needs a successful 3,000/3,000 negotiation and an active-send run longer
+  than 65 seconds to collect valid stall evidence. This change removes false
+  post-deadline profile captures, not the negotiation or feedback failures.
+  No verified real transaction exists; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION`
+  remains **NOT MEASURABLE**.
+- **Boundary:** local-only; no Cloud, Docker, paid service, protected tuning
+  change, commit, push, deployment, external contact, or production claim.
+
+## 2026-11-19 15:08 +0545 — fresh-connection retry blocked before capture
+
+- **Existing seam:** retried the optional keep-alive-disabled M7-H profile
+  request through the existing harness and SFU. No new subsystem or
+  protected tuning change.
+- **Owner dependency:** local operator still launches the 3,000-peer run and
+  inspects evidence; this attempt removed no owner action. There are no
+  verified real transactions, so `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION`
+  remains **NOT MEASURABLE**.
+- **Measured delta:** Go 1.27.4 `darwin/arm64` binary built with the mux-off
+  and socket-counter linker flags; `go version -m` verified them. With
+  `ulimit -n 65536`, the run exited 1 during remote viewer negotiation at
+  `hami-sfu-viewer-25` (`context deadline exceeded`). The SFU log recorded
+  3,000 publishers but zero received packets and 3,000 stale at elapsed
+  21,000ms; the harness did not reach its `frames=0` stall signature.
+  No profile files were produced, so this run does not test the
+  fresh-connection transport under the intended stall and is not an M7-H
+  result.
+- **Negotiation timing:** SFU `hami-sfu-viewer-25` entered ICE
+  checking/connecting at 15:06:43.263876 (`...retry2-sfu.log:12333-12334`),
+  its socket closed at 15:07:13.395281 still checking/connecting and never
+  connected (`:22794`), and the SFU peer failed at 15:07:14.302713
+  (`:22952-22953`). The harness viewer peer's checking/connecting callbacks
+  were logged at 15:07:27.132558 (`...retry2-harness.log:16984-16985`),
+  43.869s after SFU checking began. This is an observed timing gap, not
+  proof of which request, scheduling, or ICE phase caused it.
+- **Verification:** exact command and logs are in the existing result file
+  `/tmp/hami-media-011-sfu-starvation-result`; no Cloud, Docker, commit,
+  push, deployment, or tuning change. Initial metadata matching expected a
+  space after `build`; Go 1.27.4 prints a tab there. The run was correctly
+  gated until verification was retried against the `-ldflags` substring.
+  Final local `npm test` passed (168 script tests and 295 TypeScript tests),
+  `npm run gates` was GREEN, and `git diff --check` plus
+  `gofmt -d services/hami-media/main.go` were clean. These are local checks,
+  not exact-head CI evidence.
+- **Next blocker:** instrument the existing remote `/viewer` request/response
+  timing against the SFU peer-state callbacks, then retry only when full local
+  negotiation completes.
+  Keep the causal layer open; do not treat the SFU-only zero-packet sample as
+  proof of the earlier M7-H stall cause.
+
+## 2026-11-19 14:58 +0545 — M7-H profile request tracing; causal layer still open
+
+- **Existing seam:** continued the M7-H request/profile flow in
+  `services/hami-media/main.go`: client tracing around `captureGoroutineProfile`,
+  handler-entry/profile-write logs, and SFU serve/process-exit logs. No new
+  subsystem or semantic primitive.
+- **Owner dependency:** a human still needs to build and launch the local
+  3,000/3,000 run and inspect the evidence. This change reduces uncertainty
+  about where the profile request waits; it removes no authorization or
+  execution dependency. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` is **NOT
+  MEASURABLE** (no verified real transaction).
+- **Measured delta:** with separate harness/SFU logs, a mux-off run reached
+  the harness `frames=0, staleOver500ms=3000` signature at elapsed 67,009ms
+  and SFU `packets=0, staleOver500ms=3000`; four profiles were captured.
+  Feedback still timed out after 5m at 55/3,000 tracks (exit 1); p95/p99 are
+  **NOT MEASURABLE**. Not M7-H acceptance.
+- **Request evidence:** first SFU profile request was written immediately;
+  its handler began 11.877s after request start and wrote the profile in
+  0.597s; the client received the first response byte at 15.819s. The second
+  request began exactly 30s after the trigger. Its first connection/request
+  write occurred within 0.121ms, then the trace recorded another
+  GetConn/GotConn/WroteRequest sequence at 2m15.831s; the handler began at
+  2m16.368s, profile writing took 0.378s, and the profile copy completed at
+  2m18.931s. The trace narrows the wait but does not prove whether the delay
+  is stale-connection retry, SFU scheduling, or another cause.
+- **Profile evidence:** the latest SFU stall/later traces retain NACK
+  `ResponderInterceptor` / ICE `CandidatePair.Write` / `candidateBase.writeTo`
+  / UDP `WriteToInet4` frames, but the filtered full traces from these two
+  profiles did not show `fdMutex`/`rwlock`. Earlier profiles did show those
+  waits. Harness traces show `TrackRemote.ReadRTP` and reader stacks, not the
+  same UDP-writer frames. This is inconsistent stack evidence, not causation.
+  Exact commands, paths, and pprof outputs are appended to
+  `/tmp/hami-media-011-sfu-starvation-result` and
+  `/tmp/hami-media-011-sfu-starvation-pprof.md`.
+- **Instrumentation verification:** Go 1.27.4 `darwin/arm64`;
+  `cd services/hami-media && go test ./...` passed;
+  `cd services/hami-media && go vet ./...` passed; `gofmt -d` and
+  `git diff --check` were clean. `npm test` passed (168 script tests and 295
+  TypeScript tests); `npm run gates` was GREEN. The same mux-off/socket-counter
+  linker flags were confirmed by `go version -m` before the run.
+- **Banked lesson:** do not redirect harness output and `M7H_SFU_LOG` to the
+  same file; two writers produced concatenated log lines. The follow-up used
+  distinct files. A first fresh-connection isolation attempt then failed
+  during publisher negotiation at publisher 2862, before profiling began;
+  it produced no profiles and does not test the transport change.
+- **Current blocker / next removable dependency:** the second profile is
+  delayed despite immediate initial request write, and the fresh-connection
+  intervention has not reached the capture path. Next, rerun with separate
+  logs and the isolated profile transport after the local peer-negotiation
+  path can complete; compare `reused=false` phase timing before choosing one
+  controlled SFU UDP-write/NACK intervention. Keep M7-H acceptance and root
+  cause **UNKNOWN**. Local-only; no Cloud, Docker, commit, push, or deploy.
+
+## 2026-11-19 14:24 NPT — M7-H profile timing split; both SFU snapshots returned
+
+- **Existing seam:** continued `services/hami-media/main.go`'s existing
+  M7-H stall trigger, local SFU profile endpoint, and the existing 011 result
+  and pprof records. No new runtime or evidence subsystem.
+- **Owner dependency:** the owner still needs a local build and manually
+  launched 3,000/3,000 diagnostic. The trigger collects profiles without
+  manual timing; it does not remove run setup, resource, or authorization
+  requirements. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` is **NOT
+  MEASURABLE** (no verified real transaction).
+- **Measured delta:** with a 5-minute per-profile deadline, both SFU profiles
+  returned. The first request took 59.638s end-to-end: handler started 3.035s
+  after request, profile generation took 22.652s, and the client finished
+  copying about 33.95s after handler completion. The second request took
+  2m29.798s end-to-end; the handler log began 2m29.282s after the request and
+  completed in 0.511s. This narrows the second delay to before the current
+  handler-start log, but does not identify whether the delay is connection,
+  server scheduling, authorization, or another pre-profile phase.
+- **Run:** `go1.27.4` / `darwin/arm64`; exact diagnostic build and
+  `go version -m` verification are recorded in
+  `/tmp/hami-media-011-sfu-starvation-result`. Mux-off and socket counters
+  were encoded in linker flags; the harness publisher NACK-responder bypass
+  was active. Local-only; no Cloud, Docker, commit, push, or deploy.
+- **Outcome:** the harness again reached `frames=0,
+  staleOver500ms=3000`; the SFU again reached `packets=0,
+  staleOver500ms=3000`. Four profiles were captured and read. Feedback timed
+  out after 5 minutes at 32/3,000 tracks; exit 1. p95/p99 remain **NOT
+  MEASURABLE**. This is not M7-H acceptance or a proven root cause.
+- **Profile evidence:** harness profiles remained dominated by parked Pion
+  packet-buffer/SRTP/DTLS/ICE reader and task-loop stacks. SFU profiles showed
+  7,487 then 9,617 goroutines parked at `internal/poll.(*fdMutex).rwlock`
+  while UDP `WriteToInet4` flowed through Pion ICE `candidateBase.writeTo`
+  and `CandidatePair.Write`; the first SFU profile also shows the NACK
+  `ResponderInterceptor.resendPackets` caller. The path is observed
+  correlation, not causality; harness stacks do not share that write-wait
+  group.
+- **Banked timing lesson:** `stall-plus-30s` is a stage name, not a verified
+  capture timestamp. The first request consumed 59.638s before the sequential
+  second-stage request began; the later SFU snapshot timestamp is 3m29s after
+  the trigger. Future results must report observed profile timestamps, not
+  infer timing from stage labels.
+- **Next blocker/action:** instrument request arrival before authorization and
+  separately mark profile-write start/finish, then decide whether the second
+  capture should be scheduled independently or remain serial to avoid
+  overlapping profiler calls. Keep the write/NACK path a candidate until a
+  controlled intervention distinguishes cause from correlation.
+- **Separate probe lesson:** the prior local Go 1.27.4 cardinality probe
+  measured two goroutine captures at about 102/117ms with 105,000 parked
+  goroutines, versus 13.6/18.4s with 108,800 parked plus 1,350 spinning
+  goroutines. This suggests activity composition matters in that synthetic
+  probe; it does not establish a live SFU cause. Its temporary source was
+  removed after recording the result.
+
+## 2026-11-19 13:43 NPT — M7-H starvation trigger verified twice; second SFU profile remains blocked
+
+- **Existing seam:** continued the `services/hami-media/main.go` M7-H trigger and
+  local SFU `/goroutine-profile` endpoint. No new runtime or diagnostic system.
+- **Owner dependency:** a human still has to build and launch the authorized
+  local 3,000-publisher/3,000-viewer diagnostic. The trigger removes manual
+  stall-detection/profile timing for the initial pair; it does not automate or
+  authorize a real transaction. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` is
+  **NOT MEASURABLE** (no verified real transaction).
+- **Measured capability delta:** both runs reproduced harness
+  `frames=0, staleOver500ms=3000` and SFU
+  `packets=0, staleOver500ms=3000`. Initial paired profiles were captured in
+  each run. A later SFU profile was captured in the retry, 7 seconds before
+  the later harness profile. The required second SFU profile timed out in both
+  runs, including with a 2-minute request deadline.
+- **Runs:** first feedback timeout 441/3,000 tracks; retry 83/3,000; both exit
+  1 after the 5-minute feedback wait. p95/p99 **NOT MEASURABLE**; this is not
+  M7-H acceptance or a proven root cause. The retry SFU snapshot contains
+  `ResponderInterceptor.resendPackets` → ICE `CandidatePair.Write` →
+  `candidateBase.writeTo` → UDP `WriteToInet4` / `fdMutex.rwlock` stacks,
+  alongside extensive ICE/DTLS/SRTP reader stacks. This is a candidate path,
+  not causality.
+- **Remaining blocker:** the local SFU profile endpoint does not return the
+  second snapshot within either 30 seconds or 2 minutes. Without that snapshot
+  and a controlled intervention, the write/NACK path cannot be confirmed or
+  killed. Next: make the second SFU profile reliably capturable during
+  starvation, then run one controlled test of that candidate.
+- **Evidence:** `/tmp/hami-media-011-sfu-starvation-result`,
+  `/tmp/hami-media-011-sfu-starvation-pprof.md`,
+  `/tmp/hami-media-011-sfu-starvation-run-log`, and
+  `/tmp/hami-media-011-sfu-starvation-retry-run-log`.
+- **Verification:** `cd services/hami-media && go test ./...` passed;
+  `npm test` passed (295 TypeScript tests; script suite passed);
+  `npm run gates` GREEN; `git diff --check` passed. No protected tuning
+  constants changed. Local-only; no Cloud, Docker, commit, push, or deploy.
+- **Banked lesson:** the Go module is nested under `services/hami-media`;
+  `go test ./...` from the repository root is not a valid command. Use the
+  scoped command above.
+
+## 2026-11-19 13:15 NPT — SFT clean eval verdict: essentially a tie (base 96 vs adapter 94)
+
+- **Adapter:** qwen3-4b-nepali-sft-clean-5000, checkpoint 0002500, 2,500 steps, final loss 0.687, training done 13:00 NPT.
+- **Judge:** mlx-community/Qwen3-4B-4bit, blinded, 50 held-out rows 520–569, 0 failed. Base total 96 (fluency 40 / instruction 33 / factual 23). Adapter total 94 (37 / 32 / 25). Pairs: base wins 18, adapter wins 19, ties 13.
+- **Verification:** all 50 per-row scores in /tmp/hami-judge-clean.log re-summed by hand; totals, dimensions and pair counts match /tmp/scores-clean-base-vs-adapter.json exactly (re-confirmed from the JSON header 13:17 NPT). Independent programmatic re-sum by Muse self-watch 13:21 NPT confirms: header totals/dims/pairs match the 50 per-row records exactly, and the per-row A/B totals match /tmp/hami-judge-clean.log line by line. NOTE: `judge_raw` on 19 rows looks A/B-swapped vs the structured scores — that is the documented alternating-order blinding in /tmp/hami-judge.py (odd rows presented adapter-first; the script maps back correctly). NOT a scoring error; the 96–94 verdict stands.
+- **Verdict:** essentially a tie. Adapter no longer loses the way the earlier dirty eval did (58 vs 73). Adapter leads on pair wins and factual, trails on fluency. Adapter outputs notably short on many rows (21–71 chars) vs base 229–354 chars.
+- **Caveat:** first adapter-gen attempt failed (exit 13) — script copied 0002500_adapters.safetensors but mlx_lm expects adapters.safetensors (see /tmp/ksft-eval-run.out). Successful run loaded the adapter dir directly (see /tmp/hami-gen-clean-adapter.log).
+- **Next:** M7-H diagnostic rerun — rerun the 3,000/3,000 mux-off/NACK-bypass diagnostic to capture profiles at the SFU receive stall; never report it as an M7-H pass. Order staged at /tmp/next-order-m7h-diag-rerun.md.
+
+## 2026-11-19 13:10 NPT — CI correction green; SFT held-out evaluation underway
 
 - **Current main / external evidence:** `main` and `origin/main` are at
-  `fddd1495daccea3ac10450436e4a501f6268ca7a`. Exact-head ForgeOS CI run
-  `44467865849` is 9/11, not green. `frontend-tests` passed its 168 script
-  tests but failed one TypeScript assertion (294/295): `features.json`
-  referenced `haminp` while the public schema ID is `hami-sigma`.
-  `gate-checks` passed the gate tests and GATES freshness, then failed the
-  WHO_DID_WHAT check: the committed report had 1,878 entries while the CI
-  generator expected 1,879, including `6dab1d5`.
+  `c8493cd712ededfa29801c00eab6a7ce67448524`. Exact-head ForgeOS CI run
+  `44476846946` passed all 11/11 jobs, including backend tests, gate checks,
+  frontend tests, lint, build and typecheck. The preceding run
+  `44467865849` at `fddd1495` had failed 2/11: the registry assertion was
+  294/295, and the committed WHO_DID_WHAT report was stale by one entry.
 - **Root cause and correction:** updated `features.json` to the canonical
   schema URL and changed the assertion to derive it from `SITE.url`. For the
   report, CI runs the generator with `--exclude-head`, which starts at
@@ -24,15 +989,73 @@
   --experimental-strip-types --test src/lib/features.test.ts` — 28/28;
   `cd services/hami-media && go test ./...` — passed in prior validation;
   `git diff --check` — passed. `npm run who-did-what` regenerated 1,880
-  entries. The exact-head CI result after the fix commit is still pending.
-- **Deployment / owner dependency:** independent deploy verification
-  `44467865887` failed fetching production content with HTTP 402; no
-  deployment for `fddd1495` is listed, so production is not verified. The
-  local correction removes the stale-host assertion and report-regeneration
+  entries. Commit `c8493cd7` contains only the four authorized CI-fix files and
+  was pushed to `main`. Independent deploy verification `44476847027` failed
+  at “Fetch production content” with HTTP 402. Production is not verified.
+  The correction removes the stale-host assertion and report-regeneration
   mismatch; it does not remove any owner action in the economic workflow.
   `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
-  Next: commit and push only these CI corrections on `main`, then verify the
-  resulting exact-head CI. Do not claim green until that run passes.
+  No manual deploy or production action was taken.
+
+## 2026-11-19 — Exact-head CI fully green at 6dab1d5 (run 44440379981)
+
+- **Verdict:** all 11 jobs pass at exact head, zero failures. The
+  CI-reconcile chain is fully resolved: frontend registry, backend
+  D108-vs-D113, gates.mjs exit-status, GATES.md + WHO_DID_WHAT.md
+  freshness, lint.
+- **Job timings:** lint ✓ 53s; backend-tests ✓ 5m56s; gate-checks ✓ 47s;
+  build ✓ 1m4s; typecheck ✓ 1m8s; frontend-tests ✓ 1m4s;
+  livekit-local-smoke ✓ 58s; route-smoke ✓ 1m0s; secret-scan ✓ 13s;
+  evidence-triage-tests ✓ 23s; repository-guards ✓ 46s.
+- **Notes:** only annotations are Node.js 20 deprecation warnings, not
+  failures. Live site still on commit 6dab1d5d (standing degraded /
+  db not_configured). Verified by Muse directly from
+  /tmp/ci-reconcile-final4-watch.log (7,468 lines) at 07:47 +0545.
+  Recorded here by Muse self-watch at 08:29 +0545 — Copilot was at its
+  monthly credit limit and could not run the staged record order
+  (/tmp/next-order-record-ci-green-verdict.md), so Muse recorded it
+  directly.
+
+## 2026-11-19 13:17 NPT — Nepali clean-data SFT and held-out eval complete
+
+- **Existing seam:** continued the existing local MLX LoRA workflow and
+  prepared train/evaluation files; no new model stack or data service.
+- **Split integrity:** `mlx-data-clean/train.jsonl` has 5,000 unique records;
+  `mlx-data/eval-50.jsonl` has 50 unique records. An exact canonical-record
+  hash comparison found zero train/evaluation overlap. The data was inspected
+  locally for counts and hashes only; no examples were printed or transferred.
+- **Training completed at 13:00 NPT:** all 2,500 / 2,500 iterations finished;
+  final logged loss 0.687. PID 85586 exited after writing
+  `0002500_adapters.safetensors` (29,384,266 bytes; log
+  `/tmp/sft-clean-retrain.log`). Runtime was 1:31:43 from 05:43:28Z to
+  07:15:11Z. The complete 25-step loss curve is preserved in that log. The
+  memory sampler's lifetime peak is 15 GB, within the 24 GiB machine limit.
+  Using the MLX `ChatDataset` chat-template tokenization on all 5,000 training
+  records, 7 sequences exceed 2,112 tokens, none exceed the configured 4,352,
+  maximum is 3,840, p50 is 373 and p95 is 867. Loss is an optimization signal,
+  not evidence of better Nepali capability.
+- **Rights evidence (12:51 NPT):** the hosted dataset's [Hugging Face card](https://huggingface.co/datasets/Saugatkafley/alpaca-nepali-sft/raw/main/README.md)
+  and [API metadata](https://huggingface.co/api/datasets/Saugatkafley/alpaca-nepali-sft)
+  identify 52,005 examples but contain no license field or rights statement.
+  The API reports repository revision
+  `279dc1e1c048e5469a7d4ec19a33a74ab1bb7ce3`. This does not establish source
+  lineage or permission; keep rights unresolved and the work local-only.
+- **Same-set blinded evaluation:** all 50 rows scored with zero parse failures.
+  Candidate A is base, B is adapter. Base totals 96/300 (fluency 40,
+  instruction 33, factual 23); adapter totals 94/300 (37, 32, 25). Pair
+  verdicts: base 18, adapter 19, ties 13. The adapter does **not** meet the
+  score-total success criterion (base leads by 2); pair counts are effectively
+  mixed, not a robust win. The same base model judged both candidates, so this
+  remains a small, model-assisted result, not a general capability claim.
+  Generations and scores are preserved in `/tmp/gen-clean-base.jsonl`,
+  `/tmp/gen-clean-adapter.jsonl`, and
+  `/tmp/scores-clean-base-vs-adapter.json`.
+- **Boundary / next:** local research only; dataset rights remain unresolved,
+  with no commercial-use or redistribution claim. The earlier 20-row
+  model-assisted comparison favored the base (73/120 vs. 58/120), but its
+  evaluation set differs. Do not run a larger Alpaca retrain. Continue the
+  independent M7-H diagnostic using the updated receive-starvation profile
+  trigger; investigate rights and licensed Nepali data before any next SFT.
 
 ## 2026-11-19 — Exact-head CI failure reconciliation (run 44404962019)
 
@@ -124,6 +1147,191 @@
 4. Keep D95 UNKNOWN until a real producer/facility → product/quantity → buyer/lot → transport/storage → sale/outcome chain is evidenced.
 
 ---
+
+## 2026-11-19 — M7-H goroutine profile at the 3,000-peer stall (queue/011)
+
+- **Existing seam:** used the existing publisher-send sample in
+  `services/hami-media/main.go`, the split local SFU process, and its authenticated
+  loopback profile endpoint. The callback triggers only for 3,000 publishers with
+  `frames=0` and `staleOver500ms=3000`; protected tuning values were not changed.
+- **Build / run:** Go 1.27.4 (`darwin/arm64`). The local binary was built with
+  `-ldflags="-X main.routerSocketWriteMode=enabled -X main.clientSocketReadMode=enabled -X main.clientSocketReadBufferSize=4194304"`; `go version -m` verified the exact line. The 3,000-publisher / 3,000-viewer run reproduced the signature at elapsed 66,010 ms. Its proof failed on a viewer receiving 4 packets when 5 were required; this is diagnostic evidence, not an acceptance pass.
+- **Evidence delta:** the complete paired profiles are in
+  `/tmp/hami-media-011-goroutine-profile-harness-stall.pprof`,
+  `/tmp/hami-media-011-goroutine-profile-sfu-stall.pprof`,
+  `/tmp/hami-media-011-goroutine-profile-harness-stall-plus-30s.pprof`, and
+  `/tmp/hami-media-011-goroutine-profile-sfu-stall-plus-30s.pprof`. `go tool pprof`
+  shows 23,051 SFU goroutines parked on the UDP file-descriptor write lock in
+  Pion ICE `UDPMuxDefault.writeToContext`, through NACK retransmission; the
+  follow-up has 25,589 in that same stack. Harness stacks also show
+  `TrackLocalStaticSample.WriteSample` blocked on UDP writes. This narrows the
+  stall to UDP write contention, with the SFU's shared ICE mux / NACK path the
+  strongest candidate; it does not prove that the mux is the only cause.
+- **Timing limitation / next test:** the complete attempt's follow-up profile
+  timestamps were about 43 seconds (harness) and 54 seconds (SFU) after their
+  first snapshots, not exactly 30 seconds. A retry had its SFU exit before the
+  follow-up request; a later retry held it open but the SFU endpoint exceeded
+  its 30-second request deadline. The report is
+  `/tmp/hami-media-011-goroutine-profile.md`. Next is the ordered mux-off
+  3,000-peer confirmation (`routerUDPMuxMode=disabled`, same counter ldflags,
+  `ulimit -n 65536`); it was not run in this task.
+- **Owner dependency / boundary:** no routine owner action or economic
+  dependency was removed; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains
+  **NOT MEASURABLE**. This follows the explicit diagnostic order despite the
+  earlier M7-H park; it does not reopen the acceptance gate. No protected
+  setting changed; no Docker, commit, push, deployment, or Cloud test occurred.
+---
+
+## 2026-11-19 — M7-H mux-off confirmation (011 follow-on)
+
+- **Existing seam:** used the existing linker-overridable
+  `routerUDPMuxMode` in `services/hami-media/main.go:76-77`; no source or
+  protected tuning was changed. The new `/tmp` result is separate from the
+  prior mux-on profile report so the two experiments remain independently
+  attributable.
+- **Build / run:** Go 1.27.4 (`darwin/arm64`). Built
+  `/tmp/hami-media-011-muxoff` with
+  `cd services/hami-media && go build -ldflags="-X main.routerUDPMuxMode=disabled -X main.routerSocketWriteMode=enabled -X main.clientSocketReadMode=enabled -X main.clientSocketReadBufferSize=4194304" -o /tmp/hami-media-011-muxoff .`.
+  `go version -m` confirmed all four ldflags. Raised `ulimit -n` to 65536 and
+  ran the 3,000-publisher / 3,000-viewer M7-H command with the same 65 s
+  duration and test video; the runtime log states `router ICE UDP mux mode:
+  disabled`.
+- **Result — NO:** disabling the router ICE UDP mux did not fix the stall.
+  At run-log line 24494, the SFU had `publishers=3000 packets=0
+  staleOver500ms=3000` at elapsed 7,000 ms. At line 163095, the harness had
+  `publishers=3000 frames=0 staleOver500ms=3000` at elapsed 87,037 ms. The
+  signature persisted in subsequent SFU samples. The four triggered
+  harness/SFU goroutine profiles are in `/tmp/hami-media-011-muxoff-profile-*`.
+- **Proof / metric limitation:** the run exited 1. At run-log lines
+  231307-231310, the first checked viewer (`hami-sfu-viewer-1`) received 2
+  of 5 expected packets and timed out. The readiness loop returns immediately
+  on this error (`services/hami-media/main.go:6061-6066`), before the normal
+  per-viewer result and latency evidence is written (`main.go:6315-6355`).
+  Therefore aggregate viewers passed and p95/p99 are **NOT MEASURABLE** from
+  this run; no latency summaries were emitted. Do not report them as zero.
+- **Evidence / next blocker:** full result and exact commands are in
+  `/tmp/hami-media-011-muxoff-result`; raw run log:
+  `/tmp/hami-media-011-muxoff-run-log`. The experiment rules out the router
+  ICE UDP mux as a necessary condition for reproducing this stall. The
+  01:35:29 profiles still show UDP fd-write-lock waits without the mux:
+  harness 32,544 goroutines in `fdMutex.rwlock` → per-connection
+  `UDPConn.WriteTo` → Pion `CandidatePair.Write` / NACK retransmission; SFU
+  1,844 in the same fd lock during ICE STUN keepalive. This narrows the next
+  evidence step to per-connection UDP write/ICE behavior; it does not prove
+  whether Pion or the host loopback stack is the cause.
+- **Owner dependency / boundary:** no routine owner action or economic
+  dependency was removed; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains
+  **NOT MEASURABLE**. No protected setting changed; no commit, push,
+  deployment, Cloud test or Docker operation occurred.
+---
+
+## 2026-11-19 — M7-H mux-off profile comparison (011 follow-on)
+
+- **Existing seam:** ran `go tool pprof -top -nodecount=20` and
+  `go tool pprof -traces -lines` on all four mux-off profiles and the four
+  mux-on baseline profiles; grouped traces by their pprof separators. Full
+  counts and stacks are in `/tmp/hami-media-011-muxoff-pprof.md`.
+- **Measured path shift:** mux-on SFU's largest fd-write-lock/NACK group was
+  23,051 at stall and 25,589 at follow-up through
+  `UDPMuxDefault.writeToContext`. All mux-off profiles have zero
+  `UDPMuxDefault` stacks. At mux-off stall, the largest harness group is
+  32,544 on `fdMutex.rwlock` -> per-connection `UDPConn.WriteToUDPAddrPort`
+  -> ICE `CandidatePair.Write` -> NACK resend; its aggregate NACK-resend
+  stack count is 37,602. The SFU has 6,836 fd-write-lock stacks, including
+  1,844 during STUN keepalive, while its largest group is 12,000 packet-buffer
+  reads. At the follow-up, fd-write-lock counts fall to 1 (harness) and 0
+  (SFU); 12,000 packet-buffer reads are the largest group in both.
+- **Interpretation / uncertainty:** mux removal changes the visible writer
+  path but does not prevent the full stall. The evidence supports transient
+  per-connection UDP write contention under ICE/NACK load, but cannot
+  attribute it uniquely to Pion writer behavior versus host loopback/kernel
+  backpressure. Follow-up captures are 31/32 seconds after initial mux-off
+  profiles versus 43/54 seconds for mux-on; avoid direct temporal conclusions.
+- **Single next test:** same 3,000/3,000 mux-off diagnostic run, but bypass
+  only Pion's NACK `ResponderInterceptor` on harness publisher peers; preserve
+  every other setting and capture the same counters/profiles. Disappearance
+  of both the NACK/fdMutex cohort and zero-frame/all-stale signature supports
+  NACK-driven write pressure; persistence kills NACK retransmission as a
+  necessary trigger and points next to ICE receive/host loopback behavior.
+  This proposed test was not run and is not acceptance evidence.
+- **Owner dependency / boundary:** no routine owner action or economic
+  dependency was removed; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains
+  **NOT MEASURABLE**. No code or protected constant changed, and no commit,
+  push, deployment, Docker, or Cloud test occurred.
+---
+
+## 2026-11-19 — M7-H NACK-bypass diagnostic (011 follow-on; inconclusive)
+
+- **Existing seam:** the M7-H-only harness publisher setup in
+  `services/hami-media/main.go:5537` constructs the normal media API without
+  Pion's NACK responder; the selection at `main.go:5660-5665` leaves SFU-side
+  and viewer peers unchanged. The retained result is
+  `/tmp/hami-media-011-nack-bypass-result`; raw run log:
+  `/tmp/hami-media-011-nack-bypass-run-log`.
+- **Build / run:** Go 1.27.4 (`darwin/arm64`); built with
+  `routerUDPMuxMode=disabled` and the same three socket-diagnostic ldflags as
+  mux-off. The 3,000-publisher / 3,000-viewer, 65-second diagnostic exited 1.
+- **Measured result:** the target harness sample
+  `frames=0 staleOver500ms=3000` occurred 0 times. The SFU did report
+  `packets=0 staleOver500ms=3000` for 35 consecutive samples (log lines
+  24031–48094); at line 95229 packets resumed to 10,099 while 2,915 publishers
+  remained stale. Viewer 86 received 2/5 packets and readiness timed out at
+  line 139131. Aggregate viewer results and p95/p99 are **NOT MEASURABLE**.
+- **Profiles / interpretation:** no profile files were produced because the
+  run's capture condition required the absent harness signature. Thus the
+  test is **INCONCLUSIVE** about whether NACK retransmission is necessary for
+  the exact harness stall. It does show an extended SFU receive-starvation
+  interval while the harness NACK responder was bypassed; this does not prove
+  the same cause as the harness send stall.
+- **Follow-up seam and test:** the current worktree now also triggers paired
+  profiles after five consecutive all-stale, zero-packet SFU samples, armed
+  only after packet reception. The detector at `main.go:3576-3589` and callback
+  at `main.go:3655` are covered
+  by `TestM7HSFUReceiveStallDetectorRequiresArmedConsecutiveSamples` in
+  `services/hami-media/main_test.go`; focused command
+  `cd services/hami-media && go test . -run
+  '^TestM7HSFUReceiveStallDetectorRequiresArmedConsecutiveSamples$' -count=1`
+  passed. This checks the trigger condition, not profile capture under load.
+  After the SFT run completes, rerun the same diagnostic so the SFU event can
+  capture both profiles before viewer-readiness abort; do not treat it as an
+  M7-H acceptance pass.
+- **Owner dependency / boundary:** no owner action or real transaction was
+  removed; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains
+  **NOT MEASURABLE**. The next blocker is obtaining paired profiles at the
+  receive-starvation event. No protected setting, commit, push, deployment,
+  Docker, or Cloud test occurred.
+---
+
+## 2026-11-19 — Weight-Space Experiment 4: repetition penalty LOSES (verified by self-watch 00:39 +0545)
+
+- **Repetition-penalty sweep on the BASE, same 50 fresh rows (520-569), same judge,
+  same eval as exp 3.** Runner /tmp/exp4.sh, master log /tmp/exp4.log, all GEN and
+  JUDGE steps exit 0, VERIFY exit 0 (DONE 18:43:48Z / 00:28:48 +0545). Record:
+  /tmp/weight-space-experiment-4.md. Base generations are the same file as exp 3
+  (not re-generated).
+- **Results (/300, pairs base / cand / tie):** pen 1.1: base 106 (47/35/24) vs 98
+  (44/32/22), 17/13/20 — loses by 8. Pen 1.2: base 107 (49/35/23) vs 78
+  (39/22/17), 23/10/17 — loses by 29. Pen 1.3: base 119 (48/40/31) vs 61
+  (27/20/14), 32/8/10 — loses by 58.
+- **Verdict: repetition penalty is DEAD as an approach.** Loses on ALL three dimensions
+  at every level, and loses worse as the penalty rises (-8, -29, -58). Do NOT sweep it
+  further. Loop reduction alone does NOT win. (Loop counts independently verified by
+  the 00:13 self-watch run from the gen files: strict loop rows base 8/50 -> pen 1.1
+  3/50 -> pen 1.2 0/50; not re-counted in this run. The verdict does not depend on
+  the counts.)
+- **Layer probe v3 ANSWERED (19:00 UTC, /tmp/layer-probe3.log; full table + caveat in
+  /tmp/weight-space-experiment-4-base-loops.md §3):** the offset-mapping fix worked —
+  13 spans of the 14-token loop phrase found on row 535. The loop lock is a LATE-layer
+  phenomenon (layers ~22-35): loop-phrase hidden-state similarity dips to 0.918
+  mid-network (layer 21) then recovers to 0.997 at the final layer (35), while the
+  control word falls to 0.826-0.84. Largest loop-vs-control gap at layer 35 (+0.155).
+  The collapse spans ~10 late layers, not one layer — this points AWAY from a
+  single-layer weight edit and TOWARD better data. (v2 had blocked at 18:54 UTC on
+  per-token decode concatenation; the fix was tokenizer offset_mapping.)
+- **Next: Experiment 5** (staged order /tmp/next-order-exp5.md, 00:32 +0545): alpha=0.5
+  edited adapter WITH pen 1.2 — the last cheap test before better data. If it loses,
+  next work is better data (curate high-quality Nepali examples, retrain LoRA).
+  Do NOT run a full 52k training run.
 
 ## 2026-11-18 — A6 full-history candidate triage
 
@@ -6780,6 +7988,70 @@ Reuse the existing six primitives and existing substrate:
 Obtain NDRRMA #02's official PDF attachment and inspect every page; then #04. Retrieve the Chumnubri notice attachment and dated official road/bridge/power restoration records. Only attempt a dispatch-to-distribution comparison when source actor, geography, time window, units and item categories match. Keep current passability, power, water quality, restoration completion and household-level reach UNKNOWN.
 ---
 
+## 2026-11-18 — M7-H attempt 13 tuned-stall triage (queue/010)
+
+- **Existing seam/history:** traced the existing `sendContext` deadline and `sendPublisherVideo` loop in `services/hami-media/main.go`, plus the raw tuned harness/SFU logs. The sender continues on ticker events until its context is canceled or a track write fails; the configured media context is 65 seconds. The tuned log has delayed sends after the cited 19:29:16 timestamp, through approximately 19:29:40. That timestamp is not evidence that all publishers stopped sending at once.
+- **Corrected diagnosis:** the tuned run ended with `feedback wait timed out after 5m0s: 60/3000 tracks complete`; tuned2 ended with `171/3000`. Peer teardown at the configured duration is expected. The 3,000-peer feedback/latency failure before teardown remains unexplained; the logs do not establish one common cause or acceptance. Do not claim the 3,000-peer M7-H proof passed, and do not repeat the same run expecting a different result.
+- **Failure-result fix:** the proof error path now emits `{"error":"..."}` JSON to stdout before the existing nonzero exit. `TestProofFailureIsWrittenAsJSON` verifies the encoded error. The original process wrapper did not preserve an OS exit-status record; the code's `fail` path exits nonzero.
+- **Focused local evidence:** the existing local `sfu-single` scale path completed with 100 publishers and 100 viewers over a 91-second run: 449 frames per publisher; all 100 viewer p99 checks passed (219,875–492,125 ns); `measurement_pass=true`; zero RTP queue drops and write errors; cleanup verified. This is not the 3,000/3,000 M7-H acceptance proof and does not resolve its feedback timeout.
+- **Frontend follow-ups:** registered the already-linked `/ledger` and `/build-log` routes and included them in `PUBLIC_SYSTEM_PATHS`; made sitemap path extraction independent of the deployed hostname. The homepage links are present in `src/routes/index.tsx`. Verification: `npm test` passed (463 tests across its two suites); focused feature-registry test passed (28/28); `npm run typecheck`, `npm run gates`, and `npm exec -- vite build` passed. `npm run gates` refreshed the generated timestamp in `docs/GATES.md`.
+- **Conflicting existing copy:** the pre-existing working-tree edit in `public/hami-systems-map.html` still states that the stalls are identical and a single cause is being found. It was not changed because it was an unexpected edit; reconcile that copy with this verified evidence before treating it as current.
+- **Owner dependency / measured delta:** no owner action or real transaction was removed; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**. Evidence quality improved by correcting the universal-early-stop interpretation, recording separate track counts, and preserving the unresolved 3,000-peer cause. Next dependency: use the existing send and feedback instrumentation to localize the missing feedback in a 3,000-peer run before another acceptance attempt.
+- **Boundary:** local-only work; no Cloud test, commit, push or deployment.
+---
+
+## 2026-11-18 — forge.db per-table seed export (queue/005)
+
+- **Existing seam:** read `storage/forge.db` via SQLite `mode=ro` with `PRAGMA query_only=ON`; included the existing WAL snapshot. Did not copy or modify the database file.
+- **Evidence and result:** read-only inventory found 82 non-internal tables and 66,993 rows. Exported each table to a private JSONL file under `/Users/nirojpaudyal/workspace/nepali-data/seeds/forgeos-export/`; `manifest.json` records per-table counts, file sizes, row ranges, hashes, source fingerprints, and gate statuses. JSONL schema headers preserve ordered column names/types; binary values are base64-wrapped. Every table has an export; all per-table row counts match `COUNT(*)` from the source snapshot. 82 files, 71,464,764 bytes total; largest file 49,805,168 bytes, below the 50,000,000-byte limit. Output directory mode 0700 and files mode 0600.
+- **Verification:** independently parsed every JSONL file; checked table coverage, manifest/file hashes, row ranges/counts, permissions and sizes. Rechecked source DB/WAL fingerprints; unchanged. No external upload or service was used.
+- **Gate discipline:** every export gate remains **RUNNING** in the manifest, not DONE, per instruction. No production gate or flag was changed.
+- **Owner dependency / next step:** no transaction or owner intervention was removed; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**. The local export is available; any later ingestion or transfer is outside this task and remains unperformed.
+- **Boundary:** no commit, push or deployment.
+---
+
+## 2026-11-18 — pending-change count audit (queue/006; RUNNING)
+
+- **27 → 21 around 01:45 +0545: UNKNOWN.** `git reflog --all` and the HEAD, `main`, and `origin/main` reflogs have no entries in 01:30–02:00; `git log --all` has no commit in that interval; `git stash list` is empty. The local VS Code logs under `~/Library/Application Support/Code/logs` have no 18 Nov session or `vscode.git/Git.log` (latest session directory is `20261116T125626`). There is no surviving evidence of a stash/drop, reset, checkout, or which paths left Source Control; no cause is assigned.
+- **Reported 21 → 47 at 18:00: exact count attribution UNKNOWN.** The 47 figure is in `queue/006-pending-changes-drop.md`, but no historical `git status` snapshot or 18 Nov VS Code Git log is available. The repository history does corroborate later gates work: commit `238ebbda581442e4493b258eb6ab7ec410c556d0` (author 19:56:38 +0545; committer 20:09:36 +0545) added/modified `.github/workflows/forgeos-ci.yml`, `backend/app/services/gates_alert.py`, `docs/GATES.md`, `docs/GATES_INVENTORY.md`, `docs/WHO_DID_WHAT.md`, `scripts/gates.mjs`, `scripts/gates-report.mjs`, `scripts/who-did-what.mjs`, `src/lib/gates.test.ts`, `src/lib/ledger.ts`, `src/lib/ledger.test.ts`, `src/routes/ledger.tsx`, and `done/007-gates-front-door.md` / `done/008-gates-alert-wire.md`, among other files. This confirms those files entered the later committed history, not that they accounted for the exact 47 at 18:00. Follow-up commits `f97637c6` (20:25:00 +0545), `2bf8fc6a` (20:30:03), and `488899bd` (20:34:48) are also later than that observation.
+- **Current status at 21:19 +0545:** `git status --short --branch` is on `main` at `488899bd8d6246e4a53536a085b10a31718bb30b` and reports 8 paths, all unstaged: `docs/CAPABILITY_QUEUE.md`, `features.json`, `public/hami-systems-map.html`, `services/hami-media/main.go`, `services/hami-media/main_test.go`, `src/lib/features.test.ts`, `src/lib/hami-system.ts`, and untracked `queue/010-attempt13-tuned-stall-triage.md`. Thus the current count is 8, not 47; the missing historical status snapshots prevent attributing the intervening count changes.
+- **Gate discipline:** this audit remains **RUNNING**, not DONE. No commit, push, deployment, ref change, or worktree cleanup was performed.
+---
+
+## 2026-11-18 — Hami field deploy preflight (RUNNING; blocked)
+
+- **Requested source:** `/Users/nirojpaudyal/Downloads/kn33r0s3/hami-field.html` is tracked and clean in the Knee Rose checkout at `74046f11f7bb1df2534e662328d6592b126010ee` (122,032 bytes; SHA-256 `f239e0b61827e991e7ebd1ceff97561d7713c788052522a4d6cdc81c72b9dda5`).
+- **Destination:** the request ended at “into the p”; `public/hami-field.html` is a plausible interpretation but the destination was not confirmed. That path is currently absent. Existing public static pages include `public/hami-systems-map.html` and `public/hami-methodology.html`, but neither is the requested interactive field page. No file was copied or created.
+- **Privacy review:** the source embeds `FIELD` data in client-side JavaScript, including `private`-labelled credential/personal-data descriptions (for example, source lines 1540–1640). Blur/owner-mode UI cannot make inline page data confidential. No credential value was found in the inspected entries, but publishing this page would disclose those private operational descriptions. Do not deploy it publicly without an explicit decision on that exposure or a privacy-safe revision.
+- **Deployment boundary:** `vercel whoami` reports logged out. ForgeOS is on `main` at `488899bd8d6246e4a53536a085b10a31718bb30b` with 8 unrelated pending paths; a workspace deploy risks including them. No authenticated isolated deploy path was available, and no temporary deployment was created.
+- **Gate discipline / next dependency:** status remains **RUNNING**, not DONE. No source or ForgeOS page was copied, no commit/push/deployment occurred. Resume only after the owner supplies the complete destination/target, resolves the client-visible private descriptions, and establishes the authorized deployment path.
+---
+
+## 2026-11-18 — Hami Field public copy (RUNNING; pushed, production blocked)
+
+- **Owner direction and source:** the follow-up explicitly selected `public/`, requested the Explore Hami link, and authorized commit/push. The source checkout `kn33r0s3/kn33r0s3` is public; `hami-field.html` at `8a4c02881566cc18215ba56a2a0184573c5afa5c` is 124,122 bytes with SHA-256 `3d7099c1b35a83feb761a6a3b02c0796738deadc0c3e6e234b85799cc782f27f`.
+- **Change and local evidence:** `public/hami-field.html` is byte-identical (124,122 bytes); the production build emitted the same asset. `ExploreHami()` links to it at `src/routes/index.tsx:514`. `npm test` passed 463 tests in the current worktree; `npm run typecheck`, `npm run gates`, and `env -u DATABASE_URL npm run build` passed. The build skipped DB migration because `DATABASE_URL` was unset.
+- **Commit:** `18066cfec7d6ac995bd3cce5165059b1ffec0f7e` was pushed to `main`; the commit contains only the requested public asset and homepage link. Existing unrelated dirty paths were left unstaged.
+- **Exact-head CI:** build, typecheck, route-smoke, lint, repository guards, Gitleaks, evidence-triage tests, and the automatically triggered local LiveKit smoke passed. Frontend tests failed 2 registry assertions (`/build-log`, `/ledger`); gate-checks failed because those gate tests did not run cleanly; backend tests failed because the importer test expects 108 D rows but parses 113 (129 rows total). The parent commit had the same failing job names. The local worktree's pending registry changes were intentionally not included in this task commit.
+- **Production blocker:** `https://hami-sigma.vercel.app/hami-field.html` returned HTTP 404 and its homepage did not contain the new link. GitHub reports `Vercel – forge-os: Account is blocked`; the independent verifier's fetch of `haminp.vercel.app` returned HTTP 402. A separate `Vercel – hami` check succeeded but does not establish that the ForgeOS page is live.
+- **Privacy boundary:** the copied static page still embeds descriptions marked private in client-side JavaScript; blur/owner-mode is not access control. No high-confidence literal key or email pattern was found. The source repository is already public, but the ForgeOS copy is also publicly readable.
+- **Owner dependency and next step:** the local navigation dependency is removed; production visibility still depends on restoring an authorized Vercel deployment path. Verify the exact asset and homepage link on the live host after that blocker is resolved.
+- **Gate discipline:** keep this capability **RUNNING**, not DONE. Do not claim production deployment or mark gates complete from the local build.
+---
+
+## 2026-11-19 — M7-H NACK-responder bypass (011 follow-on; diagnostic, inconclusive)
+
+- **Existing seam/history:** traced the existing client API and harness publisher-PC creation in `services/hami-media/main.go` (`git log --follow`, `git log -S`, and `git blame`; original API seam in `4f22ec18d`). The M7-H harness publishers are created separately from the SFU's router peers and viewer clients, so the bypass is confined to the harness publisher API.
+- **Change:** M7-H harness publisher peers use a separate Pion API that retains default codecs, NACK generation, RTCP reports, simulcast headers, stats, and TWCC, but omits only `nack.ResponderInterceptor` (`main.go:5374-5409`, `5494-5502`, `5653-5655`). Viewer APIs and SFU-side peers retain their defaults. No protected constant changed.
+- **Build:** Go `go1.27.4 darwin/arm64`; `go build -ldflags="-X main.routerUDPMuxMode=disabled -X main.routerSocketWriteMode=enabled -X main.clientSocketReadMode=enabled -X main.clientSocketReadBufferSize=4194304" -o /tmp/hami-media-011-nack-bypass .` succeeded. `go version -m` confirms the exact ldflags in `/tmp/hami-media-011-nack-bypass`.
+- **Run evidence:** `/tmp/hami-media-011-nack-bypass-run-log`, with `ulimit -n 65536`. The SFU logged 35 one-second samples with `packets=0 staleOver500ms=3000` (lines 24031–48094); later packets resumed, but line 95229 still reports 2,915 stale publishers. The harness did not emit `frames=0 staleOver500ms=3000` (zero matching samples); at line 96007 it was still sending 14,276 frames with one stale publisher.
+- **Outcome:** the proof exited 1 at the viewer readiness check: `hami-sfu-viewer-86` received 2 packets where 5 were required (lines 139131–139134). Aggregate viewer passes and p95/p99 are **NOT MEASURABLE**.
+- **Profiles and verdict:** no profile files were produced because the existing profile hook requires all 3,000 harness publishers to have `frames=0` and be stale (`main.go:3569-3572`), which did not happen. Consequently fdMutex/NACK profile counts are unavailable. **INCONCLUSIVE** for the exact harness stall signature; the SFU's zero-packet interval persisted with the harness publisher NACK responder omitted, so that responder is not necessary for that observed receive-starvation sub-symptom. The failed run does not establish whether it is necessary for the later all-zero harness signature. Next, capture profiles at the SFU receive-starvation event or before the viewer-readiness abort, and investigate ICE receive/host-loopback behavior.
+- **Validation:** `go test ./...` passed; `npm test` passed (295 tests); `npm run gates` reported GREEN. No Docker, Cloud test, commit, push, or deployment occurred.
+- **Process lesson:** `services/hami-media` is a nested Go module; run Go formatting/build commands only after explicitly changing to that directory. Two root-directory `gofmt` attempts failed with `lstat main.go: no such file or directory`; no file was changed by those attempts, and subsequent formatting/build succeeded from the module directory.
+- **Owner dependency:** no real transaction or routine owner action was removed; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**. This is a local diagnostic, not acceptance evidence; keep the capability **RUNNING**.
+---
+
 ## 2026-11-19 — Hami Field fit and Findings truth (RUNNING; local validation only)
 
 - **Existing seams/history:** the Field continues to use `kn33r0s3/hami-field.html` and its existing `fitView()`/reset controls; `git log --follow` confirms the field lineage through the 7D and tap-vs-click fixes. The homepage retains `FindingsPreview()` and the existing shared `loadEngineHealth()` / `loadDiscoveries()` path; `git log -S` and `git blame` confirm this is the original preview seam. No new subsystem or route was added.
@@ -6789,6 +8061,7 @@ Obtain NDRRMA #02's official PDF attachment and inspect every page; then #04. Re
 - **Validation:** `npm test` passed 295/295 in the current worktree; the focused content tests passed 31/31; `npm run gates` GREEN; TypeScript check, focused ESLint, and `env -u DATABASE_URL npm run build` passed. The full local test run includes unrelated, pre-existing uncommitted registry edits and is not evidence that those edits are part of this task.
 - **Deployment / exact-head evidence:** no commit, push or deployment has been made yet. Both deployed `/hami-field.html` assets still have SHA-256 `568d7906f7d20013a44c5ac810ab65970aa6208a185f769a64692ad2dc0962d4`, not the local fixed hash. Vercel CLI reports logged out; the current exact-head CI run for `ac828fbb640a4999eb942823499f2144131b9671` has frontend registry assertions, the backend importer count (expected 108 D rows, found 113), gate-checks, and deployment verification HTTP 402 failures. Secret scan passed. Do not claim either site is updated or live-verified.
 - **Owner dependency / next removable step:** this change removes no routine owner action for a real economic outcome; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**. Production findings remain blocked by missing database configuration, and live field/home verification remains blocked by the Vercel deployment path. Keep this capability **RUNNING**, not DONE; next restore the authorized deployment path and production database, then deploy and verify both public sites.
+---
 
 ## 2026-11-19 — Hami Field deployment outcome (RUNNING; live assets verified, CI/data blockers remain)
 
@@ -6859,7 +8132,7 @@ Obtain NDRRMA #02's official PDF attachment and inspect every page; then #04. Re
   then verify the staged paths before committing.
 ---
 
-## 2026-11-19 — Public route discovery (RUNNING; next deploy pending)
+## 2026-11-19 — Public route discovery (VERIFIED LIVE 2026-11-19 04:23 +0545)
 
 - **Existing seam:** extended `public/sitemap.xml`,
   `src/lib/hami-system.ts:PUBLIC_SYSTEM_PATHS`, and the existing `features.json`
@@ -6875,13 +8148,32 @@ Obtain NDRRMA #02's official PDF attachment and inspect every page; then #04. Re
   `npm test` passed (168 script tests and 295 TypeScript tests, zero failures);
   `npm run gates` reported GREEN; `env -u DATABASE_URL npm run build` passed.
   Live GETs for all three routes returned HTTP 200 with matching titles and
-  canonical URLs. The currently deployed sitemap still has 23 entries and
-  omits these additions; no standalone deployment was run.
+  canonical URLs. Deployed sitemap verified live 2026-11-19 04:08–04:10 and
+  04:23 +0545 (commit 39706d6c): 26 entries, /ledger, /build-log and
+  /meet-hami present. (A 22:11Z cached copy showing 23 entries predated the
+  deploy.) No standalone deployment was run.
 - **Owner dependency and next step:** this removes duplicate per-route
   registration work across the existing system path list and sitemap. Normal
   deployment authorization remains; verify the deployed sitemap after the
   next deployment. The route response does not establish that the Meet Hami
   AI backend is available. No verified real transaction exists, so
   `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
-  Keep this capability **RUNNING** until the deployed sitemap is verified.
+  Deployed sitemap verified live (see Verification above) — this entry's
+  verification condition is met.
 ---
+
+## 2026-11-18 — Nepali SFT smoke test: 500-example MLX LoRA held-out eval (adapter loses to base)
+
+- **Measured run:** 500-example MLX LoRA on Qwen3-4B (`mlx-community/Qwen3-4B-4bit`, snapshot `4dcb3d101c2a062e5c1d4bb173588c54ea6c4d25`), adapter at `/Users/nirojpaudyal/Downloads/hami-nepali-sft/adapters/qwen3-4b-nepali-sft-smoke-500`. Held-out eval 2026-11-18 10:45:46–10:49:05 UTC on 20 rows (indices 500–519), greedy generation (max 256 tokens), judged by the same local base model with blinded alternating candidate order, 0–2 each for fluency, instruction adherence, factual match to reference.
+- **Scores (verified from raw files, per-row sums re-added):** base **73/120** (fluency 24, instruction 24, factual 25); adapter **58/120** (fluency 23, instruction 18, factual 17). Pair verdicts over 20 rows: base 9, adapter 4, tie 7. Verdict: **adapter loses to base**. The loss concentrates in instruction adherence and factual match, not fluency.
+- **Evidence:** `/tmp/hami-sft-heldout-eval.ifDVJb/` — `heldout-scores.md` (per-row table), `run-metadata.json` (totals, dimension totals, pair counts), `heldout-scores.json`. Raw dataset rows/generations were not persisted.
+- **Correction / current blocker:** an earlier note asserted that this hosted
+  dataset is a Stanford Alpaca translation under CC BY-NC 4.0. The Hugging
+  Face card/API checked 2026-11-19 list 52,005 examples but no license field
+  or rights statement, and the preserved evidence does not establish inherited
+  terms or source lineage. Treat the earlier CC BY-NC assertion as unverified;
+  rights remain unresolved, with no commercial or redistribution permission
+  inferred. Next step is better Nepali data / a larger or better-tuned run,
+  not more of the same 500 examples.
+- **Boundary:** research-only data; no commercial use; no commit, push, deployment or change to the protected LiveKit settings.
+## 2026-11-19 16:02 +0545 — M7-H negotiation narrowed to transient ICE loss

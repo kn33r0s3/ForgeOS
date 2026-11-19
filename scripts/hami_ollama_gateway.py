@@ -3,7 +3,8 @@
 
 The existing route in backend/app/api/hami_chat.py runs outside this Mac and
 cannot bind its loopback interface. This standalone process exposes only the
-authenticated Ollama operations needed by that route.
+authenticated Hami-model operations needed by that route. No borrowed model
+or external fallback is allowed.
 """
 
 from __future__ import annotations
@@ -19,7 +20,8 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 
-OLLAMA_BASE_URL = "http://127.0.0.1:11434"
+HAMI_MODEL_BASE_URL = "http://127.0.0.1:11436"
+HAMI_MODEL_ID = "/Users/nirojpaudyal/Downloads/New Folder With Items/hami-nepali-sft/hf-cache/hub/models--mlx-community--Qwen3-4B-4bit/snapshots/4dcb3d101c2a062e5c1d4bb173588c54ea6c4d25"
 MAX_BODY_BYTES = 1_048_576
 UPSTREAM_TIMEOUT_SECONDS = 120
 
@@ -65,7 +67,7 @@ def _make_handler(secret: str) -> type[BaseHTTPRequestHandler]:
 
             try:
                 request = urllib.request.Request(
-                    f"{OLLAMA_BASE_URL}{path}",
+                    f"{HAMI_MODEL_BASE_URL}{path}",
                     data=body,
                     headers={"Content-Type": "application/json"},
                     method=method,
@@ -90,7 +92,7 @@ def _make_handler(secret: str) -> type[BaseHTTPRequestHandler]:
                     response_body = error.read()
                 except (urllib.error.URLError, TimeoutError) as error:
                     print(
-                        f"Ollama request failed: {type(error).__name__}",
+                        f"hami-model request failed: {type(error).__name__}",
                         file=sys.stderr,
                         flush=True,
                     )
@@ -105,14 +107,14 @@ def _make_handler(secret: str) -> type[BaseHTTPRequestHandler]:
                 upstream_lock.release()
 
         def do_GET(self) -> None:
-            if self.path != "/api/tags":
+            if self.path != "/api/hami-llm/status":
                 self._send_json(HTTPStatus.NOT_FOUND, {"error": "not_found"})
                 return
             if self._is_authorized():
-                self._proxy("GET", "/api/tags")
+                self._proxy("GET", "/v1/models")
 
         def do_POST(self) -> None:
-            if self.path != "/api/chat":
+            if self.path != "/api/hami-llm/chat":
                 self._send_json(HTTPStatus.NOT_FOUND, {"error": "not_found"})
                 return
             if not self._is_authorized():
@@ -143,8 +145,69 @@ def _make_handler(secret: str) -> type[BaseHTTPRequestHandler]:
             if not isinstance(payload, dict) or payload.get("stream") is not False:
                 self._send_json(HTTPStatus.BAD_REQUEST, {"error": "stream_must_be_false"})
                 return
+            payload["model"] = HAMI_MODEL_ID
+            body = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
 
-            self._proxy("POST", "/api/chat", body)
+            # The interim adapter has been observed to loop on identity prompts.
+            # Never relay a looped or reasoning-only answer to a chat surface.
+            if not upstream_lock.acquire(blocking=False):
+                self._send_json(HTTPStatus.TOO_MANY_REQUESTS, {"error": "busy"})
+                return
+            try:
+                request = urllib.request.Request(
+                    f"{HAMI_MODEL_BASE_URL}/v1/chat/completions",
+                    data=body,
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
+                )
+                try:
+                    with urllib.request.urlopen(request, timeout=UPSTREAM_TIMEOUT_SECONDS) as response:
+                        status = response.status
+                        content_type = response.headers.get("Content-Type", "application/json")
+                        response_body = response.read()
+                except urllib.error.HTTPError as error:
+                    status = error.code
+                    content_type = error.headers.get("Content-Type", "application/json")
+                    response_body = error.read()
+                except (urllib.error.URLError, TimeoutError):
+                    self._send_json(HTTPStatus.BAD_GATEWAY, {"error": "upstream_unavailable"})
+                    return
+
+                try:
+                    upstream = json.loads(response_body.decode("utf-8"))
+                    choices = upstream.get("choices") if isinstance(upstream, dict) else None
+                    message = choices[0].get("message") if isinstance(choices, list) and choices and isinstance(choices[0], dict) else None
+                    answer = message.get("content") if isinstance(message, dict) else None
+                    if not isinstance(answer, str) or not answer.strip():
+                        self._send_json(HTTPStatus.BAD_GATEWAY, {"error": "upstream_empty"})
+                        return
+                    stripped = answer.strip()
+                    user_text = " ".join(
+                        str(item.get("content", ""))
+                        for item in payload.get("messages", [])
+                        if isinstance(item, dict)
+                    ).lower()
+                    identity_request = any(
+                        term in user_text
+                        for term in ("तिमी को हो", "तपाईं को हो", "who are you", "who made you", "who built you", "गरेको हो")
+                    )
+                    if (
+                        identity_request
+                        and not any(term in stripped.lower() for term in ("hami", "हामी"))
+                    ):
+                        self._send_json(HTTPStatus.BAD_GATEWAY, {"error": "identity_unavailable"})
+                        return
+                    for size in range(2, 40):
+                        unit = stripped[-size:]
+                        if len(stripped) >= size * 3 and stripped.endswith(unit * 3):
+                            self._send_json(HTTPStatus.BAD_GATEWAY, {"error": "upstream_loop"})
+                            return
+                except (UnicodeDecodeError, ValueError, json.JSONDecodeError):
+                    pass
+
+                self._send_bytes(status, response_body, content_type)
+            finally:
+                upstream_lock.release()
 
         def send_error(
             self,
@@ -161,7 +224,7 @@ def _make_handler(secret: str) -> type[BaseHTTPRequestHandler]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Guarded local Ollama gateway")
+    parser = argparse.ArgumentParser(description="Guarded local hami-model gateway")
     parser.add_argument("--secret", required=True)
     parser.add_argument("--port", type=int, default=11435)
     args = parser.parse_args()
@@ -174,7 +237,7 @@ def main() -> None:
         ("127.0.0.1", args.port),
         _make_handler(args.secret),
     )
-    print(f"Hami Ollama gateway listening on 127.0.0.1:{args.port}", flush=True)
+    print(f"Hami model gateway listening on 127.0.0.1:{args.port}", flush=True)
     server.serve_forever()
 
 
