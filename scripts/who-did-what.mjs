@@ -38,8 +38,21 @@ function gitLog() {
     .filter(Boolean)
     .flatMap((rec) => {
       const [metadata, ...files] = rec.split(/\r?\n/);
-      if (files.length === 1 && files[0] === "docs/WHO_DID_WHAT.md") return [];
       const [hash, author, date, subject] = metadata.split("\x1f");
+      const changedFiles = files
+        .map((file) => file.trim())
+        .filter(Boolean);
+      const reportOnlyFiles = new Set([
+        "docs/CAPABILITY_QUEUE.md",
+        "docs/GATES.md",
+        "docs/WHO_DID_WHAT.md",
+      ]);
+      if (
+        changedFiles.length > 0 &&
+        changedFiles.every((file) => reportOnlyFiles.has(file))
+      ) {
+        return [];
+      }
       return [
         {
           hash: hash.slice(0, 7),
