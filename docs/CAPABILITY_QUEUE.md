@@ -11,12 +11,15 @@
   --check` independently reports 129 rows / 113 D-unknowns. Corrected only
   `backend/tests/test_import_unknowns.py` to expect 113 and assert `D113`;
   the map and production importer were not changed.
-- **Gate-check result:** the failed run only logged `gates tests: did not run
-  cleanly`. `scripts/gates.mjs` suppresses the child test output, and its
-  implementation/tests are unchanged since that failed head, so the historical
-  child-process cause is not recoverable from the CI log. It does not reproduce
-  locally: `npm run gates` is green. Do not infer the old run was green; the
-  post-push exact-head CI result remains the final check.
+- **Gate-check root cause and fix:** the failed CI job only logged `gates
+  tests: did not run cleanly`. `scripts/gates.mjs` parsed the child runner's
+  human-readable `ℹ fail N` summary instead of relying on its exit status.
+  `node --test --test-reporter=tap src/lib/gates.test.ts` exited 0 and reported
+  `# fail 0`, which the old parser could not recognize.
+  Updated `scripts/gates.mjs` to use the child error/exit status and print
+  captured output only on failure. This removes the reporter-format dependency
+  and preserves diagnostics for genuine failures. Verify the fix with the
+  post-push exact-head CI; local `npm run gates` alone is not CI evidence.
 - **Local verification:** `npm test` passed (168 script + 295 TypeScript tests);
   `npm run gates` passed; `npm run typecheck` passed; `env -u DATABASE_URL npm
   run build` passed (database migration skipped because the variable was

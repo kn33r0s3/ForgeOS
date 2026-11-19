@@ -22,10 +22,12 @@ const test = spawnSync(
   { cwd: repoRoot, encoding: "utf-8" },
 );
 const testOut = (test.stdout || "") + (test.stderr || "");
-const failMatch = testOut.match(/ℹ fail (\d+)/);
-const testFailures = failMatch ? Number(failMatch[1]) : -1;
-if (test.status !== 0 || testFailures !== 0) {
-  red.push(`gates tests: ${testFailures >= 0 ? testFailures + " failing" : "did not run cleanly"}`);
+if (test.error || test.status !== 0) {
+  const reason = test.error
+    ? `could not start: ${test.error.message}`
+    : `exited with status ${test.status}${test.signal ? ` (${test.signal})` : ""}`;
+  red.push(`gates tests: ${reason}`);
+  if (testOut.trim()) red.push(testOut.trim());
 }
 
 // 2. GATES.md freshness: regenerate to a temp string and compare.
