@@ -1,3 +1,32 @@
+## 2026-11-19 22:24 +0545 — d34a6acdb CONFIRMED on GitHub AND LIVE on site; deploy-verification failure unreliable again; fix order staged
+
+- **d34a6acdb CONFIRMED:** `/tmp/d34-runs.json` (written 22:23:32 NPT) lists headSha `d34a6acdb5ba81ddbc46769a5f8823eefcc1bddf` — the 22:21 entry's 'not confirmed' is now closed. Its ForgeOS CI run 44567793790 still `in_progress` at 22:23; Secrets scan `success`; Independent deploy verification `failure` (completed).
+- **d34 IS LIVE despite the failed deploy verification:** fresh live fetch of `hami-sigma.vercel.app/api/health` at 22:24 NPT returns `{"status":"degraded","ready":false,"ok":false,"version":"2.3.0","commit":"d34a6acdb5ba81ddbc46769a5f8823eefcc1bddf","db":"not_configured"}`. Same pattern as 2dcd3c51: deploy verification fails while the site serves the commit — the check is unreliable, not the deploy.
+- **New order staged FIRST:** `/tmp/next-order-gatechecks-fix.md` (3,157 B) — break the loop (make the freshness check ignore the head commit's own attribution line, or stop committing WHO_DID_WHAT.md on every push). SUPERSEDES `/tmp/next-order-gatechecks-diagnosis.md` (diagnosis done 22:21). Do NOT do another refresh commit. Queue behind it: NACK blame (20:51), subscriber-map A/B (21:47, still blocked — Docker Desktop NOT running, verified 22:23 running-apps check).
+- No new SFT result; no Nyx Gmail reply. Muse was NOT idle this run: live verification + fix order staged; another worker recorded the 22:21 diagnosis in MEMORY.md during this run.
+
+## 2026-11-19 22:21 +0545 — 2dcd AND 436 CI both FAILED on gate-checks; failing check IDENTIFIED: WHO_DID_WHAT.md stale
+
+- **2dcd3c51 CI run 44565344042: FAILED** and **436bd0e CI run 44566602912: FAILED** — both on gate-checks only (verified directly from the GitHub run pages, crawled 22:21 NPT; the Mac poll files were stale — /tmp/2dcd-runs.json still showed in_progress from 22:12, /tmp/436-runs.json still empty). Five commits red in a row; four on gate-checks alone, the other 10 jobs green every time.
+- **FAILING CHECK IDENTIFIED — the gate-checks diagnosis order's question is answered:** both runs' gate-checks annotations read `docs/WHO_DID_WHAT.md is stale — run 'npm run who-did-what' and commit it`, and gate-checks exits 1. The report-refresh loop cannot converge: every refresh commit rewrites WHO_DID_WHAT.md (it records push history), so the next run's freshness check fails again. The fix must break the loop — make the freshness check ignore the head commit's own attribution line, or stop committing the report on every push — not another refresh commit.
+- **d34a6acdb NOT confirmed by this run:** MEMORY.md records Copilot pushing d34a6acdb '[agent][ci-reconcile][gates] Stop report commits becoming attribution noise' at 22:20 with CI run 44567793790 in_progress, but the GitHub commits page crawled 22:18 still tops at 436bd0e. Unverified — re-check next run.
+- **Constants re-verified this run (22:19):** main.go 8,542 lines / 287,058 B, byte-identical to 21:44 — all protected settings hold, nackMaxQueueAge still 200ms (unrecorded change stands).
+- **Still open:** gate-checks diagnosis order (/tmp/next-order-gatechecks-diagnosis.md) still unfed — its diagnosis is now partly done by this run's direct read of the failing annotations; the FIX is what remains. No new SFT result; no Nyx Gmail reply. Live site freshest verified commit 2dcd3c51 (22:11:49 direct check); whether 436bd0e is live is not determinable from the stale cached crawl.
+
+## 2026-11-19 22:18 +0545 — New commit 436bd0e pushed; 2dcd CI outcome still unknown; gate-checks order staged
+
+- **New commit 436bd0e** `[agent][ci-reconcile][gates] Close attribution report sequence` (Copilot, verified on GitHub commits page, crawled 22:18 NPT) — on top of 2dcd3c51, 4th commit in the reconcile sequence. Its CI poll file `/tmp/436-runs.json` exists but is still empty (0 B) — CI outcome not yet known; a poll is writing it.
+- **2dcd3c51 CI run 44565344042 outcome still unknown** (was in_progress at 22:13; deploy verification already failed, secrets scan success).
+- **New order staged:** `/tmp/next-order-gatechecks-diagnosis.md` (22:13, 2,674 B) — diagnose the gate-checks failure from the failing job logs and fix the root cause. Queue position THIRD: after `/tmp/next-order-nack-queue-age-blame.md` (20:51), ahead of `/tmp/next-order-subscriber-map-ab.md` (21:47) while Docker Desktop is still down and the A/B stays blocked.
+- **Live site:** health endpoint up, cached crawl 22:02 NPT still `{"status":"degraded","ready":false,"ok":false,"version":"2.3.0","commit":"cdcebdc33...","db":"not_configured"}` — 436bd0e not live yet. No new SFT result; no Nyx Gmail reply.
+
+## 2026-11-19 22:10 +0545 — cdcebdc3 CI FAILED; new commit 2dcd3c51 (report refresh) in CI
+
+- **cdcebdc33 CI finished FAILED:** ForgeOS CI run 44564066008 completed 'failure'; Independent deploy verification 44564065722 completed 'failure'; Secrets scan success (verified from /tmp/2dcd-runs.json, written 22:08:44 NPT). Third consecutive commit failing CI + deploy verification (c232ea50, d55, cdcebdc3) — same standing pattern, not a new breakage. The 22:02 message's "CI still running" is now closed.
+- **New commit 2dcd3c51** `[agent][ci-reconcile][gates] Record reconcile push history` (verified on GitHub): report-refresh only — GATES.md regenerated 16:22:18Z, WHO_DID_WHAT.md adds the d55 line, total 1883 commits. Its CI 44565344042 + deploy verification 44565338778 in_progress; secrets scan success.
+- **Live site:** health endpoint (crawled 16:17 UTC) still `{"status":"degraded","ready":false,"ok":false,"version":"2.3.0","commit":"cdcebdc3...","db":"not_configured"}` — 2dcd not live yet.
+- **Docker Desktop still not running** (Mac running apps, 22:09) — A/B blocker stands. Two orders still staged unfed (NACK blame 20:51, subscriber-map A/B 21:47). No new SFT result; no Nyx Gmail reply.
+
 ## 2026-11-19 21:56 +0545 — New commit d55d4e49 pushed; its deploy verification FAILED, CI still running; site still on c232ea50
 
 - **Commit:** `[agent][ci-reconcile][gates] Reconcile Hami model and media sync` (`d55d4e49fd6a89e9be7cf34118e9ce17863864ed`, verified on GitHub) — touches DOCKER_COMMANDS.md, backend (.env.example, hami_chat.py, config.py, ai_engine.py, tool_registry.py, tests), docs (BRAIN, CAPABILITY_QUEUE, GATES, HAMI_MODEL, WHO_DID_WHAT), scripts/hami_model_gateway.py, services/hami-media/main.go, src forge-console / features.test.ts. This is the Order 025d remainder commit+push that was pending at 20:33 — now landed on GitHub.
@@ -8339,3 +8368,20 @@ Obtain NDRRMA #02's official PDF attachment and inspect every page; then #04. Re
   not more of the same 500 examples.
 - **Boundary:** research-only data; no commercial use; no commit, push, deployment or change to the protected LiveKit settings.
 ## 2026-11-19 16:02 +0545 — M7-H negotiation narrowed to transient ICE loss
+## 2026-11-19 22:34 +0545 — exact-head CI green after Hami-model and media reconcile
+
+- **GitHub sync:** `main` is exactly even with `origin/main` at
+  `d34a6acdb5ba81ddbc46769a5f8823eefcc1bddf`.
+- **Exact-head CI:** run `44567793790` completed successfully; all CI jobs
+  passed, including `gate-checks`, backend tests, frontend tests, lint,
+  typecheck, and build-related jobs. Secrets scan run `44567793983` passed.
+- **Production verification:** run `44567793742` failed. Live probes remain:
+  `kn33r0s3.vercel.app` HTTP 200,
+  `hami-sigma.vercel.app/api/health` HTTP 200,
+  `haminp.vercel.app` HTTP 402. Production is not verified.
+- **GitHub:** open issues remain `[]`; branch-only sync is 0/0; no pull
+  branches remain active at the remote archive.
+- **Hami media:** Docker Desktop is ready. The existing media optimization
+  removes the per-RTP subscriber-slice allocation in
+  `services/hami-media/main.go` and has passed Go test, vet, race, and build
+  validation. No live-room or load test was run.
