@@ -2595,6 +2595,41 @@ This file rots if it isn't maintained. Two mechanisms keep it live:
 The "Verified" stamp in Current state is the last live check. If it is more
 than a few days old, re-verify before trusting the details.
 
+## Last verified state snapshot (2026-11-19)
+
+**Update 2026-11-19 (daily freshness check, 06:23 NPT):** HEAD at `ea6b8bdc`
+(since 2026-11-18: Discovery round 24 — the buyer's side of QR vs cash
+(D109–D113); gates deploy — home-site links, ledger, build log, map,
+methodology, Hami Systems, chat retry, AI-engineering and advancement
+gates pages; CORS fixes for the cross-origin Hami chat widget; the Hami
+Field public page with viewport-fit and tap-vs-click fixes; Meet Hami
+unverified-status display; public routes and sitemap entries; and the
+D95 fish-superzone and market-evidence reconciliation — documentation
+and public-surface work only; no runtime, collector, model or
+production-config change, and production remains 402-disabled so none
+of it is live).
+`git pull --ff-only` fast-forwarded `913044b6..ea6b8bdc`;
+`main` == `origin/main`. Working tree clean before this edit.
+
+- **Health: NOT OK — both endpoints still return HTTP 402
+  `Payment required` / `DEPLOYMENT_DISABLED` (haminp and
+  forge-os-ebon, confirmed on the check read). Unchanged from
+  2026-10-31. It matches the Vercel account/deployment gate
+  already recorded in the handoff on 2026-10-31; the exact Vercel
+  cause remains pending normal team authorization, and no bypass or
+  permission change was made here.
+- **Intake: UNKNOWN this run —** `/api/forge-bot/config` also returns
+  the same 402 `DEPLOYMENT_DISABLED` response, so `intake_enabled` could
+  not be verified. Last verified value (2026-10-31) was `false`; no
+  change is claimed.
+- **Unknowns:** 113 D-entries in `docs/UNKNOWN_MAP.md` (up from 108;
+  Discovery round 24 added D109–D113). Note: the D95 run-start check
+  recorded that `test_import_unknowns.py` still expects D108, so the
+  exact-head backend test fails on the stale count; do not alter map
+  content solely to satisfy it.
+- **Blockers (unchanged):** zero real seller conversations; zero verified
+  transactions. Owner-side gates still hold.
+
 ## Last verified state snapshot (2026-11-18)
 
 **Update 2026-11-18 (daily freshness check, 06:23 NPT):** HEAD at `7cb04a47`
