@@ -161,16 +161,6 @@ jobs:
             git diff -- docs/GATES.md | head -50
             exit 1
           fi
-      - name: WHO_DID_WHAT.md must be committed fresh
-        shell: bash
-        run: |
-          set -euo pipefail
-          npm run who-did-what -- --exclude-head
-          if ! git diff --quiet -- docs/WHO_DID_WHAT.md; then
-            echo "::error::docs/WHO_DID_WHAT.md is stale — run 'npm run who-did-what' and commit it"
-            git diff -- docs/WHO_DID_WHAT.md | head -50
-            exit 1
-          fi
       - name: Commit messages must carry [agent][task-id][gates]
         shell: bash
         run: |

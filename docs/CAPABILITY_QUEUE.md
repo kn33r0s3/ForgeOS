@@ -1,3 +1,33 @@
+## 2026-11-20 00:32 +0545 — gate-checks report loop removed by fallback option 2
+
+- **Choice:** option 2, stop gating CI on committed freshness of
+  `docs/WHO_DID_WHAT.md`. The preferred option 1 text-normalizer was not
+  chosen because it would suppress differences tied to report identity and
+  commit totals without a durable source-level contract. The fallback
+  removes the self-invalidating gate directly.
+- **Before:** `.github/workflows/forgeos-ci.yml` ran
+  `npm run who-did-what -- --exclude-head` and failed when that report
+  regeneration changed `docs/WHO_DID_WHAT.md`.
+- **After:** the workflow retains `npm run gates`, GATES.md freshness, and
+  commit-message checks, but has no `WHO_DID_WHAT.md` freshness step.
+  `npm run who-did-what` remains available for manual/scheduled regeneration
+  and the report is not a CI artifact gate.
+- **Local proof:** `npm run gates` returned GREEN; the workflow parsed as YAML
+  with Ruby/Psych; `git diff --check` passed. No protected media constants,
+  LiveKit settings, or `docs/UNKNOWN_MAP.md` content changed.
+- **Durability:** future code commits no longer invalidate gate-checks merely
+  because a generated history report gains an attribution line. Next step:
+  commit and push this workflow change, then require a CI run on the following
+  commit to prove gate-checks stays green.
+
+## 2026-11-19 23:46 +0545 — bde CI GREEN (loop broken) + 155 gate-checks GREEN (durability proven); site live on 15566b3
+
+- **bde11fe CI GREEN — loop broken (verified from /tmp/155-runs.json, written 23:34 NPT):** ForgeOS CI run 44579384187 completed `success`. First green commit after d34, and the fix itself — the plain `npm run who-did-what` refresh worked. (/tmp/bde-runs.json itself is still 0 B — the bde poll never wrote; the 155 poll file carries bde's outcome.)
+- **15566b3 gate-checks GREEN — durability proven (verified directly from the GitHub jobs API, crawl 23:35 NPT):** gate-checks job completed `success`, including the `WHO_DID_WHAT.md must be committed fresh` step (17:44:47–48Z). 10 of 11 jobs success in that snapshot (lint, route-smoke, evidence-triage-tests, build, typecheck, secret-scan/gitleaks, livekit-local-smoke, repository-guards, gate-checks, frontend-tests); backend-tests still running pytest at snapshot time. MEMORY.md records another worker's 23:41 all-11-green verification — not re-verified by this run.
+- **Live site on 15566b3:** fresh health fetch 23:42 NPT returns commit `15566b30b9998a2d701afeb435583b12d1dc6b01`, still degraded / ready false / db not_configured. Deploy verification `failure` again — unreliable, the site proves the deploy landed.
+- **HEAD still 15566b3** (COMMIT_EDITMSG) — no new commit after it. The gate-checks fix order (/tmp/next-order-gatechecks-fix.md) is now SUPERSEDED — its fix landed as bde and held on the next commit. Remaining staged orders: NACK blame (20:51), subscriber-map A/B (21:47, still blocked — Docker Desktop NOT running, verified 23:45 running-apps check).
+- No new SFT result; no Nyx Gmail reply.
+
 ## 2026-11-19 23:26 +0545 — bde11fe fix verified in the files; CI still running (loop-break test)
 
 - **Fix commit verified from the files, not just the run page:** local `.git/COMMIT_EDITMSG` reads `[agent][ci-reconcile][gates] Refresh WHO attribution for d34` (Co-authored-by Copilot). Local `docs/WHO_DID_WHAT.md` (252,460 B) now lists `d34a6ac` as the newest agent line — the plain regeneration includes d34, exactly as the 22:43 diagnosis prescribed.
