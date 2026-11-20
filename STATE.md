@@ -29,6 +29,16 @@ and quantify per-site retention before choosing a controlled UDP-write/NACK
 intervention. Do not claim the new metrics fixed the stall or prove
 5,000-viewer capacity.
 
+## Parallel Hami-wide discovery — 2026-11-21 05:07 +0545 — D93 utility/access reconciliation
+
+- D93 remains UNKNOWN. NDRRMA #01 states 11 Oct 22:00; #02 page date is 13 Oct while its English report text states a 12 Oct 22:00 cutoff. That one-day page/listing lag is not proof of republication. #02 PDF remains unread; #04 cutoff is 16 Oct 10:00 and its PDF remains unread. The official index rechecked 21 Nov still lists #04 as the latest Gorkha-specific report; no #05 is visible in that index.
+- Chumnubri's official site lists a flood-response notice submitted 11 Oct 21:47 with an unread PDF. MoEWRI's notice board lists flood/hydropower notice #454 dated 28 Asoj; the detail body exposes only title/date.
+- Secondary reports dated 14 Oct disagree on outage scope: OnlineKhabar reports 971 Sirdibas-Uhiya households, about 4,000 households across Dharche's seven wards, and 50 in Arughat; INSEC reports about 1,300 total, including 995 on Sirdibas-Uhiya and around 300 in four Dharche settlements. The exact observation time and denominators are unknown. The Rising Nepal's minister/NEA statement says power restored everywhere except Dharche but does not explicitly scope the separate micro-hydro network.
+- Recovery reporting: OnlineKhabar on 27 Oct says Sirdibas-Uhiya resumed within four days, four temporary wooden bridges restored pedestrian/livestock/mule movement toward Tsum Valley, a 1.5 km Salleri–Jagat debris section remained difficult, and the Arughat bridge was repaired with a Bailey bridge. Kantipur on 25 Oct reports only the Benighat–Tatopani section reopened after a temporary diversion; permanent upgrading still required study. These are dated secondary reports, not current service verification.
+- Electricity/communications, water pipes, medicines, roads and bridge access were interdependent in the reported impacts. No current official NEA/municipal restoration notice or post-27-Oct service state was verified; current status remains UNKNOWN. No demonstrated coordination failure is inferred.
+- The existing source-time/provenance seam is confirmed: normalization can discard metadata when raw provenance is supplied; dedup can preserve stale Signal/Evidence metadata; assessment compares publication with retrieval; citations omit source-declared cutoff. No code change because the source-edit path remains blocked. No new primitive/model/table/collector.
+- Source bodies remain manual-only / NOT CLEARED; no collection, Signal/Evidence write, provider transmission, contact, publishing, spend, payment, emergency advice or alerting. LiveKit remains the first active engineering priority; this is parallel Hami-wide discovery, not a replacement.
+
 ## Historical continuation — 2026-11-21 01:34 +0545 — 10×100 profile reconciled; scale rung held
 
 - The existing `sfu-single` retry completed 10 publishers × 100 viewers for
