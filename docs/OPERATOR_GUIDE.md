@@ -147,10 +147,11 @@ potential 30/90-day values are not collected revenue or a valuation of ForgeOS.
 Defaults: `AI_PROVIDER=hami-model`, `COGNITIVE_PROVIDER=hami-model`,
 `EMBEDDING_PROVIDER=hash`, and `AI_FALLBACK_TO_MOCK=false`. Hami requests use
 the guarded local gateway configured by `HAMI_CHAT_HOST` and `HAMI_CHAT_KEY`.
-The from-scratch model is experimental and its responses are not reliable
-evidence; if it is unavailable, requests fail rather than switching to another
-model or deterministic templates. `AI_PROVIDER=mock` is only for explicitly
-isolated tests or development; it produces templates, not model inference.
+The MLX-served model (Qwen3-4B with the clean Nepali SFT adapter) has not
+passed all quality gates, so its responses are not reliable evidence. If it is
+unavailable, requests fail rather than switching to another model or
+deterministic templates. `AI_PROVIDER=mock` is only for explicitly isolated
+tests or development; it produces templates, not model inference.
 
 ## 4A. Real-world integration policy
 

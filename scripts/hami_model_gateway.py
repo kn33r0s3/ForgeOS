@@ -257,8 +257,8 @@ def _make_handler(secret: str) -> type[BaseHTTPRequestHandler]:
                 separators=(",", ":"),
             ).encode("utf-8")
 
-            # The experimental from-scratch model can loop on prompts.
-            # Never relay a looped answer to a chat surface.
+            # The serving adapter can loop on prompts. Never relay a looped
+            # answer to a chat surface.
             if not upstream_lock.acquire(blocking=False):
                 self._send_json(HTTPStatus.TOO_MANY_REQUESTS, {"error": "busy"})
                 return

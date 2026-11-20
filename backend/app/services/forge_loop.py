@@ -120,47 +120,47 @@ from app.services.observer_engine import ObserverEngine
 
 _CAPACITY_GATE_DEFINITIONS = (
     {
-        "gate_key": "sfu-1000-baseline",
+        "gate_id": "sfu-1000-baseline",
         "display_name": "SFU 1,000-viewer local baseline",
         "required_evidence": [{
-            "evidence_key": "20x50_pass",
+            "evidence_id": "20x50_pass",
             "description": "A full local 20-publisher by 50-viewer measurement gate passes.",
         }],
     },
     {
-        "gate_key": "sfu-1500-frame-integrity",
+        "gate_id": "sfu-1500-frame-integrity",
         "display_name": "SFU 1,500-viewer frame integrity",
         "required_evidence": [{
-            "evidence_key": "20x75_frame_integrity_pass",
+            "evidence_id": "20x75_frame_integrity_pass",
             "description": "Every selected RTP timestamp reconciles at every viewer.",
         }],
     },
     {
-        "gate_key": "sfu-1500-cause",
+        "gate_id": "sfu-1500-cause",
         "display_name": "SFU 1,500-viewer frame cause",
         "required_evidence": [{
-            "evidence_key": "frame_cause_localized",
+            "evidence_id": "frame_cause_localized",
             "description": "The packet and assembler evidence accounts for each missing frame.",
         }],
     },
     {
-        "gate_key": "sfu-safe-copy-treatment",
+        "gate_id": "sfu-safe-copy-treatment",
         "display_name": "SFU safe packet-copy treatment",
         "required_evidence": [{
-            "evidence_key": "nack_regression_passed",
+            "evidence_id": "nack_regression_passed",
             "description": "NACK, PLI, FIR, retransmission, and viewer delivery all pass.",
         }],
     },
     {
-        "gate_key": "sfu-1500-repeat",
+        "gate_id": "sfu-1500-repeat",
         "display_name": "SFU 1,500-viewer repeat",
         "required_evidence": [
             {
-                "evidence_key": "20x75_repeat_pass",
+                "evidence_id": "20x75_repeat_pass",
                 "description": "A matched 20-by-75 repeat passes the full per-viewer gate.",
             },
             {
-                "evidence_key": "host_headroom_verified",
+                "evidence_id": "host_headroom_verified",
                 "description": "Host headroom is above the recorded safety floor before the run.",
             },
         ],
@@ -314,7 +314,14 @@ def run_capacity_gate_tick(db: Session) -> dict:
     gates: dict[str, models.SubstrateEntity] = {}
     created_gates = 0
     for definition in _CAPACITY_GATE_DEFINITIONS:
-        gate_key = definition["gate_key"]
+        gate_key = definition["gate_id"]
+        required_evidence = [
+            {
+                "evidence_key": item["evidence_id"],
+                "description": item["description"],
+            }
+            for item in definition["required_evidence"]
+        ]
         identity_key = f"source:gate:forge_gate_definition:{gate_key}"
         if db.query(models.SubstrateEntity.id).filter_by(identity_key=identity_key).first() is None:
             created_gates += 1
@@ -324,7 +331,7 @@ def run_capacity_gate_tick(db: Session) -> dict:
             display_name=definition["display_name"],
             attributes={
                 "gate_key": gate_key,
-                "required_evidence": definition["required_evidence"],
+                "required_evidence": required_evidence,
             },
             created_by="forge_gate_tick",
             identity={
@@ -379,7 +386,7 @@ def run_capacity_gate_tick(db: Session) -> dict:
     transition_event_ids: dict[str, int | None] = {}
     events_created = 0
     for definition in _CAPACITY_GATE_DEFINITIONS:
-        gate_key = definition["gate_key"]
+        gate_key = definition["gate_id"]
         gate = gates[gate_key]
         evidence_state, result_event_ids, rejected_events = evidence_states[gate_key]
         dependencies = {

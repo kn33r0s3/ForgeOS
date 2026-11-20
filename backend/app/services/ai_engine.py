@@ -7,10 +7,11 @@ market analysis, business ideas, MVP plans, validation steps, and
 marketing strategy snippets.
 
 $0 OPERATING COST IS A HARD CONSTRAINT, NOT A DEFAULT TO OVERRIDE:
-The default AI_PROVIDER is hami-model (the owner's own from-scratch model)
-via the guarded gateway. Explicitly selecting MockProvider for tests or
-offline development is not model inference and must never be counted as
-evidence.
+The default AI_PROVIDER is hami-model via the guarded gateway to the
+MLX-served Qwen3-4B base and clean Nepali SFT adapter. The from-scratch
+TinyLM is a separate experiment, not the current chat provider. Explicitly
+selecting MockProvider for tests or offline development is not model inference
+and must never be counted as evidence.
 Paid completions remain disabled until per-call metering and a global
 spend guard are enforced at the call boundary.
 
@@ -30,10 +31,10 @@ Providers
 - MockProvider   : deterministic, offline, zero cost, zero setup.
                     Explicitly selected for tests or offline development;
                     it is not model inference.
-- HamiModelProvider : Hami's experimental from-scratch TinyLM on the
-                    owner's Mac, reached only through the guarded gateway
-                    (scripts/hami_model_gateway.py). No borrowed model
-                    or paid API. Its output has not passed quality gates.
+- HamiModelProvider : the MLX-served Qwen3-4B base with the clean Nepali
+                    SFT adapter on the owner's Mac, reached only through
+                    the guarded gateway (scripts/hami_model_gateway.py).
+                    Its output has not passed all quality gates.
 """
 
 from __future__ import annotations
