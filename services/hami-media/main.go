@@ -25,7 +25,6 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
-	"syscall"
 	"time"
 
 	"github.com/pion/ice/v4"
@@ -42,6 +41,8 @@ import (
 const (
 	audioFrameDuration             = 20 * time.Millisecond
 	videoFrameDuration             = 3 * audioFrameDuration
+	heapBudgetPollInterval         = 100 * time.Millisecond
+	heapBudgetSampleInterval       = time.Second
 	audioSampleRate                = 8000
 	audioSamplesFrame              = audioSampleRate / 50
 	sfuNACKHistoryPackets          = 512
@@ -77,9 +78,16 @@ const (
 	m7hCPUProfileDelay                  = 30 * time.Second
 	m7hCPUProfileWindow                 = 5 * time.Second
 	m7hCPUProfileMaxWindow              = 10 * time.Second
+	m7hHeapProfileCaptureTimeout        = 30 * time.Second
 	sfuInitialVideoTimestamp     uint32 = 0x10203040
 	peerConnectionConnected             = "connected"
 )
+
+var m7hHeapProfileCaptureOffsets = [...]time.Duration{
+	60 * time.Second,
+	90 * time.Second,
+	120 * time.Second,
+}
 
 // routerUDPMuxMode is linker-overridable for local transport isolation runs.
 var routerUDPMuxMode = "enabled"
@@ -124,7 +132,13 @@ var metricsListenAddress = flag.String(
 var m7hHeapProfilePath = flag.String(
 	"m7h-heap-profile",
 	"",
-	"optional local path prefix for connected and post-media M7-H heap profiles",
+	"optional local path prefix for connected, timed streaming, and post-media M7-H heap profiles",
+)
+
+var maxHeapBytes = flag.Uint64(
+	"max-heap-bytes",
+	0,
+	"cancel a local proof when Go HeapAlloc reaches this byte limit; 0 disables (not a total RSS limit)",
 )
 
 var m7hGoroutineProfilePath = flag.String(
@@ -332,7 +346,10 @@ func main() {
 		if *m7hSFUToken == "" {
 			fail("--m7h-sfu-token is required in m7h-sfu mode")
 		}
-		if err := runM7HSFUServer(*m7hSFUToken); err != nil {
+		if err := checkGoHeapBudget(*maxHeapBytes); err != nil {
+			fail("start local M7-H SFU process: %v", err)
+		}
+		if err := runM7HSFUServer(*m7hSFUToken, *maxHeapBytes); err != nil {
 			fail("run local M7-H SFU process: %v", err)
 		}
 		return
@@ -368,33 +385,47 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), *duration+setupAllowance)
 	defer cancel()
 	var result any
-	switch *mode {
-	case "pair":
-		result, err = runLocalPair(ctx, videoFrames, *duration)
-	case "sfu":
-		result, err = runLocalSFUProof(ctx, videoFrames, *duration)
-	case "sfu-single":
-		if *sfuPublishers == 1 && *sfuViewersPerPublisher == 1 {
-			result, err = runLocalSFUSinglePairProof(ctx, videoFrames, *duration)
-		} else {
-			result, err = runLocalSFUScaleProof(ctx, videoFrames, *duration, *sfuPublishers, *sfuViewersPerPublisher)
+	var heapBudgetDone <-chan error
+	if err = checkGoHeapBudget(*maxHeapBytes); err == nil {
+		heapBudgetDone = startHeapBudgetMonitor(ctx, *maxHeapBytes, cancel)
+		switch *mode {
+		case "pair":
+			result, err = runLocalPair(ctx, videoFrames, *duration)
+		case "sfu":
+			result, err = runLocalSFUProof(ctx, videoFrames, *duration)
+		case "sfu-single":
+			if *sfuPublishers == 1 && *sfuViewersPerPublisher == 1 {
+				result, err = runLocalSFUSinglePairProof(ctx, videoFrames, *duration)
+			} else {
+				result, err = runLocalSFUScaleProof(ctx, videoFrames, *duration, *sfuPublishers, *sfuViewersPerPublisher)
+			}
+		case "m1h":
+			result, err = runLocalM1HProof(ctx, videoFrames, *duration)
+		case "m2h":
+			result, err = runLocalM2HProof(ctx, videoFrames, *duration)
+		case "m3h":
+			result, err = runLocalM3HProof(ctx, videoFrames, *duration)
+		case "m4h":
+			result, err = runLocalM4HProof(ctx, videoFrames, *duration)
+		case "m5h":
+			result, err = runLocalM5HProof(ctx, videoFrames, *duration)
+		case "m6h":
+			result, err = runLocalM6HProof(ctx, videoFrames, *duration)
+		case "m7h":
+			result, err = runLocalM7HProof(ctx, videoFrames, *duration, *m7hPairs)
+		default:
+			fail("unsupported --mode %q (want pair, sfu, sfu-single, m1h, m2h, m3h, m4h, m5h, m6h, or m7h)", *mode)
 		}
-	case "m1h":
-		result, err = runLocalM1HProof(ctx, videoFrames, *duration)
-	case "m2h":
-		result, err = runLocalM2HProof(ctx, videoFrames, *duration)
-	case "m3h":
-		result, err = runLocalM3HProof(ctx, videoFrames, *duration)
-	case "m4h":
-		result, err = runLocalM4HProof(ctx, videoFrames, *duration)
-	case "m5h":
-		result, err = runLocalM5HProof(ctx, videoFrames, *duration)
-	case "m6h":
-		result, err = runLocalM6HProof(ctx, videoFrames, *duration)
-	case "m7h":
-		result, err = runLocalM7HProof(ctx, videoFrames, *duration, *m7hPairs)
-	default:
-		fail("unsupported --mode %q (want pair, sfu, sfu-single, m1h, m2h, m3h, m4h, m5h, m6h, or m7h)", *mode)
+	}
+	cancel()
+	if heapBudgetDone != nil {
+		if heapBudgetErr := <-heapBudgetDone; heapBudgetErr != nil {
+			if err == nil || errors.Is(err, context.Canceled) {
+				err = heapBudgetErr
+			} else {
+				err = errors.Join(err, heapBudgetErr)
+			}
+		}
 	}
 	if err != nil {
 		if writeErr := writeProofError(os.Stdout, err); writeErr != nil {
@@ -405,6 +436,91 @@ func main() {
 	if err := json.NewEncoder(os.Stdout).Encode(result); err != nil {
 		fail("write proof result: %v", err)
 	}
+}
+
+func startHeapBudgetMonitor(
+	ctx context.Context,
+	maxHeapBytes uint64,
+	cancel context.CancelFunc,
+) <-chan error {
+	done := make(chan error, 1)
+	if maxHeapBytes == 0 {
+		close(done)
+		return done
+	}
+
+	fmt.Fprintf(
+		os.Stderr,
+		"heap budget armed: maxHeapBytes=%d pollInterval=%s sampleInterval=%s\n",
+		maxHeapBytes,
+		heapBudgetPollInterval,
+		heapBudgetSampleInterval,
+	)
+	var initialMemory runtime.MemStats
+	runtime.ReadMemStats(&initialMemory)
+	logHeapBudgetSample("start", maxHeapBytes, initialMemory)
+
+	go func() {
+		defer close(done)
+		ticker := time.NewTicker(heapBudgetPollInterval)
+		defer ticker.Stop()
+		lastSampleAt := time.Now()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				var memory runtime.MemStats
+				runtime.ReadMemStats(&memory)
+				now := time.Now()
+				if now.Sub(lastSampleAt) >= heapBudgetSampleInterval {
+					logHeapBudgetSample("periodic", maxHeapBytes, memory)
+					lastSampleAt = now
+				}
+				if err := goHeapBudgetExceeded(memory.HeapAlloc, maxHeapBytes); err != nil {
+					logHeapBudgetSample("abort", maxHeapBytes, memory)
+					done <- err
+					cancel()
+					return
+				}
+			}
+		}
+	}()
+	return done
+}
+
+func checkGoHeapBudget(maxHeapBytes uint64) error {
+	if maxHeapBytes == 0 {
+		return nil
+	}
+	var memory runtime.MemStats
+	runtime.ReadMemStats(&memory)
+	return goHeapBudgetExceeded(memory.HeapAlloc, maxHeapBytes)
+}
+
+func goHeapBudgetExceeded(heapAlloc, maxHeapBytes uint64) error {
+	if maxHeapBytes == 0 || heapAlloc < maxHeapBytes {
+		return nil
+	}
+	return fmt.Errorf(
+		"Go heap budget exceeded: HeapAlloc=%d bytes >= max-heap-bytes=%d",
+		heapAlloc,
+		maxHeapBytes,
+	)
+}
+
+func logHeapBudgetSample(phase string, maxHeapBytes uint64, memory runtime.MemStats) {
+	fmt.Fprintf(
+		os.Stderr,
+		"heap budget sample: phase=%s maxHeapBytes=%d HeapAlloc=%d HeapInuse=%d HeapSys=%d NumGC=%d Goroutines=%d\n",
+		phase,
+		maxHeapBytes,
+		memory.HeapAlloc,
+		memory.HeapInuse,
+		memory.HeapSys,
+		memory.NumGC,
+		runtime.NumGoroutine(),
+	)
 }
 
 func fail(format string, args ...any) {
@@ -1937,7 +2053,7 @@ func setUDPConnReadBuffer(conn net.PacketConn, requested int) (int, error) {
 	var actual int
 	var socketErr error
 	if err := rawConn.Control(func(fd uintptr) {
-		actual, socketErr = syscall.GetsockoptInt(int(fd), syscall.SOL_SOCKET, syscall.SO_RCVBUF)
+		actual, socketErr = readSocketReceiveBuffer(fd)
 	}); err != nil {
 		return 0, fmt.Errorf("inspect client UDP receive buffer: %w", err)
 	}
@@ -1963,7 +2079,7 @@ func readUDPConnReadBuffer(conn net.PacketConn) (int, error) {
 	var actual int
 	var socketErr error
 	if err := rawConn.Control(func(fd uintptr) {
-		actual, socketErr = syscall.GetsockoptInt(int(fd), syscall.SOL_SOCKET, syscall.SO_RCVBUF)
+		actual, socketErr = readSocketReceiveBuffer(fd)
 	}); err != nil {
 		return 0, fmt.Errorf("inspect UDP receive buffer: %w", err)
 	}
@@ -2356,16 +2472,6 @@ func readM7HRuntimeMetrics(samples []runtimemetrics.Sample) m7hRuntimeMetricSnap
 		snapshot.gcCyclesPresent = true
 	}
 	return snapshot
-}
-
-func m7hProcessCPUSeconds() (float64, error) {
-	var usage syscall.Rusage
-	if err := syscall.Getrusage(syscall.RUSAGE_SELF, &usage); err != nil {
-		return 0, fmt.Errorf("read process CPU usage: %w", err)
-	}
-	user := float64(usage.Utime.Sec) + float64(usage.Utime.Usec)/float64(time.Second/time.Microsecond)
-	system := float64(usage.Stime.Sec) + float64(usage.Stime.Usec)/float64(time.Second/time.Microsecond)
-	return user + system, nil
 }
 
 func m7hHistogramDelta(
@@ -3423,6 +3529,7 @@ func startM7HRemoteSFU(ctx context.Context) (*m7hRemoteSFUClient, error) {
 		executable,
 		"-mode=m7h-sfu",
 		"-m7h-sfu-token="+token,
+		"-max-heap-bytes="+strconv.FormatUint(*maxHeapBytes, 10),
 	)
 	command.ExtraFiles = []*os.File{listenerFile}
 	command.Stdout = io.Discard
@@ -3796,6 +3903,65 @@ func captureM7HHeapProfiles(
 		return err
 	}
 	return nil
+}
+
+func m7hHeapProfileOffsetsForDuration(duration time.Duration) []time.Duration {
+	var offsets []time.Duration
+	for _, offset := range m7hHeapProfileCaptureOffsets {
+		if offset+m7hHeapProfileCaptureTimeout <= duration {
+			offsets = append(offsets, offset)
+		}
+	}
+	return offsets
+}
+
+func startM7HHeapProfileCapture(
+	sendCtx context.Context,
+	remote *m7hRemoteSFUClient,
+	pathPrefix string,
+	duration time.Duration,
+) func() error {
+	offsets := m7hHeapProfileOffsetsForDuration(duration)
+	if len(offsets) == 0 {
+		return func() error { return nil }
+	}
+	done := make(chan error, 1)
+	go func() {
+		startedAt := time.Now()
+		for _, offset := range offsets {
+			timer := time.NewTimer(time.Until(startedAt.Add(offset)))
+			select {
+			case <-timer.C:
+			case <-sendCtx.Done():
+				if !timer.Stop() {
+					select {
+					case <-timer.C:
+					default:
+					}
+				}
+				done <- nil
+				return
+			}
+			profileCtx, cancel := context.WithTimeout(sendCtx, m7hHeapProfileCaptureTimeout)
+			stage := fmt.Sprintf("streaming-%ds", int(offset/time.Second))
+			err := captureM7HHeapProfiles(profileCtx, remote, pathPrefix, stage)
+			cancel()
+			if err != nil {
+				done <- fmt.Errorf("capture M7-H heap profiles at %s: %w", stage, err)
+				return
+			}
+			fmt.Fprintf(os.Stderr, "m7h heap profiles captured: prefix=%s stage=%s\n", pathPrefix, stage)
+		}
+		done <- nil
+	}()
+	var waitOnce sync.Once
+	var result error
+	return func() error {
+		waitOnce.Do(func() {
+			result = <-done
+		})
+		return result
+	}
 }
 
 func captureM7HGoroutineProfiles(
@@ -4397,7 +4563,7 @@ type m7hRemoteSFUServer struct {
 	httpServer         *http.Server
 }
 
-func runM7HSFUServer(token string) (returnErr error) {
+func runM7HSFUServer(token string, heapBudgetBytes uint64) (returnErr error) {
 	listenerFile := os.NewFile(3, "m7h-sfu-listener")
 	if listenerFile == nil {
 		return errors.New("inherited M7-H loopback listener is missing")
@@ -4409,6 +4575,14 @@ func runM7HSFUServer(token string) (returnErr error) {
 	if err != nil {
 		return fmt.Errorf("adopt inherited M7-H loopback listener: %w", err)
 	}
+	heapBudgetContext, cancelHeapBudget := context.WithCancel(context.Background())
+	heapBudgetDone := startHeapBudgetMonitor(heapBudgetContext, heapBudgetBytes, cancelHeapBudget)
+	defer func() {
+		cancelHeapBudget()
+		if heapErr := <-heapBudgetDone; heapErr != nil {
+			returnErr = errors.Join(returnErr, fmt.Errorf("M7-H SFU process: %w", heapErr))
+		}
+	}()
 	shardCount := min(peerNegotiationConcurrency, 3000)
 	server := &m7hRemoteSFUServer{
 		apis:            make([]*webrtc.API, shardCount),
@@ -4438,6 +4612,9 @@ func runM7HSFUServer(token string) (returnErr error) {
 		return fmt.Errorf("parse M7-H router receive buffer size %q: %w", clientSocketReadBufferSize, err)
 	}
 	for shard := 0; shard < shardCount; shard++ {
+		if err := heapBudgetContext.Err(); err != nil {
+			return fmt.Errorf("M7-H SFU setup canceled: %w", err)
+		}
 		settings, mux, settingsErr := loopbackSettings(routerUDPMuxMode == "enabled", clientSocketReadBufferBytes)
 		if settingsErr != nil {
 			return fmt.Errorf("configure M7-H router shard %d: %w", shard, settingsErr)
@@ -4452,6 +4629,9 @@ func runM7HSFUServer(token string) (returnErr error) {
 	server.router, err = newSFURouter(server.apis[0])
 	if err != nil {
 		return err
+	}
+	if err := heapBudgetContext.Err(); err != nil {
+		return fmt.Errorf("M7-H SFU setup canceled: %w", err)
 	}
 	server.router.m7hPublisherReceiveStats = make(map[string]*m7hPublisherReceiveStats, 3000)
 	stopRuntimeProbe := startM7HRuntimeProbe("sfu", nil, nil)
@@ -4474,9 +4654,28 @@ func runM7HSFUServer(token string) (returnErr error) {
 		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
+	if err := heapBudgetContext.Err(); err != nil {
+		return fmt.Errorf("M7-H SFU startup canceled: %w", err)
+	}
 	fmt.Fprintf(os.Stderr, "m7h split process: role=sfu pid=%d address=%s muxShards=%d\n",
 		os.Getpid(), listener.Addr().String(), shardCount)
+	serveDone := make(chan struct{})
+	shutdownDone := make(chan error, 1)
+	go func() {
+		select {
+		case <-heapBudgetContext.Done():
+			if closeErr := server.httpServer.Close(); closeErr != nil && !errors.Is(closeErr, http.ErrServerClosed) {
+				shutdownDone <- fmt.Errorf("close M7-H SFU after heap budget cancellation: %w", closeErr)
+			}
+		case <-serveDone:
+		}
+		close(shutdownDone)
+	}()
 	serveErr := server.httpServer.Serve(listener)
+	close(serveDone)
+	if shutdownErr := <-shutdownDone; shutdownErr != nil {
+		returnErr = errors.Join(returnErr, shutdownErr)
+	}
 	fmt.Fprintf(os.Stderr, "m7h SFU HTTP serve returned: at=%s err=%v\n", time.Now().Format(time.RFC3339Nano), serveErr)
 	if serveErr != nil && !errors.Is(serveErr, http.ErrServerClosed) {
 		return fmt.Errorf("serve M7-H loopback signaling: %w", serveErr)
@@ -6958,6 +7157,7 @@ func runLocalSFUProofWithConfig(
 	captureBeforeViewerReadinessAbort := func() {}
 	waitForM7HGoroutineProfileCapture := func() {}
 	waitForM7HCPUProfileCapture := func() error { return nil }
+	waitForM7HHeapProfileCapture := func() error { return nil }
 	stopSFUReceivePoll := func() {}
 	if router != nil && (routerSocketWriteMode == "enabled" || clientSocketReadMode == "enabled") {
 		stopCandidatePairSampler = startCandidatePairSampler(
@@ -6976,6 +7176,14 @@ func runLocalSFUProofWithConfig(
 				sendContext,
 				config.remoteSFU,
 				*m7hCPUProfilePath,
+			)
+		}
+		if config.remoteSFU != nil && *m7hHeapProfilePath != "" {
+			waitForM7HHeapProfileCapture = startM7HHeapProfileCapture(
+				sendContext,
+				config.remoteSFU,
+				*m7hHeapProfilePath,
+				duration,
 			)
 		}
 		if config.remoteSFU != nil && *m7hGoroutineProfilePath != "" {
@@ -7000,6 +7208,9 @@ func runLocalSFUProofWithConfig(
 		waitForM7HGoroutineProfileCapture()
 		if err := waitForM7HCPUProfileCapture(); err != nil {
 			fmt.Fprintf(os.Stderr, "m7h CPU profile capture ended without a complete profile: %v\n", err)
+		}
+		if err := waitForM7HHeapProfileCapture(); err != nil {
+			fmt.Fprintf(os.Stderr, "m7h scheduled heap profile capture ended without a complete profile: %v\n", err)
 		}
 	}()
 	sendDone := make(chan sfuSendResult, 1)
@@ -7264,7 +7475,7 @@ func runLocalSFUProofWithConfig(
 	stopM7HRuntimeProbe()
 	cancelSend()
 	sent := <-sendDone
-	profileErr := waitForM7HCPUProfileCapture()
+	profileErr := errors.Join(waitForM7HCPUProfileCapture(), waitForM7HHeapProfileCapture())
 	if sent.err != nil {
 		sendErr := fmt.Errorf("write publisher video: %w", sent.err)
 		if profileErr != nil {

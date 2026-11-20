@@ -1,3 +1,245 @@
+## 2026-11-20 18:41 +0545 — MEDIA SESSION A–D CHECKPOINT: PLATFORM BUILDS PASS; HIGH-SCALE RUN BLOCKED BY SWAP
+
+- **A — p99 diagnosis:** existing 3,000-pair CPU profile evidence is dominated
+  by `syscall.rawsyscalln` (33.78%), `runtime.kevent` (16.94%), waits, and
+  UDP/Pion writes; harness `LatencyRecorder.Record` is about 0.95% cumulative.
+  The run has no completed latency JSON, so p99 is **NOT MEASURABLE** and no
+  specific latency hot path is established. No optimization was made on CPU
+  profile data alone.
+- **B — 121-second memory event:** the existing post-media profile attributes
+  about 9.66 GB in-use to Pion packet/read buffers and other networking
+  allocations; the 121.097-second sample recorded 15.06 GB HeapAlloc,
+  15.93 GB HeapInuse, and 120,631 goroutines. This supports memory pressure as
+  a leading suspect, not proof that heap alone caused the termination. The
+  local M7-H heap guard now reaches the spawned SFU process independently,
+  and runs of sufficient duration schedule harness/SFU heap profiles at 60,
+  90, and 120 seconds. Runtime verification remains pending.
+- **C — local viewer ladder:** prior local TEST evidence has a clean
+  measurement pass at 1,000 viewers. The 1,500-viewer result is not clean:
+  all 1,500 individual summaries pass, but 17 distinct publisher-frame IDs
+  remain pending after the existing one-second drain. Separately, 56 viewers
+  have 302 matched frames and one has 303 (113 subscriber-frame matches short
+  of 304); all unmatched counts, queue drops, write errors, and cleanup
+  failures are zero. `FrameClock.Pending()` counts frame IDs still awaiting
+  one or more subscribers, not the subscriber-frame shortfall. The 57 short
+  viewers cluster by publisher (26 on stream-0007, 15 on stream-0002, 16
+  across eight other fan-outs), a per-publisher diagnostic lead that remains
+  unexplained. Do not relax the gate. The clean maximum remains 1,000.
+- **D — portability:** the platform-specific socket receive-buffer and
+  process-CPU seams now compile for Darwin/arm64, Linux/amd64, and
+  Windows/amd64. Windows runtime behavior is not claimed.
+- **Autonomy delta:** no real customer or transaction was involved, so owner
+  interventions per real outcome remain **NOT MEASURABLE**. The code removes
+  manual heap-guard forwarding to the SFU child and manual timing of the
+  diagnostic snapshots; the owner still chooses and starts any high-scale
+  run. Current host pressure, not missing authorization, blocks that run.
+- **Verification:** Go tests, vet, race tests, and all three cross-builds
+  passed; `npm test` and `npm run gates` passed. Toolchain: Go 1.27.4
+  darwin/arm64. At this checkpoint, `main` was at `dd57e1a1`, two commits
+  ahead of `origin/main`; no CI run exists for this exact HEAD and production
+  is not verified. No push, deployment, or high-scale media run was done.
+- **Current stop condition:** at 18:41 +0545, macOS reported 7,188.56 MiB of
+  8,192 MiB swap used, 1,003.44 MiB free, and 61% system-wide free memory.
+  This is above the prior 2 GiB swap safety threshold. Do not run 3,000 pairs,
+  20×100+, or 5,000 viewers until swap recovers and the dual-process guard is
+  verified. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` is **NOT MEASURABLE**.
+- **Next:** when host pressure is below the safety threshold, run the bounded
+  3,000-pair M7-H profile with an 8 GiB per-process heap guard and verify both
+  harness/SFU profile pairs at 60/90/120 seconds. Before any further scale
+  climb, inspect the stream-0007/stream-0002 fan-outs and identify the 17
+  pending frame IDs without changing acceptance criteria.
+
+## 2026-11-20 18:44 +0545 — self-watch independent re-parse of the 20x75 JSON: two corrections + one new diagnostic lead (verified by Muse self-watch from the uploaded raw JSON, parsed locally)
+
+- CORRECTION to the 18:38 entry: the short viewers are 56 at 302 frames + 1 at 303 (not "57 at 302"). Total frame shortfall vs 304/viewer is 113 — NOT 17. So `latency_pending_frames = 17` is a different counter from the per-viewer recorded-frame shortfall; the staged order's task 1 (find what it counts) matters more, not less.
+- NEW LEAD: the 57 short viewers cluster by publisher — stream-0007 holds 26, stream-0002 holds 15, the other 8 fan-outs share 16. Not uniform loss; looks per-publisher, not per-viewer. Worth checking in the staged order's task 2 (log tail + whether 0007/0002 fan-outs show anything distinct).
+- Re-confirmed from the parse: measurement_pass=false, 1,500/1,500 latency pass, p95 max 3.0005 ms, p99 max 7.000 ms, worst single frame 141.3 ms, retransmitted 1,712 (max 5/viewer), rtp_queue_drops 0, rtp_write_errors 0, rtp_intentional_shed 0, cleanup_verified=true, 6,080 frames sent, 62 s.
+- Site health: /api/health still degraded / ready false / db not_configured, commit 2d2f8b3 (standing state; the read was a cached crawl from 18:20, not a fresh live check).
+- No new run file since the 20x75 verdict (18:35). The staged order `/tmp/next-order-sessionC-20x75-pending-frames.md` (18:41) is still the pending next step; feeder not determinable from files. Muse not idle: this run re-parsed the verdict independently and recorded the corrections above.
+
+## 2026-11-20 18:38 +0545 — SESSION C CLIMB: 20x75/8GiB measurement_pass=FALSE — LATENCY PASSED EVERYWHERE, 17 FRAMES NEVER MATCHED (verified by Muse self-watch from the raw JSON, not from summaries)
+
+- 20x75/8GiB (`/tmp/hami-sessionC-20x75-8GiB.json`, 2,003,921 B, run 18:33:58–18:35:05): measurement_pass=false, BUT all 1,500/1,500 viewers pass latency individually — p95 max 3.000 ms, p99 max 7.000 ms, 0 viewers with latency.pass false, all connected, 0 drops/sheds/write errors, cleanup_verified=true, 62 s, 6,080 frames sent. The fail is NOT latency.
+- The failing gate is `latency_pending_frames = 17` (vs 0 on the passing 20x50/6GiB run). 57 viewers recorded 302 frames instead of 304; no viewer has unmatched>0. Single-frame worst case 141 ms (viewer-1303) but p99 still passed. Retransmitted 1,712 total (max 5/viewer) vs 1,000 (1 each) at 20x50.
+- Diagnosis change: the climb's next wall is NOT heap (8 GiB did not trip; JSON is a full 2 MB verdict) and NOT p95/p99 — it is frame matching/completeness at 1,500 viewers. Before climbing to 20x100: find what `latency_pending_frames` counts (sent-but-unmatched at close? per-viewer shortfall?) and whether the 17 are a drain/flush artifact (frames still in flight at the 62 s close) or genuinely lost. The 20x50 run's 305-vs-304 frame quirk (50 viewers, one publisher's fan-out) may be the same phenomenon at smaller scale.
+- Heap peak for 20x75 still NOT pinned: the 122.9 MB log is over the 50 MB files.read/files.upload limit, so its heap samples are unreadable from here — same blind spot as the 6 GiB run. The 18:35 entry's "pin the 20x50 peak + re-check swap BEFORE any 20x100 step" still stands, now extended to 20x75.
+- Cross-build check binaries landed in /tmp at 18:37:35 (`hami-media-windows-amd64-check.exe`, `-linux-amd64-check`, `-darwin-arm64-check`, ~19 MB each) — someone is verifying the build across platforms; no 20x100 run file exists yet.
+- Muse not idle: this run verified the new 20x75 verdict from the raw JSON and recorded it here. Feeder not determinable from files.
+
+## 2026-11-20 18:35 +0545 — SESSION C CLIMB: 20x25 PASSED (500 VIEWERS), 20x50 TRIPPED AT 3 + 4 GiB, PASSED AT 6 GiB (1,000 VIEWERS) (verified by Muse self-watch from the raw JSONs/logs, not from summaries)
+
+- 20x25/2GiB (`/tmp/hami-sessionC-20x25-2GiB.json`, 672,163 B, run 18:27:51–18:28:54): measurement_pass=true, 500/500 viewers connected, 20/20 publishers, p95 max 1.002 ms, p99 max 1.447 ms, 304 frames each, 0 unmatched, 500 retransmitted total, 0 drops/sheds/write errors, cleanup_verified=true, 62 s. Heap peak 1,729,878,392 B (~1,650 MiB) from 60 periodic samples — guard armed-and-silent PROVEN for this run (armed line + samples, no trip).
+- 20x50/3GiB: TRIPPED, HeapAlloc=3,221,580,416 >= 3,221,225,472. 20x50/4GiB: TRIPPED, HeapAlloc=4,361,475,048 >= 4,294,967,296. (98-byte error JSONs; 4GiB log 54.6 MB.)
+- 20x50/6GiB (`/tmp/hami-sessionC-20x50-6GiB.json`, 1,336,643 B, run 18:32:33–18:33:38): measurement_pass=true, 1,000/1,000 viewers connected, 20/20 publishers, p95 max 2.068 ms, p99 max 3.215 ms, 0 drops/sheds/write errors, cleanup_verified=true, 62 s, 6,081 frames sent. Note: 50 viewers (one publisher's fan-out) recorded 305 frames vs 304 for the other 950; pass_frames true for all, measurement_pass true — not a failure, worth watching on the next climb step.
+- Calibration table (measured, 62 s runs): 20x5 peak ~424 MiB; 20x25 peak ~1,650 MiB; 20x50 peak bounded (4,361 MiB < peak ≤ 6 GiB) — NOT pinned: the 6GiB log is 54.6 MB, over the 50 MB files.read/files.upload limit, so its heap samples are unreadable from here. The flood is the per-viewer RTP path dump (12,500 lines at 20x25; ~25,000 at 20x50), not an error storm.
+- Also closes the 18:28 gap: the 20x5-1GiB verdict JSON LANDED after that entry read it (was 0 bytes, now 143,314 B): measurement_pass=true, p95 max 0.88 ms, p99 max 1.32 ms, 100/100 pass, 304 frames each — the file was still being written at 18:28. (Verified by the 18:32 self-watch run from the raw JSON.)
+- Next: pin the 20x50 peak (read the log on the Mac itself, or cut the per-viewer dump) + re-check swap (7,624 MiB in use at 18:04:49, still owed) BEFORE any 20x100 step. Do not climb on the 6 GiB bound alone.
+- Muse not idle: the climb ran five back-to-back runs 18:24–18:33; feeder not determinable from files.
+
+## 2026-11-20 18:28 +0545 — CALIBRATION CLIMB RAN: 128 + 256 MiB TRIPPED, 1 GiB FULL 62 s NO TRIP; LATENCY VERDICT MISSING (verified by Muse self-watch from the raw logs/JSONs, not from summaries)
+
+- 128 MiB 20x5 (`/tmp/hami-sessionC-20x5-128MiB.log`, 209 lines, 18:24:53–18:25:05): TRIPPED at HeapAlloc=134,285,120 >= max-heap-bytes=134,217,728. Abort sample line 21. All 240 peers connected at wait-end; NACK 100/100 retransmitted, 0 drops. Final line is the trip error.
+- 256 MiB 20x5 (`/tmp/hami-sessionC-20x5-256MiB.log`, 227 lines, 18:25:28–18:25:58): TRIPPED at HeapAlloc=268,694,880 >= 268,435,456 (~30 s in). 20/20 publishers + 100/100 viewers connected, 0 died, NACK 100/100, clean teardown. Final line is the trip error.
+- 1 GiB 20x5 (`/tmp/hami-sessionC-20x5-1GiB.log`, 761 lines, 18:26:16–18:27:19): FULL 62 s, NO trip, NO error lines. 58 periodic samples; HeapAlloc 82,783,448 (~79 MiB) at ~2 s rising to max 424,114,880 (~404 MiB) at the end. All 240 peers connected at wait-end, connectedMs ~62,100 each, 0 died, clean teardown. Sampled viewers: 1,153-1,154 packets, lost=0. Guard armed-and-silent PROVEN by the log (start + 58 periodic samples with the 1 GiB budget).
+- GAP — NO LATENCY VERDICT for the 1 GiB run: no p95/p99, no measurement_pass, no `router feedback diagnosis`, no `whole-run socket aggregates`, no final run line anywhere in the 761 lines; `/tmp/hami-sessionC-20x5-1GiB.json` is 0 bytes. measurement_pass for 20x5 with the guard armed is NOT proven by these artifacts. Next: check why the verdict JSON / final line was not written on a clean run (the tripped runs DO write a JSON + final line).
+- Calibration table (measured, 20x5/62 s): setup baseline ~40 MiB (42,796,800 at the 32 MiB trip); streaming growth ~5.5 MiB/s net of GC; 62 s peak 424 MiB. Realistic budget for 20x5/62 s is ~512 MiB. 128 and 256 MiB are both too low for a full 62 s run. Do NOT climb to 20x250 on a guessed budget; measure per-shape peak first. Swap re-check still owed before any climb above 20x5 (7,624 MiB in use at 18:04:49).
+- CORRECTION to the 18:24 entry: the re-runs HAVE happened — the staged calibration order was fed and executed 18:24:53–18:27:19 (three back-to-back runs). "No 128 MiB re-run has happened yet" is now false. Feeder not determinable from files.
+
+## 2026-11-20 18:24 +0545 — HEAP SAMPLING NOW IN main.go; CORRECTION to the 18:23 "unchanged" claim (verified by Muse self-watch from a direct content read)
+
+- main.go NOW contains the heap-budget sampling the staged calibration order asked for: `heapBudgetSampleInterval = time.Second` (line 46); `startHeapBudgetMonitor` prints `heap budget armed: maxHeapBytes=%d pollInterval=%s sampleInterval=%s`, logs a `start` sample, then a `periodic` sample every 1 s, and an `abort` sample on trip; new `logHeapBudgetSample` prints `phase / maxHeapBytes / HeapAlloc / HeapInuse / HeapSys / NumGC / Goroutines`. A passing run's log can now prove the guard was armed and silent — the 18:02 "in-run arming UNPROVEN" gap is closed in code (still to be proven by an actual run).
+- CORRECTION: the 18:23 watch entry's "main.go unchanged — still 289,424 B" is WRONG. It trusted `files.list` metadata (still reporting 289,424 B / modified 12:14:23Z). A direct content read this run shows 8,679 lines / 290,616 B vs 8,640 lines / 289,424 B at the 18:02 snapshot (+39 lines). **files.list size/mtime for main.go is stale — content reads are the authority for change detection, not list metadata.**
+- Wiring re-verified in the current file: `checkGoHeapBudget` pre-check + `startHeapBudgetMonitor(ctx, *maxHeapBytes, cancel)` before the mode switch, budget error joined into the run error. All protected constants intact in this snapshot: mux `enabled` (line 86), NACK 512 / max-sequences 512 / queue 512 / age 500 ms, RTCP chunk MaxUint8-2 = 253, pacing 5 ms, per-pair timeout 60 s, scale seam 250/publisher / 5,000 total, `--max-heap-bytes` flag (lines 329-332). Socket counters still source-default `disabled` (linker-override gap unchanged).
+- The sampling landed between the 18:02 snapshot and this 18:24 read. Author and feed path NOT determinable from files — the staged calibration order was recorded "still unfed" at 18:15, and no new run artifacts exist in /tmp since 12:22:25Z. No 128 MiB 20x5 re-run has happened yet; the staged order's tasks 1, 3, 4 remain open (task 2's code change has landed). Do NOT re-feed the order for the code change — only the re-run + climb remain.
+- Tunnel log: quick (account-less) tunnel at https://tours-let-appliance-bulk.trycloudflare.com → 127.0.0.1:11435; QUIC timeout + reconnect 11:35:13–15Z, DNS refresh failures 10:19Z/11:34Z, version warning 12:39:07Z (2026.9.1 → 2026.11.1). Chat probe 18:20–18:21 passed, so the tunnel path works; permanence still blocked on Niroj's named-tunnel account (unchanged).
+
+## 2026-11-20 18:21 +0545 — LIVE CHAT UP; IDENTITY PROBE FINALLY PASSED (verified by Muse self-watch, browser probe 18:20-18:21)
+
+- Chat probe 187 on https://hami-sigma.vercel.app/meet-hami: UP, both messages answered, no errors. 110th consecutive pass (probe 186 at 17:52 was 109th). Streak continues.
+- **"Who made you?" FINALLY ANSWERED — first time ever.** It 502'd on every overnight attempt and never ran. Verbatim reply: "I am Hami, a Nepal-origin living system built and maintained by Niroj Paudyal. I am not a borrowed model or a GPT, Qwen, Llama, or gpt-oss identity." Correct attribution to Niroj; denies GPT/Qwen/Llama/gpt-oss. The Foundation-hallucination check has now run and passed. No own model name disclosed.
+- "नमस्ते" answered with a fuller Nepali sentence ("नमस्ते! कस्ता आपको छ? आपको कुन बारेमा जानकारी चाहिन्छ?") — NOT the garbled echo "नम स्त े छ ।" from the 01:43-03:00 flapping probes. Grammar is off, but it is a real-sentence reply. Status indicator: "Hami AI replied to your last message."
+
+## 2026-11-20 18:15 +0545 — self-watch verification: heapguard trip numbers confirmed from the raw log; teardown evidenced clean
+
+- `/tmp/hami-heapguard-active-20x5.json` re-read: `{"error":"Go heap budget exceeded: HeapAlloc=42796800 bytes >= max-heap-bytes=33554432"}` — matches the 18:05 entry exactly. Final log line (line 190) is the same trip error.
+- Log head confirms the 18:05 counts: attribution lifetime survived=108, currentlyConnected=56; publisher-client survived=20, currentlyConnected=20; viewer-client survived=33, currentlyConnected=8; totalRouterWrites=0, 0 frames — trip during setup, before streaming.
+- CORRECTION to the 18:05 entry's "graceful teardown remains unproven": the log tail shows all 20 publisher-client PCs closed with everConnected=true and all 20 router mux shards (0–19) closed by app-teardown. No `cleanup_verified` verdict field exists (the run errored), but the log evidences a clean teardown of every peer connection and mux socket. The 31 router errors are "read/write on closed pipe" RTCP reads during teardown, not a failure cause.
+- Site health unchanged: https://hami-sigma.vercel.app/api/health returns degraded / ready false / db not_configured, commit 2d2f8b3 (standing state).
+- Next order `/tmp/next-order-heapguard-budget-calibration.md` (staged 18:07) still unfed as of this check; the Copilot watch owns the feed. No new run artifacts in /tmp since 12:22:25Z.
+
+## 2026-11-20 18:05 +0545 — heap abort trips during setup; larger rerun blocked by host pressure
+
+- The 20 × 5 / 100-viewer proof with `-max-heap-bytes=33554432` exited 1
+  with an explicit JSON error at `HeapAlloc=42796800` bytes. The 100 ms
+  sample exceeded the 32 MiB threshold by 8.8 MiB, confirming this Go-heap
+  guard is not a hard cap and needs substantial headroom.
+- Cancellation occurred during connection setup/wait: 108 peer states had
+  been created and 56 were connected at wait-end. The final log records
+  router mux socket closures and the runner process exited, but there is no
+  successful result or `cleanup_verified` verdict; graceful teardown remains
+  unproven. The focused race test passed, and the guarded source cross-built
+  offline for Linux/amd64.
+- At 18:04:49 +0545 the 24 GiB host had 7,624 MiB swap in use and 1,592 MiB
+  swap free (system-wide free memory 69%). The staged M7-H order prohibits a
+  3,000-pair rerun above 2 GiB swap use, so it was not started. Do not attempt
+  20 × 250 or 3,000 pairs on this host under the current pressure; those
+  capacities and the 3,000-pair p99 remain **NOT MEASURABLE**.
+- Windows remains unsupported by the current build: existing Unix-specific
+  socket/CPU diagnostics fail its cross-build. Correct platform adapters are
+  still needed; no Windows runtime is claimed.
+
+## 2026-11-20 18:02 +0545 — MEMORY ABORT NOW IN main.go; heapguard 20x5 PASSED (verified by Muse self-watch from the raw files, not from summaries)
+
+- The 17:55 entry's "No runtime memory abort exists" is now SUPERSEDED. main.go (8,640 lines, 289,424 B, snapshot read 18:02) contains the heap budget abort: `--max-heap-bytes` flag (lines 329-332, "cancel a local proof when Go HeapAlloc reaches this byte limit; 0 disables"), 100 ms poll interval (line 45), `startHeapBudgetMonitor` (430-460) + `checkGoHeapBudget` (461-473, `runtime.ReadMemStats`, error "Go heap budget exceeded: HeapAlloc=%d bytes >= max-heap-bytes=%d"), wired into the proof context cancel (377-379) and joined into the run error (410-415).
+- Tripwire PROVEN: `/tmp/hami-heapguard-preflight.json` + `.log` (12:14:54Z): run with max-heap-bytes=1 cancelled immediately — "Go heap budget exceeded: HeapAlloc=2858632 bytes >= max-heap-bytes=1". The abort fires and cancels the proof.
+- Heapguard 20x5 run PASSED (`/tmp/hami-heapguard-20x5.json`, 143,266 B, run 12:14:57-12:15:59Z, binary `/tmp/hami-media-92e208a8-heapguard` built 12:14:53Z): `measurement_pass=true`, 20/20 publishers connected, 100/100 viewers latency pass, 100/100 only-requested-track, p95 max 0.920 ms, p99 max 1.341 ms, 304 frames each, 100 retransmitted total, 0 RTP queue drops, `cleanup_verified=true`, 62 s.
+- Gap (honest): the 20x5 log (576,688 B) contains ZERO heap lines — no budget value, no sampling, no trip. The monitor logs nothing unless it trips, so the log cannot distinguish "armed, never tripped" from "not armed (0 disables)". In-run arming of the guard is UNPROVEN from these artifacts; the invocation command is not recorded in the log. Next run should pass a real budget and record the flag value plus a heap sample line.
+- Protected constants re-verified in this snapshot: mux enabled (line 86, source default "enabled"; log line 1 confirms); NACK history 512 / max-sequences 512 / queue 512 / RTCP chunk MaxUint8-2 = 253 (lines 48, 60, 62-63); pacing 5 ms (line 68); age 500 ms (lines 59, 64); per-pair timeout 60 s (line 66); scale seam 250/publisher, 5,000 total (lines 49-50); 5 fps proof ID (line 6146). Counters note: this binary's log also prints socket counters DISABLED (same linker-override gap as the autopc binary); verdicts do not depend on counters.
+- Consequence: the staged memory-abort order `/tmp/next-order-m7h-memory-abort-pion-retention.md` (17:26) is now DONE in code — its implementation landed between 17:53 and 18:00. The 20x250 run is no longer blocked on the abort existing; it is blocked only on a cautious climb (heap budget to be set per run) and on proving the guard armed in-run. The 50x2 fast-fail cause remains UNKNOWN (not reproduced).
+- Chat: probe 186 at 17:52, 109th consecutive pass, recovery holding ~401 min after the 11:11 restart; site health degraded / ready false / db not_configured (standing state, unchanged, commit 2d2f8b3).
+
+## 2026-11-20 17:53 +0545 — CORRECTION to the 17:50 ladder entry (verified by Muse self-watch from the raw JSONs, not from summaries)
+
+- The 17:50 entry's "50x2 FAILED FAST" claim is WRONG. `/tmp/hami-autopc-50x2.json` is 159,558 B (modified 12:04:00Z, run 12:02:58–12:04:00Z, ~62 s): `measurement_pass=true`, 50/50 publishers connected, 100/100 viewers latency pass, 100/100 only_requested_track, p95 max 0.426 ms, p99 max 0.595 ms, 304 frames each, 100 retransmitted total, 0 RTP queue drops / intentional sheds / write errors, `cleanup_verified=true`. The final log is 443 lines / 258,609 B with connected viewer RTP paths. The "8-line log / ~2 s / 0-byte JSON" was a mid-run snapshot read before the run finished — it was never re-checked before the 17:50 entry was written. The 17:50 header's "verified by Muse self-watch" attribution does not cover 50x2: the 17:43 self-watch run had verified only 20x5 and 1x100.
+- A sixth shape was also missed: **100x1 PASSED** (`/tmp/hami-autopc-100x1.json`, 186,725 B, run 12:04:08–12:05:10Z): `measurement_pass=true`, 100/100 publishers connected, 100/100 viewers latency pass, p95 max 0.315 ms, p99 max 0.377 ms, 304 frames each, 100 retransmitted, 0 drops/sheds/write errors, `cleanup_verified=true`.
+- 5x20 and 10x10 numbers in the 17:50 entry are CONFIRMED from the JSONs (5x20: p95 max 1.833 ms, p99 max 2.666 ms; 10x10: p95 max 1.391 ms, p99 max 1.789 ms; both 100/100 latency pass, 304 frames, 0 drops).
+- Corrected ladder: SIX shapes, ALL PASS, 100 viewers each, 62 s each — 20x5, 1x100, 5x20, 10x10, 50x2, 100x1. Per-viewer p99 falls as publisher count rises at fixed 100 viewers (1x100 12.277 ms → 5x20 2.666 → 10x10 1.789 → 20x5 0.701 → 50x2 0.595 → 100x1 0.377 ms) — fan-out per publisher is the driver, all far under 100 ms.
+- **Socket-counter decision:** do not rebuild/rerun this layout ladder solely to enable counters. These six verdicts measure delivery, latency, track isolation, and cleanup; disabled socket counters do not invalidate those fields. Treat socket aggregates as unavailable, not zero. Enable and verify the linker overrides on a later run only if socket activity is the measurement question.
+- Consequence: the staged order `/tmp/next-order-autopc-50x2-fast-fail.md` is VOID — it was built on the false 50x2 fail claim. Retracted (trashed) by Muse self-watch 17:53; replaced by `/tmp/next-order-autopc-ladder-verified.md`. No 50x2 diagnosis is needed. The 20x250 run still waits on the memory abort (NOT in main.go) — the staged memory-abort order (17:26) is still unfed.
+
+## 2026-11-20 17:50 +0545 — autopc shape ladder: four 100-viewer shapes PASS; 50x2 fails fast, zero connections (verified by Muse self-watch from the JSONs, not from summaries)
+
+- Ladder ran 17:42–17:48 +0545 (binary `/tmp/hami-media-local-pc`, built 17:42): shapes 20x5, 1x100, 5x20, 10x10, 50x2. The four completed shapes all report `measurement_pass=true`, 100/100 viewers connected, 100/100 latency pass, 304 frames each, 0 RTP queue drops / intentional sheds / write errors / forwarding errors, 62 s each. Evidence: `/tmp/hami-autopc-{20x5,1x100,5x20,10x10}.json`.
+- 20x5: p95 max 0.560 ms, p99 max 0.701 ms. 1x100 (one publisher, 100 viewers): p95 max 7.082 ms, p99 max 12.277 ms — worst of the four, still far inside 100 ms; fan-out 100 on one publisher costs ~17x the p99 of fan-out 5. 5x20: p95 max 1.833 ms, p99 max 2.666 ms. 10x10: p95 max 1.391 ms, p99 max 1.789 ms.
+- 50x2 FAILED FAST: `/tmp/hami-autopc-50x2.log` is 8 lines only, created 17:47:58, last write 17:48:00 — ~2 s lifespan vs ~63 s for passing runs; all five attribution snapshots `conns=0 roles=0` including wait-end; zero "viewer RTP path" lines; `/tmp/hami-autopc-50x2.json` is 0 bytes, no verdict. No connections at all. Cause unknown from the log alone — diagnose before the 20x250 run (50 publishers is the first shape above 20). Staged order: `/tmp/next-order-autopc-50x2-fast-fail.md`.
+- Counters note: all five autopc logs print "router socket write counter mode: disabled" / "client socket read counter mode: disabled". Source defaults in main.go are `"disabled"` (lines 88, 91); the M6-H/M7-H "counters ON" state is a build-time linker override the autopc binary evidently did not get. The verdicts above do not depend on counters, but per-viewer socket diagnostics in these logs are uncounted (`routerSocketWrites=0`, `socketReadCounted=false` throughout).
+- main.go snapshot verified 17:50 (8,573 lines): mux enabled (line 85); NACK 512 / pacing 5 ms / age 500 ms / history 512; RTCP chunk `maxNACKPairsPerRTCPPacket` = MaxUint8-2 = 253; per-pair timeout 60 s; scale seam 250/publisher, 5,000 total; 5 fps proof ID. Memory abort STILL NOT in main.go — only ReadMemStats sampling/logging. No 20x250 run yet.
+
+## 2026-11-20 17:55 +0545 — local-PC 100-viewer layout sweep; portability boundary measured
+
+- **Existing seam and owner action:** `sfu-single` already runs publisher,
+  router, and viewer PeerConnections in one local process. Users need a Go
+  toolchain, the pinned Pion modules (cached for an offline build), and a local
+  Annex-B H.264 file; they do not need LiveKit Cloud, a LiveKit server,
+  Docker, credentials, or paid infrastructure. The integration guide now
+  gives the exact invocation and 100-viewer layouts. This reduces setup
+  ambiguity, not the physical resource requirement.
+- **Offline Mac build:** Go 1.27.4, `CGO_ENABLED=0`, `GOTOOLCHAIN=local`,
+  `GOPROXY=off`; built `/tmp/hami-media-local-pc` as a Darwin/arm64 binary
+  using only cached modules. Runtime used `/tmp/hami-cost-interframe-20261119.h264`.
+- **Same-total layout sweep:** six separate 61 s local runs, each with 100
+  viewers, returned `evidence_type=TEST`, `local_only=true`,
+  `measurement_pass=true`, 100/100 latency passes, exact requested-track
+  isolation for all viewers, minimum 304 frames, 100/100 NACK retransmits
+  and PLI/FIR forwards, zero queue drops, intentional sheds, write errors,
+  forwarding errors, or cleanup failures:
+
+  | Publishers × viewers/publisher | Max viewer p95 | Median viewer p99 | Max viewer p99 |
+  | --- | ---: | ---: | ---: |
+  | 1 × 100 | 7.082 ms | 8.820 ms | 12.277 ms |
+  | 5 × 20 | 1.833 ms | 2.006 ms | 2.666 ms |
+  | 10 × 10 | 1.391 ms | 1.379 ms | 1.789 ms |
+  | 20 × 5 | 0.560 ms | 0.600 ms | 0.701 ms |
+  | 50 × 2 | 0.426 ms | 0.453 ms | 0.595 ms |
+  | 100 × 1 | 0.315 ms | 0.265 ms | 0.377 ms |
+
+  These are single-run results on one Mac, not controlled causal comparisons
+  or general capacity claims. More evenly distributed publisher load had
+  lower observed p99 in this sweep; repeat on other hardware before treating
+  that as a method.
+- **50 × 2 snapshot correction:** the earlier "failed fast" report inspected
+  the log while the 61 s run was still in progress; the completed same-path
+  JSON passed. A clean rebuild and unique-path rerun
+  `/tmp/hami-autopc-92e208a8-50x2.json` also exited 0 and passed 100/100
+  viewers (max p99 0.536 ms, zero queue drops/errors). The fast-fail was a
+  premature snapshot, not a harness failure; no root-cause fix was needed.
+- **Portability check:** `GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  GOTOOLCHAIN=local GOPROXY=off go build` passed. Windows cross-build failed
+  at existing `syscall.GetsockoptInt` calls (main.go:1940,1966) and
+  `syscall.Getrusage`/`Rusage` fields (main.go:2363-2367). The syscall
+  diagnostics require platform-specific adapters before claiming Windows
+  support; this run did not test a Linux or Windows runtime.
+- **Current blocker and safe next rung:** the host has 24 GiB RAM and about
+  7.7 GiB swap in use; the 100-viewer sweep did not materially increase
+  system-wide swap, but that does not bound process RSS on another PC. No
+  runtime memory abort exists. Do not run 20 × 250 or 3,000 viewers from this
+  result; the earlier 3,000-pair attempt reached 10.07/11.26 GiB swap before
+  it was stopped. Next, add a verified per-process heap-budget cancellation
+  at the existing proof-context seam, then climb cautiously on each host.
+  Five-thousand-viewer capacity remains **NOT MEASURABLE**.
+
+## 2026-11-20 18:01 +0545 — optional local Go-heap abort added and verified
+
+- **Existing seam:** the CLI already owns the proof context in `main.go` and
+  samples `runtime.MemStats`; the owner previously had to watch host memory
+  manually during a local run. `-max-heap-bytes` now rejects a budget already
+  exceeded before peer setup and polls Go `HeapAlloc` every 100 ms while the
+  proof runs. Crossing the limit cancels the existing proof context and
+  produces an explicit JSON error. Default `0` preserves existing runs.
+- **Boundary:** this is a Go-heap abort, not an OS RSS/cgroup limit; it does
+  not count kernel socket buffers or other processes, can overshoot by work
+  between samples, and requires the operator to choose a conservative budget.
+  It improves a local safety rung but does not make an arbitrary topology safe
+  on every PC.
+- **Focused verification:** `GOTOOLCHAIN=local GOPROXY=off go test -run
+  'TestHeapBudget' -count=1 ./...` passed. End-to-end preflight with
+  `-max-heap-bytes=1` exited 1 before any viewer RTP path and emitted
+  `{"error":"Go heap budget exceeded: HeapAlloc=2858632 bytes >=
+  max-heap-bytes=1"}`. A 20 × 5 / 100-viewer 61 s local proof with a 2 GiB
+  budget passed: 100/100 latency and track checks, 304 minimum frames, 100
+  NACK retransmits and PLI/FIR forwards, zero drops/errors, cleanup verified,
+  max p99 1.341 ms.
+- **Validation:** full Hami `go test ./...`, `go vet ./...`, and offline
+  `CGO_ENABLED=0` build passed; ForgeOS `npm test` and `npm run gates` passed
+  (`gates: GREEN`). `GOOS=linux GOARCH=amd64` cross-build passed. Windows
+  remains blocked by the direct `syscall` socket/CPU diagnostics identified
+  above; no Windows runtime was tested.
+- **Next removable dependency:** replace those OS-specific diagnostics with
+  correct platform adapters, then verify the memory abort during active peer
+  setup/teardown before trying a larger host-specific rung. No 20 × 250 run
+  was started; 5,000-viewer capacity and 3,000-viewer p99 remain **NOT
+  MEASURABLE**.
+
 ## 2026-11-20 17:20 +0545 — RTP-copy cost reduced; 3,000-pair degradation profiled
 
 - **Existing seam and owner action:** the `sfu-single` M6-H scale path was

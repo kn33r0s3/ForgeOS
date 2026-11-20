@@ -76,6 +76,72 @@ summary — receive must never be reported as capture-to-render.
   (a loss signal). A high pending count with a passing p95 is still a
   problem; report it, do not hide it.
 
+## Single-PC SFU scale proof (no LiveKit service)
+
+The existing `sfu-single` mode starts the simulated publisher, Hami's Pion
+router, and viewers inside one process on loopback. It does not need LiveKit
+Cloud, a LiveKit server, Docker, credentials, or a paid service. Results are
+local `TEST` evidence, not production capacity or multi-machine routing.
+
+Requirements are Go (the module declares Go 1.24 or newer), the pinned Pion
+modules, and a local Annex-B H.264 file. A first build may need to download
+the modules; once cached, this pure-Go build works offline:
+
+```sh
+cd services/hami-media
+CGO_ENABLED=0 GOTOOLCHAIN=local GOPROXY=off go build -o hami-media .
+```
+
+Run any publisher/fan-out shape with the same existing proof path:
+
+```sh
+./hami-media -mode sfu-single -duration 61s \
+  -video-file /path/to/local-source.h264 \
+  -sfu-publishers 20 -sfu-viewers-per-publisher 5 \
+  -max-heap-bytes 2147483648
+```
+
+`-max-heap-bytes` is an optional Go-heap abort threshold. It is checked before
+peer setup and sampled every 100 ms while the proof runs; when exceeded, the
+proof is canceled and returns an explicit error. The value is **not** an
+operating-system RSS limit and does not include socket buffers or other
+processes, so leave substantial host-memory headroom and choose a conservative
+per-PC threshold. The 2 GiB value above is only an example, not a universal
+recommendation. When enabled, stderr records the configured budget and
+HeapAlloc/HeapInuse/HeapSys/GC/goroutine samples at startup and once per
+second; the proof JSON remains on stdout. `0` disables the guard.
+
+For split-process M7-H runs, the same limit is passed to the SFU child and
+enforced independently in the harness and SFU processes; it is not an
+aggregate two-process limit. `-m7h-heap-profile <temporary-prefix>` captures
+connected and post-media profiles as before, and adds harness/SFU pairs at
+60, 90, and 120 seconds when the configured run duration leaves at least
+30 seconds for each capture to complete. These profiles are diagnostic
+artifacts, not proof of a universal memory ceiling.
+
+For a 100-viewer layout sweep, vary only the last two values:
+
+| Publishers | Viewers per publisher | Total viewers |
+| ---: | ---: | ---: |
+| 1 | 100 | 100 |
+| 5 | 20 | 100 |
+| 10 | 10 | 100 |
+| 20 | 5 | 100 |
+| 50 | 2 | 100 |
+| 100 | 1 | 100 |
+
+On one Apple Silicon Mac, a six-layout 61-second sweep passed the existing
+per-viewer latency, track-isolation, NACK, PLI/FIR, and cleanup checks. An
+earlier snapshot of a same-host 50 × 2 run appeared to fail fast because it
+was checked before the 61-second run finished; the completed same-path run
+and a unique-path rerun both passed. This is a repeatable starting matrix,
+not a promise that every PC can sustain the same load. Start low and use the
+emitted JSON to verify each viewer. The 5,000-viewer
+configuration is accepted by the harness but has not passed a runtime proof;
+do not jump to it without host-specific rungs and a conservative memory
+budget. Windows runtime support is not established; the current source has
+Unix-specific socket/CPU diagnostics.
+
 ## M2-H local multi-publisher proof
 
 The `m2h` runner uses ten distinct publisher PeerConnections and tracks,

@@ -861,6 +861,68 @@ func TestProofFailureIsWrittenAsJSON(t *testing.T) {
 	}
 }
 
+func TestHeapBudgetMonitorCancelsProofWhenLimitIsReached(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	done := startHeapBudgetMonitor(ctx, 1, cancel)
+	select {
+	case err := <-done:
+		if err == nil || !strings.Contains(err.Error(), "Go heap budget exceeded") {
+			t.Fatalf("heap budget result = %v, want explicit budget error", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("heap budget monitor did not abort at the exceeded limit")
+	}
+	if !errors.Is(ctx.Err(), context.Canceled) {
+		t.Fatalf("proof context error = %v, want context cancellation", ctx.Err())
+	}
+}
+
+func TestHeapBudgetCanBeDisabled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	done := startHeapBudgetMonitor(ctx, 0, cancel)
+	if err, ok := <-done; ok || err != nil {
+		t.Fatalf("disabled monitor result = %v, open=%t; want closed without error", err, ok)
+	}
+	if ctx.Err() != nil {
+		t.Fatalf("disabled monitor canceled proof context: %v", ctx.Err())
+	}
+}
+
+func TestM7HHeapProfileOffsetsFitRunDuration(t *testing.T) {
+	tests := []struct {
+		name     string
+		duration time.Duration
+		want     []time.Duration
+	}{
+		{
+			name:     "short run omits scheduled captures",
+			duration: 89 * time.Second,
+			want:     nil,
+		},
+		{
+			name:     "one capture with time to complete",
+			duration: 90 * time.Second,
+			want:     []time.Duration{60 * time.Second},
+		},
+		{
+			name:     "all captures with time to complete",
+			duration: 150 * time.Second,
+			want:     []time.Duration{60 * time.Second, 90 * time.Second, 120 * time.Second},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := m7hHeapProfileOffsetsForDuration(tt.duration); !reflect.DeepEqual(got, tt.want) {
+				t.Fatalf("profile offsets for %s = %v, want %v", tt.duration, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestWaitForSFUFeedbackReturnsPartialCountsOnContextTimeout(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
 	defer cancel()
