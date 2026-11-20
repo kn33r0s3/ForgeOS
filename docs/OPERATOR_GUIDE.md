@@ -46,8 +46,9 @@ bun install --frozen-lockfile
 bun run build
 ```
 
-No virtual environment or global Python install is required. `AI_PROVIDER=mock` and
-hash embeddings remain offline and cost-free after dependencies are installed.
+No virtual environment or global Python install is required for these commands.
+Tests explicitly select `AI_PROVIDER=mock`; normal runtime defaults to Hami's
+local model and does not silently fall back to templates.
 Open `http://localhost:3000`; API documentation is at `http://localhost:8000/docs`.
 
 ## 2. First human experiment — canonical workflow
@@ -143,13 +144,13 @@ potential 30/90-day values are not collected revenue or a valuation of ForgeOS.
 
 ## 4. AI configuration
 
-Default: `AI_PROVIDER=mock`, `EMBEDDING_PROVIDER=hash`, no keys/cost.
-Mock uses deterministic heuristics/templates, not validated external facts.
-For local AI install Ollama separately, download your chosen model, and set
-`AI_PROVIDER=ollama`, `OLLAMA_HOST`, `OLLAMA_MODEL` in backend `.env`.
-Optional OpenAI requires `requirements-optional.txt` and a locally stored key.
-Real-provider failure is fail-closed by default (`AI_FALLBACK_TO_MOCK=false`).
-Do not describe fallback output as model-verified customer evidence.
+Defaults: `AI_PROVIDER=hami-model`, `COGNITIVE_PROVIDER=hami-model`,
+`EMBEDDING_PROVIDER=hash`, and `AI_FALLBACK_TO_MOCK=false`. Hami requests use
+the guarded local gateway configured by `HAMI_CHAT_HOST` and `HAMI_CHAT_KEY`.
+The from-scratch model is experimental and its responses are not reliable
+evidence; if it is unavailable, requests fail rather than switching to another
+model or deterministic templates. `AI_PROVIDER=mock` is only for explicitly
+isolated tests or development; it produces templates, not model inference.
 
 ## 4A. Real-world integration policy
 

@@ -40,7 +40,7 @@ above, it is NOT unconditional — it requires real economic evidence
 (economic_intelligence.py: a problem, an identifiable customer, and at
 least one of pain/demand/monetary-impact/solution-gap, all backed by
 actual matched text, never guessed) before creating anything. It also
-does NOT call ai_engine — with AI_PROVIDER defaulting to "mock" ($0),
+does NOT call ai_engine — when AI_PROVIDER is explicitly "mock" ($0),
 ai_engine's output is templated boilerplate, which is exactly the
 "treating keyword clusters as opportunities" failure mode v1.8 was
 built to stop. Its problem/target_customer/economic_consequence come

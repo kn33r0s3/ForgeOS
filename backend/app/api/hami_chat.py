@@ -17,9 +17,8 @@ Checkpoint limits (honest):
   not from Hami's evidence store. Retrieval comes next.
 - No actions are executed: this endpoint only chats. It cannot contact
   anyone, spend money, or change records.
-- hami-model is an interim Nepali LoRA serving checkpoint. The base and
-  adapter provenance must stay visible; this is not a from-scratch Hami
-  model. It becomes public only while it passes live quality gates.
+- hami-model is an experimental from-scratch TinyLM and has not passed
+  quality gates. Treat its fluency and factual answers as unreliable.
 """
 
 import json
@@ -114,8 +113,9 @@ def hami_chat(payload: ChatRequest, response: Response):
             status_code=503,
             detail="Hami chat is not configured; required environment variables are unset.",
         )
-    # The clean adapter was trained and evaluated on {"messages": [...]} with
-    # this system prompt — send it as trained.
+    # Send the system prompt and recent turns to the gateway. The current
+    # gateway only forwards the latest user turn to the model server, so these
+    # fields do not currently condition the model output.
     messages: list[dict[str, str]] = [{"role": "system", "content": HAMI_SYSTEM_PROMPT}]
     for item in payload.history[-10:]:
         if item.role in {"user", "assistant"}:

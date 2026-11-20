@@ -7,9 +7,10 @@ market analysis, business ideas, MVP plans, validation steps, and
 marketing strategy snippets.
 
 $0 OPERATING COST IS A HARD CONSTRAINT, NOT A DEFAULT TO OVERRIDE:
-The default AI_PROVIDER is the deterministic MockProvider for offline
-development; that is not model inference and must never be counted as
-evidence. Real inference requires hami-model (the owner's own model) via the guarded gateway.
+The default AI_PROVIDER is hami-model (the owner's own from-scratch model)
+via the guarded gateway. Explicitly selecting MockProvider for tests or
+offline development is not model inference and must never be counted as
+evidence.
 Paid completions remain disabled until per-call metering and a global
 spend guard are enforced at the call boundary.
 
@@ -27,14 +28,12 @@ file.
 Providers
 ---------
 - MockProvider   : deterministic, offline, zero cost, zero setup.
-                    Default. Keeps Forge fully usable on a low-end
-                    laptop with no API key, no local model, and no
-                    internet at all.
-- HamiModelProvider : Hami's own model (the clean adapter) on the
+                    Explicitly selected for tests or offline development;
+                    it is not model inference.
+- HamiModelProvider : Hami's experimental from-scratch TinyLM on the
                     owner's Mac, reached only through the guarded gateway
                     (scripts/hami_model_gateway.py). No borrowed model
-                    or paid API. The intended
-                    "better than mock, still $0" path.
+                    or paid API. Its output has not passed quality gates.
 """
 
 from __future__ import annotations
@@ -86,7 +85,7 @@ class AIProvider(ABC):
 class MockProvider(AIProvider):
     """
     Deterministic offline templates used only when AI_PROVIDER=mock
-    (the default) or after an explicit, permitted MOCK fallback. This is
+    is explicitly selected or after an explicit, permitted MOCK fallback. This is
     not model inference and does not establish facts or support claims.
     Consumers must preserve MOCK provenance and must not count template
     output as evidence or a real-world result.

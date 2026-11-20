@@ -4,8 +4,8 @@ x-forgeos-environment: &forgeos-environment
   DATABASE_URL: ${DATABASE_URL:-sqlite:////app/storage/forge.db}
   AI_PROVIDER: ${AI_PROVIDER:-hami-model}
   AI_FALLBACK_TO_MOCK: ${AI_FALLBACK_TO_MOCK:-false}
+  COGNITIVE_PROVIDER: ${COGNITIVE_PROVIDER:-hami-model}
   EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-hash}
-  HAMI_MODEL_HOST: ${HAMI_MODEL_HOST:-http://host.docker.internal:11436}
   HAMI_CHAT_HOST: ${HAMI_CHAT_HOST:-http://host.docker.internal:11435}
   HAMI_CHAT_KEY: ${HAMI_CHAT_KEY:-}
   EVIDENCE_TRIAGE_URL: ${EVIDENCE_TRIAGE_URL:-}

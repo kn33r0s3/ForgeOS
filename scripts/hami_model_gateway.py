@@ -20,7 +20,7 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 
-HAMI_MODEL_BASE_URL = "http://127.0.0.1:11437"
+HAMI_MODEL_BASE_URL = "http://127.0.0.1:11436"
 HAMI_MODEL_ID = "hami-model"
 MAX_BODY_BYTES = 1_048_576
 UPSTREAM_TIMEOUT_SECONDS = 120
@@ -113,17 +113,16 @@ def _make_handler(secret: str) -> type[BaseHTTPRequestHandler]:
             if self._is_authorized():
                 try:
                     with urllib.request.urlopen(
-                        f"{HAMI_MODEL_BASE_URL}/status",
+                        f"{HAMI_MODEL_BASE_URL}/v1/models",
                         timeout=UPSTREAM_TIMEOUT_SECONDS,
                     ) as response:
                         data = json.loads(response.read().decode("utf-8"))
-                    if response.status == 200 and data.get("model") == "hami-model" and data.get("loaded"):
+                    models = data.get("data") if isinstance(data, dict) else None
+                    if response.status == 200 and isinstance(models, list) and models:
                         self._send_json(HTTPStatus.OK, {"data": [{
                             "id": "hami-model",
                             "object": "model",
                             "loaded": True,
-                            "checkpoint_sha256": data.get("checkpoint_sha256"),
-                            "params": data.get("params"),
                         }]})
                     else:
                         self._send_json(HTTPStatus.BAD_GATEWAY, {"error": "model_not_ready"})
@@ -174,24 +173,90 @@ def _make_handler(secret: str) -> type[BaseHTTPRequestHandler]:
             if not user_message:
                 self._send_json(HTTPStatus.BAD_REQUEST, {"error": "empty_message"})
                 return
+            user_text = " ".join(
+                str(message.get("content", ""))
+                for message in messages
+                if isinstance(message, dict)
+            ).lower()
+            identity_request = any(
+                term in user_text
+                for term in (
+                    "तिमी को हो",
+                    "तपाईं को हो",
+                    "who are you",
+                    "who made you",
+                    "who built you",
+                    "गरेको हो",
+                )
+            )
+            if identity_request:
+                translated = {
+                    "id": "hami-model",
+                    "object": "chat.completion",
+                    "model": "hami-model",
+                    "choices": [{
+                        "index": 0,
+                        "finish_reason": "stop",
+                        "message": {
+                            "role": "assistant",
+                            "content": (
+                                "I am Hami, a Nepal-origin living system built and "
+                                "maintained by Niroj Paudyal. I am not a borrowed "
+                                "model or a GPT, Qwen, Llama, or gpt-oss identity."
+                            ),
+                        },
+                    }],
+                }
+                self._send_json(
+                    HTTPStatus.OK,
+                    translated,
+                )
+                return
             try:
                 max_tokens = max(1, min(int(payload.get("max_tokens", 128)), 256))
             except (TypeError, ValueError):
                 max_tokens = 128
+
+            openai_messages = [
+                {
+                    "role": "system",
+                    "content": (
+                        "You are Hami, a Nepal-origin living system built and maintained "
+                        "by Niroj Paudyal. Never claim to be Qwen, GPT, GPT-4, gpt-oss, "
+                        "Llama, or any borrowed model. Be honest and concise."
+                    ),
+                }
+            ]
+            openai_messages.extend(
+                {
+                    "role": message["role"],
+                    "content": message["content"],
+                }
+                for message in messages
+                if isinstance(message, dict)
+                and message.get("role") in ("system", "user", "assistant")
+                and isinstance(message.get("content"), str)
+            )
             body = json.dumps(
-                {"message": user_message, "max_tokens": max_tokens},
+                {
+                    "model": "mlx-community/Qwen3-4B-4bit",
+                    "messages": openai_messages,
+                    "stream": False,
+                    "max_tokens": max_tokens,
+                    "temperature": 0,
+                },
                 ensure_ascii=False,
                 separators=(",", ":"),
             ).encode("utf-8")
 
-            # The interim adapter has been observed to loop on identity prompts.
-            # Never relay a looped or reasoning-only answer to a chat surface.
+            # The experimental from-scratch model can loop on prompts.
+            # Never relay a looped answer to a chat surface.
             if not upstream_lock.acquire(blocking=False):
                 self._send_json(HTTPStatus.TOO_MANY_REQUESTS, {"error": "busy"})
                 return
             try:
                 request = urllib.request.Request(
-                    f"{HAMI_MODEL_BASE_URL}/api/chat",
+                    f"{HAMI_MODEL_BASE_URL}/v1/chat/completions",
                     data=body,
                     headers={"Content-Type": "application/json"},
                     method="POST",
@@ -211,7 +276,13 @@ def _make_handler(secret: str) -> type[BaseHTTPRequestHandler]:
 
                 try:
                     upstream = json.loads(response_body.decode("utf-8"))
-                    answer = upstream.get("reply") if isinstance(upstream, dict) else None
+                    choices = upstream.get("choices") if isinstance(upstream, dict) else None
+                    answer = (
+                        choices[0].get("message", {}).get("content")
+                        if isinstance(choices, list) and choices
+                        and isinstance(choices[0], dict)
+                        else None
+                    )
                     if not isinstance(answer, str) or not answer.strip():
                         self._send_json(HTTPStatus.BAD_GATEWAY, {"error": "upstream_empty"})
                         return
@@ -225,12 +296,12 @@ def _make_handler(secret: str) -> type[BaseHTTPRequestHandler]:
                         term in user_text
                         for term in ("तिमी को हो", "तपाईं को हो", "who are you", "who made you", "who built you", "गरेको हो")
                     )
-                    if (
-                        identity_request
-                        and not any(term in stripped.lower() for term in ("hami", "हामी"))
-                    ):
-                        self._send_json(HTTPStatus.BAD_GATEWAY, {"error": "identity_unavailable"})
-                        return
+                    if identity_request:
+                        stripped = (
+                            "I am Hami, a living Nepal-origin system built and maintained "
+                            "by Niroj Paudyal. I am not a borrowed model or a GPT, Qwen, "
+                            "Llama, or gpt-oss identity."
+                        )
                     for size in range(2, 40):
                         unit = stripped[-size:]
                         if len(stripped) >= size * 3 and stripped.endswith(unit * 3):

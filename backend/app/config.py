@@ -80,22 +80,19 @@ class Settings(BaseSettings):
     # --- AI ---
     # Exactly one AI: hami-model, Hami's own model on the owner's Mac.
     # No borrowed model or external AI dependency anywhere.
-    #   "mock"      -> deterministic offline templates. Default. Zero cost,
-    #                   zero setup, zero external calls of any kind.
     #   "hami-model" -> real inference through the guarded gateway:
     #                   loopback HTTP to the hami-model server on the Mac.
-    # The default "mock" is deterministic template behavior, not intelligence.
+    #   "mock"       -> deterministic offline templates, only when explicitly
+    #                   selected for tests or offline development.
     # AI_FALLBACK_TO_MOCK stays False by default: production never silently
     # fabricates intelligence, and a down hami-model reports unavailable.
-    AI_PROVIDER: str = os.getenv("AI_PROVIDER", "mock")
+    AI_PROVIDER: str = os.getenv("AI_PROVIDER", "hami-model")
     # Explicit opt-in only: when True, real-provider failures may use MockProvider.
     # Default False so production never silently fabricates intelligence.
     AI_FALLBACK_TO_MOCK: bool = os.getenv("AI_FALLBACK_TO_MOCK", "false").lower() in ("1", "true", "yes")
 
-    # hami-model on the owner's Mac: the only model. The gateway
-    # (scripts/hami_model_gateway.py) is its only caller; the server
-    # listens on 127.0.0.1:11436 and serves only hami-model.
-    HAMI_MODEL_HOST: str = os.getenv("HAMI_MODEL_HOST", "http://127.0.0.1:11436")
+    # hami-model on the owner's Mac is reached through the guarded gateway
+    # at 127.0.0.1:11435; its model server is private on 127.0.0.1:11437.
     HAMI_MODEL_NAME: str = os.getenv("HAMI_MODEL_NAME", "hami-model")
     # The guarded gateway is the ONLY caller of the model server. The
     # backend (Vercel) reaches it through the tunnel; local code reaches
@@ -106,9 +103,9 @@ class Settings(BaseSettings):
     # No paid judge: any judgment call a judge makes must come from
     # hami-model.
 
-    # The proposal-only cognitive worker is offline by default. External
-    # providers require a separate adapter and explicit configuration.
-    COGNITIVE_PROVIDER: str = os.getenv("COGNITIVE_PROVIDER", "mock")
+    # The proposal-only cognitive worker also uses Hami's local model by
+    # default. Its proposals remain gated and are never actions.
+    COGNITIVE_PROVIDER: str = os.getenv("COGNITIVE_PROVIDER", "hami-model")
 
     # --- Nepal payment providers (credentials are environment-only) ---
     ESEWA_MERCHANT_CODE: str = os.getenv("ESEWA_MERCHANT_CODE", "")
