@@ -6,6 +6,20 @@
 #              *.md = agent task (Copilot/Nyx/Muse pick it up; loop only logs it).
 # Never reads keys, tokens, or .env values. Never sends mail or spends money.
 set -u
+# run_with_timeout <seconds> <cmd...> — macOS has no `timeout(1)`, so run the
+# command in the background and kill it after <seconds>. Returns the command's
+# exit code (non-zero on timeout). Same helper as the live ~/hami/hami-loop.sh.
+run_with_timeout() {
+  local limit="$1"; shift
+  "$@" &
+  local pid=$!
+  ( sleep "$limit"; kill "$pid" 2>/dev/null ) &
+  local watcher=$!
+  wait "$pid"; local rc=$?
+  kill "$watcher" 2>/dev/null
+  wait "$watcher" 2>/dev/null
+  return "$rc"
+}
 ROOT="$HOME/Downloads/ForgeOS"
 LOGDIR="$ROOT/logs"
 QUEUEDIR="$ROOT/queue"
@@ -20,11 +34,12 @@ while true; do
     [ -e "$f" ] || continue
     base=$(basename "$f" .sh)
     echo "[$(date -u +%FT%TZ)] running queue task: $base"
-    if timeout 600 bash "$f" > "$LOGDIR/$base.log" 2>&1; then
+    if run_with_timeout 600 bash "$f" > "$LOGDIR/$base.log" 2>&1; then
       echo "[$(date -u +%FT%TZ)] done: $base (exit 0)"
       mv "$f" "$DONEDIR/$base.sh"
     else
-      echo "[$(date -u +%FT%TZ)] FAILED: $base (exit $?) — left in queue"
+      rc=$?
+      echo "[$(date -u +%FT%TZ)] FAILED: $base (exit $rc) — left in queue"
       touch "$QUEUEDIR/$base.failed"
     fi
     ran=1

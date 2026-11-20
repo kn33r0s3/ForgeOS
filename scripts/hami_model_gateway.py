@@ -30,6 +30,30 @@ def _reject_non_json_constant(value: str) -> None:
     raise ValueError(f"invalid JSON constant: {value}")
 
 
+IDENTITY_TERMS = (
+    "तिमी को हो",
+    "तपाईं को हो",
+    "who are you",
+    "who made you",
+    "who built you",
+    "गरेको हो",
+)
+
+
+def _is_identity_request(user_message: str) -> bool:
+    """True only when the latest user message itself asks who Hami is.
+
+    The guard used to scan every supplied message (system prompt, history,
+    assistant turns), so an identity question anywhere in the history made
+    every later message return the canned identity line instead of an
+    answer. The guard itself is unchanged and stays: the model does not
+    self-identify (probe T5), so identity questions are still answered
+    with the hard-coded line — only now for the message that asks.
+    """
+    text = user_message.lower()
+    return any(term in text for term in IDENTITY_TERMS)
+
+
 def _make_handler(secret: str) -> type[BaseHTTPRequestHandler]:
     upstream_lock = threading.Lock()
 
@@ -173,23 +197,7 @@ def _make_handler(secret: str) -> type[BaseHTTPRequestHandler]:
             if not user_message:
                 self._send_json(HTTPStatus.BAD_REQUEST, {"error": "empty_message"})
                 return
-            user_text = " ".join(
-                str(message.get("content", ""))
-                for message in messages
-                if isinstance(message, dict)
-            ).lower()
-            identity_request = any(
-                term in user_text
-                for term in (
-                    "तिमी को हो",
-                    "तपाईं को हो",
-                    "who are you",
-                    "who made you",
-                    "who built you",
-                    "गरेको हो",
-                )
-            )
-            if identity_request:
+            if _is_identity_request(user_message):
                 translated = {
                     "id": "hami-model",
                     "object": "chat.completion",
@@ -287,21 +295,9 @@ def _make_handler(secret: str) -> type[BaseHTTPRequestHandler]:
                         self._send_json(HTTPStatus.BAD_GATEWAY, {"error": "upstream_empty"})
                         return
                     stripped = answer.strip()
-                    user_text = " ".join(
-                        str(item.get("content", ""))
-                        for item in payload.get("messages", [])
-                        if isinstance(item, dict)
-                    ).lower()
-                    identity_request = any(
-                        term in user_text
-                        for term in ("तिमी को हो", "तपाईं को हो", "who are you", "who made you", "who built you", "गरेको हो")
-                    )
-                    if identity_request:
-                        stripped = (
-                            "I am Hami, a living Nepal-origin system built and maintained "
-                            "by Niroj Paudyal. I am not a borrowed model or a GPT, Qwen, "
-                            "Llama, or gpt-oss identity."
-                        )
+                    # No second identity check here: an identity question was
+                    # already answered above, before any upstream call, so
+                    # this point is only reached for non-identity messages.
                     for size in range(2, 40):
                         unit = stripped[-size:]
                         if len(stripped) >= size * 3 and stripped.endswith(unit * 3):

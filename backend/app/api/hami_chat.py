@@ -17,8 +17,12 @@ Checkpoint limits (honest):
   not from Hami's evidence store. Retrieval comes next.
 - No actions are executed: this endpoint only chats. It cannot contact
   anyone, spend money, or change records.
-- hami-model is an experimental from-scratch TinyLM and has not passed
-  quality gates. Treat its fluency and factual answers as unreliable.
+- hami-model here is the MLX server (mlx-community/Qwen3-4B-4bit + the
+  clean Nepali SFT adapter; see docs/HAMI_MODEL.md for the pinned identity
+  line). The from-scratch TinyLM pilot is a separate experiment server and
+  is not in this path. Treat fluency and factual answers as unreliable:
+  the serving adapter has not passed all quality gates (notably the
+  Sagarmatha height gate).
 """
 
 import json
@@ -112,10 +116,11 @@ def hami_chat(payload: ChatRequest, response: Response):
         raise HTTPException(
             status_code=503,
             detail="Hami chat is not configured; required environment variables are unset.",
+            headers=_CORS_HEADERS,
         )
-    # Send the system prompt and recent turns to the gateway. The current
-    # gateway only forwards the latest user turn to the model server, so these
-    # fields do not currently condition the model output.
+    # Send the system prompt and recent turns to the gateway. The gateway
+    # forwards the full message list to the model server, so history does
+    # condition the model output.
     messages: list[dict[str, str]] = [{"role": "system", "content": HAMI_SYSTEM_PROMPT}]
     for item in payload.history[-10:]:
         if item.role in {"user", "assistant"}:
@@ -159,34 +164,44 @@ def hami_chat(payload: ChatRequest, response: Response):
                 err_body = b""
             if b"upstream_unavailable" in err_body:
                 raise HTTPException(
-                    status_code=503, detail="Hami is unavailable."
+                    status_code=503, detail="Hami is unavailable.", headers=_CORS_HEADERS
                 ) from exc
             if exc.code in (502, 503, 504) and attempt < 2:
                 time.sleep(1.0 * (attempt + 1))
                 continue
             raise HTTPException(
-                status_code=502, detail=f"Hami AI answered with HTTP {exc.code}."
+                status_code=502,
+                detail=f"Hami AI answered with HTTP {exc.code}.",
+                headers=_CORS_HEADERS,
             ) from exc
         except TimeoutError as exc:
             raise HTTPException(
-                status_code=503, detail="Hami is unavailable."
+                status_code=503, detail="Hami is unavailable.", headers=_CORS_HEADERS
             ) from exc
         except Exception as exc:
+            # urllib wraps connect timeouts in URLError; a timeout already
+            # spent the full TIMEOUT_SECONDS, so it is never retried (see the
+            # comment above the loop). Read timeouts surface as TimeoutError
+            # and are handled above.
+            if isinstance(exc, urllib.error.URLError) and isinstance(exc.reason, TimeoutError):
+                raise HTTPException(
+                    status_code=503, detail="Hami is unavailable.", headers=_CORS_HEADERS
+                ) from exc
             if attempt < 2:
                 time.sleep(1.0 * (attempt + 1))
                 continue
             raise HTTPException(
-                status_code=503, detail="Hami is unavailable."
+                status_code=503, detail="Hami is unavailable.", headers=_CORS_HEADERS
             ) from exc
     if raw is None:
-        raise HTTPException(status_code=503, detail="Hami is unavailable.")
+        raise HTTPException(status_code=503, detail="Hami is unavailable.", headers=_CORS_HEADERS)
     if len(raw) > MAX_RESPONSE_BYTES:
-        raise HTTPException(status_code=502, detail="Hami AI's reply was too large.")
+        raise HTTPException(status_code=502, detail="Hami AI's reply was too large.", headers=_CORS_HEADERS)
     try:
         data = json.loads(raw.decode("utf-8"))
     except Exception as exc:
         raise HTTPException(
-            status_code=502, detail="Hami AI returned an unreadable reply."
+            status_code=502, detail="Hami AI returned an unreadable reply.", headers=_CORS_HEADERS
         ) from exc
     # The serving process answers with chat-completion choices.
     # The model field is the serving name, hami-model; the base + adapter
@@ -198,14 +213,14 @@ def hami_chat(payload: ChatRequest, response: Response):
         if isinstance(first, dict) and isinstance(first.get("message"), dict):
             reply = first["message"].get("content")
     if not isinstance(reply, str) or not reply.strip():
-        raise HTTPException(status_code=502, detail="Hami AI returned an empty reply.")
+        raise HTTPException(status_code=502, detail="Hami AI returned an empty reply.", headers=_CORS_HEADERS)
     stripped = reply.strip()
     for size in range(2, 40):
         unit = stripped[-size:]
         if len(stripped) >= size * 3 and stripped.endswith(unit * 3):
-            raise HTTPException(status_code=502, detail="Hami AI returned a looping reply.")
+            raise HTTPException(status_code=502, detail="Hami AI returned a looping reply.", headers=_CORS_HEADERS)
     if len(stripped) >= 20:
         tail = stripped[-20:]
         if len(set(tail)) <= 3:
-            raise HTTPException(status_code=502, detail="Hami AI returned a looping reply.")
+            raise HTTPException(status_code=502, detail="Hami AI returned a looping reply.", headers=_CORS_HEADERS)
     return ChatResponse(reply=reply.strip(), model=MODEL)

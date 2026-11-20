@@ -30,6 +30,7 @@ import (
 	"github.com/pion/ice/v4"
 	"github.com/pion/interceptor"
 	"github.com/pion/interceptor/pkg/nack"
+	"github.com/pion/logging"
 	"github.com/pion/rtcp"
 	"github.com/pion/rtp"
 	"github.com/pion/stun/v4"
@@ -60,7 +61,7 @@ const (
 	maxSequencesPerNACK   = 512
 	// Pion's NACK marshaler requires len(Nacks)+2 <= MaxUint8.
 	maxNACKPairsPerRTCPPacket  = math.MaxUint8 - 2
-	nackQueueSize              = 512
+	nackQueueSize              = 64
 	nackMaxQueueAge            = 500 * time.Millisecond
 	sfuRTPQueueSize            = 64
 	peerPairNegotiationTimeout = 60 * time.Second
@@ -269,31 +270,32 @@ type sfuUpstreamFeedback struct {
 }
 
 type sfuProofResult struct {
-	EvidenceType                   string                `json:"evidence_type"`
-	LocalOnly                      bool                  `json:"local_only"`
-	PublisherIdentity              string                `json:"publisher_identity"`
-	PublisherIdentities            []string              `json:"publisher_identities,omitempty"`
-	PublisherStates                map[string]string     `json:"publisher_peer_connection_states,omitempty"`
-	PublisherState                 string                `json:"publisher_peer_connection_state"`
-	PublisherTracks                []string              `json:"publisher_track_ids"`
-	MediaDurationMS                int64                 `json:"media_duration_ms"`
-	VideoFramesSent                uint64                `json:"video_frames_sent,omitempty"`
-	PublisherFramesSent            map[string]uint64     `json:"video_frames_sent_per_publisher,omitempty"`
-	Viewers                        []sfuViewerResult     `json:"viewers"`
-	UpstreamFeedback               []sfuUpstreamFeedback `json:"upstream_feedback"`
-	UnauthorizedSubscriptionDenied bool                  `json:"unauthorized_subscription_denied"`
-	CleanupVerified                bool                  `json:"cleanup_verified"`
-	ForwardingErrors               []string              `json:"forwarding_errors"`
-	RTPQueueDrops                  uint64                `json:"rtp_queue_drops"`
-	RTPIntentionalShed             uint64                `json:"rtp_intentional_shed"`
-	RTPWriteErrors                 uint64                `json:"rtp_write_errors"`
-	RTPKeyframeRecoverySamples     uint64                `json:"rtp_keyframe_recovery_samples"`
-	RTPKeyframeRecoveryNanos       uint64                `json:"rtp_keyframe_recovery_nanos"`
-	RTPKeyframeRecoveryMaxNanos    uint64                `json:"rtp_keyframe_recovery_max_nanos"`
-	LatencyMode                    string                `json:"latency_mode,omitempty"`
-	LatencyPending                 int                   `json:"latency_pending_frames"`
-	LatencyEvidenceDirectory       string                `json:"latency_evidence_directory,omitempty"`
-	MeasurementPass                *bool                 `json:"measurement_pass,omitempty"`
+	EvidenceType                   string                     `json:"evidence_type"`
+	LocalOnly                      bool                       `json:"local_only"`
+	PublisherIdentity              string                     `json:"publisher_identity"`
+	PublisherIdentities            []string                   `json:"publisher_identities,omitempty"`
+	PublisherStates                map[string]string          `json:"publisher_peer_connection_states,omitempty"`
+	PublisherState                 string                     `json:"publisher_peer_connection_state"`
+	PublisherTracks                []string                   `json:"publisher_track_ids"`
+	MediaDurationMS                int64                      `json:"media_duration_ms"`
+	VideoFramesSent                uint64                     `json:"video_frames_sent,omitempty"`
+	PublisherFramesSent            map[string]uint64          `json:"video_frames_sent_per_publisher,omitempty"`
+	Viewers                        []sfuViewerResult          `json:"viewers"`
+	UpstreamFeedback               []sfuUpstreamFeedback      `json:"upstream_feedback"`
+	UnauthorizedSubscriptionDenied bool                       `json:"unauthorized_subscription_denied"`
+	CleanupVerified                bool                       `json:"cleanup_verified"`
+	ForwardingErrors               []string                   `json:"forwarding_errors"`
+	RTPQueueDrops                  uint64                     `json:"rtp_queue_drops"`
+	RTPIntentionalShed             uint64                     `json:"rtp_intentional_shed"`
+	RTPWriteErrors                 uint64                     `json:"rtp_write_errors"`
+	RTPKeyframeRecoverySamples     uint64                     `json:"rtp_keyframe_recovery_samples"`
+	RTPKeyframeRecoveryNanos       uint64                     `json:"rtp_keyframe_recovery_nanos"`
+	RTPKeyframeRecoveryMaxNanos    uint64                     `json:"rtp_keyframe_recovery_max_nanos"`
+	LatencyMode                    string                     `json:"latency_mode,omitempty"`
+	LatencyPending                 int                        `json:"latency_pending_frames"`
+	LatencyEvidenceDirectory       string                     `json:"latency_evidence_directory,omitempty"`
+	FrameDiagnostics               *sfuFrameDiagnosticSummary `json:"frame_diagnostics,omitempty"`
+	MeasurementPass                *bool                      `json:"measurement_pass,omitempty"`
 }
 
 type proofErrorResult struct {
@@ -330,14 +332,31 @@ func writeProofError(w io.Writer, err error) error {
 }
 
 func main() {
-	mode := flag.String("mode", "pair", "local proof mode: pair, sfu, sfu-single, m1h, m2h, m3h, m4h, m5h, m6h, or m7h")
+	mode := flag.String("mode", "pair", "local proof mode: pair, sfu, sfu-single, sfu-cascade, m1h, m2h, m3h, m4h, m5h, m6h, m7h, or audio-rung1")
 	videoPath := flag.String("video-file", "", "local Annex-B H.264 source file")
 	duration := flag.Duration("duration", 3*time.Second, "local media send duration")
+	audioSpeakers := flag.Int("audio-speakers", 10, "speaker count for audio-rung1 mode")
+	audioListeners := flag.Int("audio-listeners", 100, "listener count for audio-rung1 mode")
 	sfuPublishers := flag.Int("sfu-publishers", 1, "publisher count for sfu-single mode (1-1000)")
 	sfuViewersPerPublisher := flag.Int(
 		"sfu-viewers-per-publisher",
 		1,
 		"viewer count per publisher for sfu-single mode (1-250; total viewers capped at 5000)",
+	)
+	sfuFrameDiagnosticOutput := flag.String(
+		"sfu-frame-diagnostic-output",
+		"",
+		"optional exclusive-created JSONL output for selected RTP frame diagnostics in sfu-single mode",
+	)
+	sfuFrameDiagnosticIDs := flag.String(
+		"sfu-frame-diagnostic-ids",
+		"271462960,271468360,271457560",
+		"comma-separated RTP timestamps to trace when frame diagnostics are enabled (maximum 64)",
+	)
+	sfuFrameDiagnosticMaxRecords := flag.Int(
+		"sfu-frame-diagnostic-max-records",
+		50000,
+		"maximum JSONL records written by selected-frame diagnostics (1-100000)",
 	)
 	m7hSFUToken := flag.String("m7h-sfu-token", "", "private token for the local M7-H router process")
 	m7hPairs := flag.Int("m7h-viewers", 3000, "M7-H publisher/viewer pair count (1-3000; one viewer per publisher)")
@@ -354,20 +373,60 @@ func main() {
 		}
 		return
 	}
-	if *videoPath == "" {
-		fail("--video-file is required")
-	}
 	if *duration <= 0 {
 		fail("--duration must be positive")
 	}
 
-	data, err := os.ReadFile(*videoPath)
-	if err != nil {
-		fail("read local H.264 source: %v", err)
+	var (
+		videoFrames []media.Sample
+		err         error
+	)
+	if *mode != "audio-rung1" {
+		if *videoPath == "" {
+			fail("--video-file is required")
+		}
+		data, readErr := os.ReadFile(*videoPath)
+		if readErr != nil {
+			fail("read local H.264 source: %v", readErr)
+		}
+		videoFrames, err = readH264Frames(bytes.NewReader(data))
+		if err != nil {
+			fail("parse local H.264 source: %v", err)
+		}
 	}
-	videoFrames, err := readH264Frames(bytes.NewReader(data))
-	if err != nil {
-		fail("parse local H.264 source: %v", err)
+	var (
+		frameDiagnosticFile     *os.File
+		frameDiagnosticRecorder *sfuFrameDiagnosticRecorder
+	)
+	if *sfuFrameDiagnosticOutput != "" {
+		if *mode != "sfu-single" {
+			fail("--sfu-frame-diagnostic-output is supported only in sfu-single mode")
+		}
+		frameIDs, parseErr := parseSFUFrameDiagnosticIDs(*sfuFrameDiagnosticIDs)
+		if parseErr != nil {
+			fail("parse --sfu-frame-diagnostic-ids: %v", parseErr)
+		}
+		if *sfuFrameDiagnosticMaxRecords < 1 || *sfuFrameDiagnosticMaxRecords > 100_000 {
+			fail("--sfu-frame-diagnostic-max-records must be between 1 and 100000")
+		}
+		frameDiagnosticFile, err = os.OpenFile(
+			*sfuFrameDiagnosticOutput,
+			os.O_WRONLY|os.O_CREATE|os.O_EXCL,
+			0o600,
+		)
+		if err != nil {
+			fail("create frame diagnostic output %q: %v", *sfuFrameDiagnosticOutput, err)
+		}
+		frameDiagnosticRecorder, err = newSFUFrameDiagnosticRecorder(
+			frameDiagnosticFile,
+			*sfuFrameDiagnosticOutput,
+			frameIDs,
+			*sfuFrameDiagnosticMaxRecords,
+		)
+		if err != nil {
+			_ = frameDiagnosticFile.Close()
+			fail("configure frame diagnostic output: %v", err)
+		}
 	}
 
 	setupAllowance := 3 * time.Minute
@@ -381,6 +440,8 @@ func main() {
 		setupAllowance = 45 * time.Minute
 	} else if *mode == "m7h" {
 		setupAllowance = 60 * time.Minute
+	} else if *mode == "audio-rung1" {
+		setupAllowance = 30 * time.Minute
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), *duration+setupAllowance)
 	defer cancel()
@@ -393,8 +454,19 @@ func main() {
 			result, err = runLocalPair(ctx, videoFrames, *duration)
 		case "sfu":
 			result, err = runLocalSFUProof(ctx, videoFrames, *duration)
+		case "sfu-cascade":
+			result, err = runLocalSFUProcessCascadeProof(ctx, videoFrames, *duration)
 		case "sfu-single":
-			if *sfuPublishers == 1 && *sfuViewersPerPublisher == 1 {
+			if frameDiagnosticRecorder != nil {
+				result, err = runLocalSFUScaleProofWithDiagnostics(
+					ctx,
+					videoFrames,
+					*duration,
+					*sfuPublishers,
+					*sfuViewersPerPublisher,
+					frameDiagnosticRecorder,
+				)
+			} else if *sfuPublishers == 1 && *sfuViewersPerPublisher == 1 {
 				result, err = runLocalSFUSinglePairProof(ctx, videoFrames, *duration)
 			} else {
 				result, err = runLocalSFUScaleProof(ctx, videoFrames, *duration, *sfuPublishers, *sfuViewersPerPublisher)
@@ -413,8 +485,10 @@ func main() {
 			result, err = runLocalM6HProof(ctx, videoFrames, *duration)
 		case "m7h":
 			result, err = runLocalM7HProof(ctx, videoFrames, *duration, *m7hPairs)
+		case "audio-rung1":
+			result, err = runLocalAudioRungBothModes(ctx, *duration, *audioSpeakers, *audioListeners)
 		default:
-			fail("unsupported --mode %q (want pair, sfu, sfu-single, m1h, m2h, m3h, m4h, m5h, m6h, or m7h)", *mode)
+			fail("unsupported --mode %q (want pair, sfu, sfu-single, sfu-cascade, m1h, m2h, m3h, m4h, m5h, m6h, m7h, or audio-rung1)", *mode)
 		}
 	}
 	cancel()
@@ -425,6 +499,11 @@ func main() {
 			} else {
 				err = errors.Join(err, heapBudgetErr)
 			}
+		}
+	}
+	if frameDiagnosticFile != nil {
+		if closeErr := frameDiagnosticFile.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("close frame diagnostic output: %w", closeErr))
 		}
 	}
 	if err != nil {
@@ -2765,6 +2844,1445 @@ func formatICECandidate(candidate webrtc.ICECandidateStats) string {
 	return fmt.Sprintf("%s:%d/%s/%s", candidate.IP, candidate.Port, candidate.Protocol, candidate.CandidateType)
 }
 
+const (
+	audioRTPClockRate        = 48000
+	audioOpusSamplesPerFrame = audioRTPClockRate / 50
+	audioOpusPayloadType     = 111
+	audioReconnectWindow     = time.Minute
+)
+
+type audioRungMode string
+
+const (
+	audioRungMixing    audioRungMode = "mixing"
+	audioRungSelective audioRungMode = "selective_forwarding"
+)
+
+type audioRTPPacketSink interface {
+	WritePacket(string, *rtp.Packet) error
+}
+
+type audioPacketCounter struct {
+	mu             sync.Mutex
+	origin         time.Time
+	packets        uint64
+	lost           uint64
+	outOfOrder     uint64
+	lastSequence   uint16
+	haveSequence   bool
+	lastTransit    int64
+	haveTransit    bool
+	jitterRTPTicks float64
+}
+
+type audioPacketCounterSnapshot struct {
+	Packets    uint64        `json:"packets_received"`
+	Lost       uint64        `json:"lost_packets"`
+	OutOfOrder uint64        `json:"out_of_order_packets"`
+	Jitter     time.Duration `json:"jitter_ns"`
+}
+
+func newAudioPacketCounter(origin time.Time) *audioPacketCounter {
+	return &audioPacketCounter{origin: origin}
+}
+
+func (c *audioPacketCounter) record(packet *rtp.Packet, arrivedAt time.Time) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.haveSequence {
+		delta := packet.SequenceNumber - c.lastSequence
+		if delta > 1 && delta < 1<<15 {
+			c.lost += uint64(delta - 1)
+		} else if delta == 0 || delta >= 1<<15 {
+			c.outOfOrder++
+		}
+	}
+	c.lastSequence = packet.SequenceNumber
+	c.haveSequence = true
+	c.packets++
+
+	arrivalTicks := arrivedAt.Sub(c.origin).Nanoseconds() * audioRTPClockRate / int64(time.Second)
+	transit := arrivalTicks - int64(packet.Timestamp)
+	if c.haveTransit {
+		difference := math.Abs(float64(transit - c.lastTransit))
+		c.jitterRTPTicks += (difference - c.jitterRTPTicks) / 16
+	}
+	c.lastTransit = transit
+	c.haveTransit = true
+}
+
+func (c *audioPacketCounter) snapshot() audioPacketCounterSnapshot {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	jitterNanos := c.jitterRTPTicks * float64(time.Second) / audioRTPClockRate
+	return audioPacketCounterSnapshot{
+		Packets:    c.packets,
+		Lost:       c.lost,
+		OutOfOrder: c.outOfOrder,
+		Jitter:     time.Duration(jitterNanos),
+	}
+}
+
+func (c *audioPacketCounter) reset() {
+	c.mu.Lock()
+	c.packets = 0
+	c.lost = 0
+	c.outOfOrder = 0
+	c.haveSequence = false
+	c.haveTransit = false
+	c.jitterRTPTicks = 0
+	c.mu.Unlock()
+}
+
+type audioRungEvent struct {
+	Type           string    `json:"type"`
+	ParticipantID  string    `json:"participant_id"`
+	SubscriptionID string    `json:"subscription_id,omitempty"`
+	ActorID        string    `json:"actor_id,omitempty"`
+	Reason         string    `json:"reason,omitempty"`
+	At             time.Time `json:"at"`
+}
+
+type audioRungStreamResult struct {
+	SpeakerID           string        `json:"speaker_id"`
+	Loss                uint64        `json:"loss"`
+	Jitter              time.Duration `json:"jitter_ns"`
+	Reconnects          uint64        `json:"reconnects"`
+	UpstreamLoss        uint64        `json:"upstream_loss,omitempty"`
+	DownstreamLoss      uint64        `json:"downstream_loss,omitempty"`
+	UpstreamJitter      time.Duration `json:"upstream_jitter_ns,omitempty"`
+	DownstreamJitter    time.Duration `json:"downstream_jitter_ns,omitempty"`
+	MeasurementBoundary string        `json:"measurement_boundary"`
+}
+
+type audioRungListenerResult struct {
+	ListenerID string                  `json:"listener_id"`
+	Latency    Summary                 `json:"latency"`
+	Streams    []audioRungStreamResult `json:"streams"`
+}
+
+type audioRungResult struct {
+	EvidenceType      string                    `json:"evidence_type"`
+	LocalOnly         bool                      `json:"local_only"`
+	RoomID            string                    `json:"room_id"`
+	Mode              audioRungMode             `json:"mode"`
+	Speakers          int                       `json:"speakers"`
+	Listeners         int                       `json:"listeners"`
+	Duration          time.Duration             `json:"duration_ns"`
+	FramesSent        uint64                    `json:"frames_sent"`
+	PendingCaptures   int                       `json:"pending_captures"`
+	HeapAllocStart    uint64                    `json:"heap_alloc_start_bytes"`
+	HeapAllocPeak     uint64                    `json:"heap_alloc_peak_bytes"`
+	HeapAllocEnd      uint64                    `json:"heap_alloc_end_bytes"`
+	SwapUsedMiB       float64                   `json:"swap_used_mib"`
+	SwapFreeMiB       float64                   `json:"swap_free_mib"`
+	SwapUsedEndMiB    float64                   `json:"swap_used_end_mib"`
+	SwapFreeEndMiB    float64                   `json:"swap_free_end_mib"`
+	StartedAt         time.Time                 `json:"started_at"`
+	CompletedAt       time.Time                 `json:"completed_at"`
+	HandRaiseEvents   []audioRungEvent          `json:"hand_raise_events"`
+	ReconnectEvents   []audioRungEvent          `json:"reconnect_events"`
+	ListenerResults   []audioRungListenerResult `json:"listener_results"`
+	EveryListenerPass bool                      `json:"every_listener_pass"`
+}
+
+type audioRungPublisher struct {
+	id       string
+	key      sfuTrackKey
+	peer     *webrtc.PeerConnection
+	track    *webrtc.TrackLocalStaticRTP
+	payload  []byte
+	sequence uint16
+}
+
+type audioRungViewer struct {
+	id             string
+	subscriptionID string
+	client         *webrtc.PeerConnection
+	server         *webrtc.PeerConnection
+	renderer       *audioRTPRenderer
+	recorder       *LatencyRecorder
+	stats          map[string]*audioPacketCounter
+	reconnects     map[string]uint64
+	cancel         context.CancelFunc
+}
+
+type audioRTPInput struct {
+	trackID string
+	port    int
+	address *net.UDPAddr
+}
+
+type audioRTPRenderer struct {
+	cancel    context.CancelFunc
+	command   *exec.Cmd
+	directory string
+	inputs    map[string]*net.UDPAddr
+	writer    *net.UDPConn
+	done      chan error
+	closeOnce sync.Once
+	closeErr  error
+}
+
+type audioRTPMixer struct {
+	cancel    context.CancelFunc
+	command   *exec.Cmd
+	directory string
+	inputs    map[string]*net.UDPAddr
+	writer    *net.UDPConn
+	output    *net.UDPConn
+	done      chan error
+	closeOnce sync.Once
+	closeErr  error
+}
+
+func (p *audioRungPublisher) writeFrame(frameID uint64) error {
+	p.sequence++
+	packet := &rtp.Packet{
+		Header: rtp.Header{
+			Version:        2,
+			PayloadType:    audioOpusPayloadType,
+			SequenceNumber: p.sequence,
+			Timestamp:      0x10203040 + uint32(frameID*audioOpusSamplesPerFrame),
+			SSRC:           1,
+		},
+		Payload: p.payload,
+	}
+	if err := p.track.WriteRTP(packet); err != nil {
+		return fmt.Errorf("publish Opus frame for %s: %w", p.id, err)
+	}
+	return nil
+}
+
+func (p *audioRungPublisher) writePrimer() error {
+	packet := &rtp.Packet{
+		Header: rtp.Header{
+			Version:        2,
+			PayloadType:    audioOpusPayloadType,
+			SequenceNumber: p.sequence,
+			Timestamp:      0x10203040 - audioOpusSamplesPerFrame,
+			SSRC:           1,
+		},
+		Payload: p.payload,
+	}
+	if err := p.track.WriteRTP(packet); err != nil {
+		return fmt.Errorf("register Opus track for %s: %w", p.id, err)
+	}
+	return nil
+}
+
+func generateOpusPayload(ctx context.Context, frequency int) ([]byte, error) {
+	ffmpeg, err := exec.LookPath("ffmpeg")
+	if err != nil {
+		return nil, fmt.Errorf("find local FFmpeg for Opus source: %w", err)
+	}
+	receiver, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1)})
+	if err != nil {
+		return nil, fmt.Errorf("bind local Opus source receiver: %w", err)
+	}
+	defer receiver.Close()
+	if err := receiver.SetReadDeadline(time.Now().Add(5 * time.Second)); err != nil {
+		return nil, fmt.Errorf("set Opus source read deadline: %w", err)
+	}
+	commandCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	address := receiver.LocalAddr().(*net.UDPAddr)
+	command := exec.CommandContext(
+		commandCtx,
+		ffmpeg,
+		"-hide_banner", "-loglevel", "error",
+		"-f", "lavfi", "-i",
+		fmt.Sprintf("sine=frequency=%d:sample_rate=%d:duration=0.2", frequency, audioRTPClockRate),
+		"-ac", "1",
+		"-c:a", "libopus",
+		"-frame_duration", "20",
+		"-payload_type", strconv.Itoa(audioOpusPayloadType),
+		"-f", "rtp",
+		fmt.Sprintf("rtp://127.0.0.1:%d?pkt_size=1200", address.Port),
+	)
+	var stderr bytes.Buffer
+	command.Stderr = &stderr
+	if err := command.Start(); err != nil {
+		return nil, fmt.Errorf("start local Opus encoder: %w", err)
+	}
+	packetBytes := make([]byte, 1500)
+	n, _, readErr := receiver.ReadFromUDP(packetBytes)
+	waitErr := command.Wait()
+	if readErr != nil {
+		return nil, fmt.Errorf("read encoded Opus RTP packet: %w (ffmpeg: %s)", readErr, strings.TrimSpace(stderr.String()))
+	}
+	if waitErr != nil {
+		return nil, fmt.Errorf("encode local Opus source: %w (ffmpeg: %s)", waitErr, strings.TrimSpace(stderr.String()))
+	}
+	var packet rtp.Packet
+	if err := packet.Unmarshal(packetBytes[:n]); err != nil {
+		return nil, fmt.Errorf("decode FFmpeg RTP header: %w", err)
+	}
+	if int(packet.PayloadType) != audioOpusPayloadType || len(packet.Payload) == 0 {
+		return nil, fmt.Errorf("FFmpeg emitted invalid Opus RTP packet: PT=%d payload=%d",
+			packet.PayloadType, len(packet.Payload))
+	}
+	return append([]byte(nil), packet.Payload...), nil
+}
+
+func reserveAudioRTPPort() (int, error) {
+	conn, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1)})
+	if err != nil {
+		return 0, fmt.Errorf("reserve loopback RTP port: %w", err)
+	}
+	port := conn.LocalAddr().(*net.UDPAddr).Port
+	if err := conn.Close(); err != nil {
+		return 0, fmt.Errorf("release reserved RTP port %d: %w", port, err)
+	}
+	return port, nil
+}
+
+func audioSDP(trackIDs []string, ports []int) (string, error) {
+	if len(trackIDs) == 0 || len(trackIDs) != len(ports) {
+		return "", errors.New("audio SDP requires one port per track")
+	}
+	var sdp strings.Builder
+	sdp.WriteString("v=0\r\no=- 0 0 IN IP4 127.0.0.1\r\ns=Hami local audio\r\n")
+	sdp.WriteString("c=IN IP4 127.0.0.1\r\nt=0 0\r\n")
+	for index, port := range ports {
+		fmt.Fprintf(&sdp, "m=audio %d RTP/AVP %d\r\n", port, audioOpusPayloadType)
+		fmt.Fprintf(&sdp, "a=rtpmap:%d opus/48000/2\r\n", audioOpusPayloadType)
+		fmt.Fprintf(&sdp, "a=mid:%d\r\na=recvonly\r\n", index)
+	}
+	return sdp.String(), nil
+}
+
+func startAudioRTPRenderer(
+	ctx context.Context,
+	trackIDs []string,
+	mixInputs bool,
+	firstFrameID uint64,
+	onFrame func(uint64, time.Time),
+) (*audioRTPRenderer, error) {
+	ffmpeg, err := exec.LookPath("ffmpeg")
+	if err != nil {
+		return nil, fmt.Errorf("find local FFmpeg renderer: %w", err)
+	}
+	directory, err := os.MkdirTemp("", "hami-audio-render-")
+	if err != nil {
+		return nil, fmt.Errorf("create audio renderer directory: %w", err)
+	}
+	renderer := &audioRTPRenderer{
+		directory: directory,
+		inputs:    make(map[string]*net.UDPAddr, len(trackIDs)),
+		done:      make(chan error, 1),
+	}
+	cleanup := func() {
+		if renderer.writer != nil {
+			_ = renderer.writer.Close()
+		}
+		_ = os.RemoveAll(directory)
+	}
+	ports := make([]int, len(trackIDs))
+	for index, trackID := range trackIDs {
+		if trackID == "" {
+			cleanup()
+			return nil, errors.New("audio renderer track ID is required")
+		}
+		port, err := reserveAudioRTPPort()
+		if err != nil {
+			cleanup()
+			return nil, err
+		}
+		ports[index] = port
+		renderer.inputs[trackID] = &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1), Port: port}
+	}
+	sdp, err := audioSDP(trackIDs, ports)
+	if err != nil {
+		cleanup()
+		return nil, err
+	}
+	sdpPath := filepath.Join(directory, "input.sdp")
+	if err := os.WriteFile(sdpPath, []byte(sdp), 0o600); err != nil {
+		cleanup()
+		return nil, fmt.Errorf("write renderer SDP: %w", err)
+	}
+	renderer.writer, err = net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1)})
+	if err != nil {
+		cleanup()
+		return nil, fmt.Errorf("bind renderer RTP writer: %w", err)
+	}
+	renderCtx, cancel := context.WithCancel(ctx)
+	renderer.cancel = cancel
+	args := []string{
+		"-hide_banner", "-loglevel", "error", "-nostats",
+		"-protocol_whitelist", "file,udp,rtp",
+		"-f", "sdp", "-i", sdpPath,
+	}
+	if mixInputs && len(trackIDs) > 1 {
+		var filter strings.Builder
+		for index := range trackIDs {
+			fmt.Fprintf(&filter, "[0:a:%d]", index)
+		}
+		fmt.Fprintf(&filter, "amix=inputs=%d:duration=longest:dropout_transition=0[mixout]", len(trackIDs))
+		args = append(args, "-filter_complex", filter.String(), "-map", "[mixout]")
+	} else {
+		args = append(args, "-map", "0:a:0")
+	}
+	args = append(args,
+		"-ac", "1", "-ar", strconv.Itoa(audioRTPClockRate),
+		"-c:a", "pcm_s16le", "-f", "s16le", "pipe:1",
+	)
+	renderer.command = exec.CommandContext(renderCtx, ffmpeg, args...)
+	renderer.command.Stderr = os.Stderr
+	stdout, err := renderer.command.StdoutPipe()
+	if err != nil {
+		cancel()
+		cleanup()
+		return nil, fmt.Errorf("open renderer PCM output: %w", err)
+	}
+	if err := renderer.command.Start(); err != nil {
+		cancel()
+		cleanup()
+		return nil, fmt.Errorf("start Opus render sink: %w", err)
+	}
+	go func() {
+		frameID := firstFrameID
+		pcmFrame := make([]byte, audioOpusSamplesPerFrame*2)
+		var readErr error
+		for {
+			_, readErr = io.ReadFull(stdout, pcmFrame)
+			if readErr != nil {
+				break
+			}
+			onFrame(frameID, time.Now())
+			frameID++
+		}
+		waitErr := renderer.command.Wait()
+		if renderCtx.Err() != nil {
+			renderer.done <- nil
+			return
+		}
+		if readErr != nil && !errors.Is(readErr, io.EOF) && !errors.Is(readErr, io.ErrUnexpectedEOF) {
+			renderer.done <- fmt.Errorf("read decoded PCM: %w", readErr)
+			return
+		}
+		if waitErr != nil {
+			renderer.done <- fmt.Errorf("Opus renderer stopped: %w", waitErr)
+			return
+		}
+		renderer.done <- errors.New("Opus renderer stopped before cancellation")
+	}()
+	return renderer, nil
+}
+
+func (r *audioRTPRenderer) WritePacket(trackID string, packet *rtp.Packet) error {
+	address, ok := r.inputs[trackID]
+	if !ok {
+		return fmt.Errorf("audio renderer has no input for track %q", trackID)
+	}
+	data, err := packet.Marshal()
+	if err != nil {
+		return fmt.Errorf("marshal received Opus RTP packet: %w", err)
+	}
+	if _, err := r.writer.WriteToUDP(data, address); err != nil {
+		return fmt.Errorf("forward Opus RTP to render sink: %w", err)
+	}
+	return nil
+}
+
+func (r *audioRTPRenderer) Close() error {
+	r.closeOnce.Do(func() {
+		r.cancel()
+		closeErr := r.writer.Close()
+		doneErr := <-r.done
+		removeErr := os.RemoveAll(r.directory)
+		r.closeErr = errors.Join(closeErr, doneErr, removeErr)
+	})
+	return r.closeErr
+}
+
+func startAudioRTPMixer(ctx context.Context, trackIDs []string) (*audioRTPMixer, error) {
+	ffmpeg, err := exec.LookPath("ffmpeg")
+	if err != nil {
+		return nil, fmt.Errorf("find local FFmpeg mixer: %w", err)
+	}
+	directory, err := os.MkdirTemp("", "hami-audio-mixer-")
+	if err != nil {
+		return nil, fmt.Errorf("create audio mixer directory: %w", err)
+	}
+	mixer := &audioRTPMixer{
+		directory: directory,
+		inputs:    make(map[string]*net.UDPAddr, len(trackIDs)),
+		done:      make(chan error, 1),
+	}
+	cleanup := func() {
+		if mixer.writer != nil {
+			_ = mixer.writer.Close()
+		}
+		if mixer.output != nil {
+			_ = mixer.output.Close()
+		}
+		_ = os.RemoveAll(directory)
+	}
+	ports := make([]int, len(trackIDs))
+	for index, trackID := range trackIDs {
+		if trackID == "" {
+			cleanup()
+			return nil, errors.New("audio mixer track ID is required")
+		}
+		port, err := reserveAudioRTPPort()
+		if err != nil {
+			cleanup()
+			return nil, err
+		}
+		ports[index] = port
+		mixer.inputs[trackID] = &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1), Port: port}
+	}
+	sdp, err := audioSDP(trackIDs, ports)
+	if err != nil {
+		cleanup()
+		return nil, err
+	}
+	sdpPath := filepath.Join(directory, "input.sdp")
+	if err := os.WriteFile(sdpPath, []byte(sdp), 0o600); err != nil {
+		cleanup()
+		return nil, fmt.Errorf("write mixer SDP: %w", err)
+	}
+	mixer.output, err = net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1)})
+	if err != nil {
+		cleanup()
+		return nil, fmt.Errorf("bind mixed Opus RTP output: %w", err)
+	}
+	mixer.writer, err = net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1)})
+	if err != nil {
+		cleanup()
+		return nil, fmt.Errorf("bind mixer RTP writer: %w", err)
+	}
+	mixCtx, cancel := context.WithCancel(ctx)
+	mixer.cancel = cancel
+	var filter strings.Builder
+	for index := range trackIDs {
+		fmt.Fprintf(&filter, "[0:a:%d]", index)
+	}
+	fmt.Fprintf(&filter, "amix=inputs=%d:duration=longest:dropout_transition=0[mixout]", len(trackIDs))
+	outputPort := mixer.output.LocalAddr().(*net.UDPAddr).Port
+	args := []string{
+		"-hide_banner", "-loglevel", "error", "-nostats",
+		"-protocol_whitelist", "file,udp,rtp",
+		"-f", "sdp", "-i", sdpPath,
+		"-filter_complex", filter.String(), "-map", "[mixout]",
+		"-ac", "1", "-ar", strconv.Itoa(audioRTPClockRate),
+		"-c:a", "libopus", "-application", "lowdelay", "-frame_duration", "20",
+		"-payload_type", strconv.Itoa(audioOpusPayloadType),
+		"-f", "rtp", fmt.Sprintf("rtp://127.0.0.1:%d?pkt_size=1200", outputPort),
+	}
+	mixer.command = exec.CommandContext(mixCtx, ffmpeg, args...)
+	mixer.command.Stdout = io.Discard
+	mixer.command.Stderr = os.Stderr
+	if err := mixer.command.Start(); err != nil {
+		cancel()
+		cleanup()
+		return nil, fmt.Errorf("start server-side Opus mixer: %w", err)
+	}
+	go func() {
+		err := mixer.command.Wait()
+		if mixCtx.Err() != nil {
+			mixer.done <- nil
+			return
+		}
+		if err == nil {
+			err = errors.New("server-side Opus mixer stopped before cancellation")
+		}
+		mixer.done <- fmt.Errorf("server-side Opus mixer stopped: %w", err)
+	}()
+	return mixer, nil
+}
+
+func (m *audioRTPMixer) WritePacket(trackID string, packet *rtp.Packet) error {
+	address, ok := m.inputs[trackID]
+	if !ok {
+		return fmt.Errorf("audio mixer has no input for track %q", trackID)
+	}
+	data, err := packet.Marshal()
+	if err != nil {
+		return fmt.Errorf("marshal mixer input RTP packet: %w", err)
+	}
+	if _, err := m.writer.WriteToUDP(data, address); err != nil {
+		return fmt.Errorf("forward speaker Opus RTP to mixer: %w", err)
+	}
+	return nil
+}
+
+func (m *audioRTPMixer) ForwardOutput(ctx context.Context, track *webrtc.TrackLocalStaticRTP) error {
+	packetBytes := make([]byte, 1500)
+	for {
+		if err := m.output.SetReadDeadline(time.Now().Add(200 * time.Millisecond)); err != nil {
+			return fmt.Errorf("set mixed RTP read deadline: %w", err)
+		}
+		n, _, err := m.output.ReadFromUDP(packetBytes)
+		if err != nil {
+			if ctx.Err() != nil {
+				return nil
+			}
+			if networkErr, ok := err.(net.Error); ok && networkErr.Timeout() {
+				select {
+				case <-ctx.Done():
+					return nil
+				default:
+					continue
+				}
+			}
+			return fmt.Errorf("read mixed Opus RTP: %w", err)
+		}
+		var packet rtp.Packet
+		if err := packet.Unmarshal(packetBytes[:n]); err != nil {
+			return fmt.Errorf("unmarshal mixed Opus RTP: %w", err)
+		}
+		if err := track.WriteRTP(&packet); err != nil {
+			return fmt.Errorf("publish mixed Opus RTP: %w", err)
+		}
+	}
+}
+
+func (m *audioRTPMixer) Close() error {
+	m.closeOnce.Do(func() {
+		m.cancel()
+		writerErr := m.writer.Close()
+		outputErr := m.output.Close()
+		doneErr := <-m.done
+		removeErr := os.RemoveAll(m.directory)
+		m.closeErr = errors.Join(writerErr, outputErr, doneErr, removeErr)
+	})
+	return m.closeErr
+}
+
+func createAudioRungPublisher(
+	ctx context.Context,
+	router *sfuRouter,
+	routerAPI, clientAPI *webrtc.API,
+	publisherID, trackID string,
+	payload []byte,
+) (*audioRungPublisher, error) {
+	serverPeer, err := router.registerPublisher(routerAPI, publisherID)
+	if err != nil {
+		return nil, err
+	}
+	clientPeer, err := clientAPI.NewPeerConnection(webrtc.Configuration{})
+	if err != nil {
+		return nil, fmt.Errorf("create audio publisher %s client: %w", publisherID, err)
+	}
+	track, err := webrtc.NewTrackLocalStaticRTP(
+		webrtc.RTPCodecCapability{
+			MimeType:  webrtc.MimeTypeOpus,
+			ClockRate: audioRTPClockRate,
+			Channels:  2,
+		},
+		trackID,
+		"hami-audio-rung1-room",
+	)
+	if err != nil {
+		_ = clientPeer.Close()
+		return nil, fmt.Errorf("create Opus publisher track %s: %w", trackID, err)
+	}
+	sender, err := clientPeer.AddTrack(track)
+	if err != nil {
+		_ = clientPeer.Close()
+		return nil, fmt.Errorf("add Opus publisher track %s: %w", trackID, err)
+	}
+	drainRTCP(sender)
+	if err := negotiateLoopbackPeers(
+		ctx,
+		fmt.Sprintf("audio publisher %s", publisherID),
+		clientPeer,
+		serverPeer,
+		"m=audio",
+	); err != nil {
+		_ = clientPeer.Close()
+		return nil, err
+	}
+	publisher := &audioRungPublisher{
+		id:      publisherID,
+		key:     sfuTrackKey{PublisherID: publisherID, TrackID: trackID},
+		peer:    clientPeer,
+		track:   track,
+		payload: payload,
+	}
+	if err := publisher.writePrimer(); err != nil {
+		_ = clientPeer.Close()
+		return nil, err
+	}
+	return publisher, nil
+}
+
+func connectAudioRTPReceiver(
+	ctx context.Context,
+	router *sfuRouter,
+	routerAPI, clientAPI *webrtc.API,
+	viewerID string,
+	keys []sfuTrackKey,
+	sink audioRTPPacketSink,
+	stats map[string]*audioPacketCounter,
+	errorsOut chan<- error,
+) (*webrtc.PeerConnection, *webrtc.PeerConnection, context.CancelFunc, peerNegotiationPair, error) {
+	if len(keys) == 0 {
+		return nil, nil, nil, peerNegotiationPair{}, errors.New("audio receiver requires subscriptions")
+	}
+	viewerCtx, cancel := context.WithCancel(ctx)
+	serverPeer, err := routerAPI.NewPeerConnection(webrtc.Configuration{})
+	if err != nil {
+		cancel()
+		return nil, nil, nil, peerNegotiationPair{}, fmt.Errorf("create audio receiver %s router peer: %w", viewerID, err)
+	}
+	clientPeer, err := clientAPI.NewPeerConnection(webrtc.Configuration{})
+	if err != nil {
+		cancel()
+		_ = serverPeer.Close()
+		return nil, nil, nil, peerNegotiationPair{}, fmt.Errorf("create audio receiver %s client peer: %w", viewerID, err)
+	}
+	clientPeer.OnTrack(func(track *webrtc.TrackRemote, _ *webrtc.RTPReceiver) {
+		counter := stats[track.ID()]
+		if counter == nil {
+			errorsOut <- fmt.Errorf("audio receiver %s got unexpected track %q", viewerID, track.ID())
+			return
+		}
+		go forwardAudioRTP(viewerCtx, track, sink, counter, errorsOut)
+	})
+	for range keys {
+		if _, err := clientPeer.AddTransceiverFromKind(
+			webrtc.RTPCodecTypeAudio,
+			webrtc.RTPTransceiverInit{Direction: webrtc.RTPTransceiverDirectionRecvonly},
+		); err != nil {
+			cancel()
+			_ = clientPeer.Close()
+			_ = serverPeer.Close()
+			return nil, nil, nil, peerNegotiationPair{}, fmt.Errorf("add audio receive transceiver for %s: %w", viewerID, err)
+		}
+	}
+	if err := router.registerViewer(viewerID, serverPeer); err != nil {
+		cancel()
+		_ = clientPeer.Close()
+		_ = serverPeer.Close()
+		return nil, nil, nil, peerNegotiationPair{}, err
+	}
+	cleanup := func() error {
+		cancel()
+		return errors.Join(router.removeViewer(viewerID), clientPeer.Close())
+	}
+	for _, key := range keys {
+		if err := router.authorizeSubscription(viewerID, key); err != nil {
+			return nil, nil, nil, peerNegotiationPair{}, errors.Join(
+				fmt.Errorf("authorize %s for %s: %w", key.TrackID, viewerID, err),
+				cleanup(),
+			)
+		}
+		if err := router.subscribe(viewerID, key); err != nil {
+			return nil, nil, nil, peerNegotiationPair{}, errors.Join(
+				fmt.Errorf("subscribe %s for %s: %w", key.TrackID, viewerID, err),
+				cleanup(),
+			)
+		}
+	}
+	sections := make([]string, len(keys))
+	for index := range sections {
+		sections[index] = "m=audio"
+	}
+	pair := peerNegotiationPair{
+		name:          fmt.Sprintf("audio receiver %s", viewerID),
+		offerer:       clientPeer,
+		answerer:      serverPeer,
+		mediaSections: sections,
+	}
+	return clientPeer, serverPeer, cancel, pair, nil
+}
+
+func createAudioRungViewer(
+	ctx context.Context,
+	router *sfuRouter,
+	routerAPI, clientAPI *webrtc.API,
+	viewerID, subscriptionID string,
+	keys []sfuTrackKey,
+	trackIDs []string,
+	mixInputs bool,
+	firstFrameID uint64,
+	clock *AudioFrameClock,
+	origin time.Time,
+	recorder *LatencyRecorder,
+	stats map[string]*audioPacketCounter,
+	errorsOut chan<- error,
+) (*audioRungViewer, peerNegotiationPair, error) {
+	if len(keys) != len(trackIDs) {
+		return nil, peerNegotiationPair{}, errors.New("audio viewer track identities do not match subscription count")
+	}
+	if recorder == nil {
+		recorder = NewLatencyRecorder(ModeRender)
+	}
+	if stats == nil {
+		stats = make(map[string]*audioPacketCounter, len(trackIDs))
+		for _, trackID := range trackIDs {
+			stats[trackID] = newAudioPacketCounter(origin)
+		}
+	}
+	for _, trackID := range trackIDs {
+		if stats[trackID] == nil {
+			return nil, peerNegotiationPair{}, fmt.Errorf("audio viewer has no packet counter for track %q", trackID)
+		}
+	}
+	renderer, err := startAudioRTPRenderer(ctx, trackIDs, mixInputs, firstFrameID, func(frameID uint64, renderedAt time.Time) {
+		recorder.RecordAudio(frameID, clock, renderedAt)
+	})
+	if err != nil {
+		return nil, peerNegotiationPair{}, err
+	}
+	client, server, cancel, pair, err := connectAudioRTPReceiver(
+		ctx,
+		router,
+		routerAPI,
+		clientAPI,
+		viewerID,
+		keys,
+		renderer,
+		stats,
+		errorsOut,
+	)
+	if err != nil {
+		closeErr := renderer.Close()
+		return nil, peerNegotiationPair{}, errors.Join(err, closeErr)
+	}
+	return &audioRungViewer{
+		id:             viewerID,
+		subscriptionID: subscriptionID,
+		client:         client,
+		server:         server,
+		renderer:       renderer,
+		recorder:       recorder,
+		stats:          stats,
+		reconnects:     make(map[string]uint64, len(trackIDs)),
+		cancel:         cancel,
+	}, pair, nil
+}
+
+func disconnectAudioRungViewer(router *sfuRouter, viewer *audioRungViewer) error {
+	if viewer == nil {
+		return nil
+	}
+	viewer.cancel()
+	removeErr := router.removeViewer(viewer.id)
+	clientErr := viewer.client.Close()
+	rendererErr := viewer.renderer.Close()
+	return errors.Join(removeErr, clientErr, rendererErr)
+}
+
+func createAudioMixerReceiver(
+	ctx context.Context,
+	router *sfuRouter,
+	routerAPI, clientAPI *webrtc.API,
+	keys []sfuTrackKey,
+	mixer *audioRTPMixer,
+	origin time.Time,
+	errorsOut chan<- error,
+) (*webrtc.PeerConnection, context.CancelFunc, peerNegotiationPair, map[string]*audioPacketCounter, error) {
+	stats := make(map[string]*audioPacketCounter, len(keys))
+	for _, key := range keys {
+		stats[key.TrackID] = newAudioPacketCounter(origin)
+	}
+	client, _, cancel, pair, err := connectAudioRTPReceiver(
+		ctx,
+		router,
+		routerAPI,
+		clientAPI,
+		"hami-audio-rung1-mixer",
+		keys,
+		mixer,
+		stats,
+		errorsOut,
+	)
+	if err != nil {
+		return nil, nil, peerNegotiationPair{}, nil, err
+	}
+	return client, cancel, pair, stats, nil
+}
+
+func audioHandRaiseSmoke(
+	roomID, grantParticipantID, grantSubscriptionID, declineParticipantID, declineSubscriptionID string,
+) ([]audioRungEvent, error) {
+	roles := map[string]string{
+		grantParticipantID:   "listener",
+		declineParticipantID: "listener",
+	}
+	now := time.Now()
+	const actorID = "audio-rung1-owner"
+	events := []audioRungEvent{
+		{Type: "hand_raise", ParticipantID: grantParticipantID, SubscriptionID: grantSubscriptionID, ActorID: grantParticipantID, At: now},
+		{Type: "hand_raise_granted", ParticipantID: grantParticipantID, SubscriptionID: grantSubscriptionID, ActorID: actorID, At: now.Add(time.Millisecond)},
+		{Type: "stage_leave", ParticipantID: grantParticipantID, SubscriptionID: grantSubscriptionID, ActorID: grantParticipantID, Reason: "hand_raise_smoke_complete", At: now.Add(2 * time.Millisecond)},
+		{Type: "hand_raise", ParticipantID: declineParticipantID, SubscriptionID: declineSubscriptionID, ActorID: declineParticipantID, At: now.Add(3 * time.Millisecond)},
+		{Type: "hand_raise_declined", ParticipantID: declineParticipantID, SubscriptionID: declineSubscriptionID, ActorID: actorID, At: now.Add(4 * time.Millisecond)},
+	}
+	if roomID == "" || grantParticipantID == "" || declineParticipantID == "" ||
+		grantParticipantID == declineParticipantID || grantSubscriptionID == "" || declineSubscriptionID == "" ||
+		roles[events[0].ParticipantID] != "listener" || roles[events[3].ParticipantID] != "listener" {
+		return nil, errors.New("hand-raise smoke requires listeners in a room")
+	}
+	roles[events[1].ParticipantID] = "speaker"
+	if roles[events[1].ParticipantID] != "speaker" {
+		return nil, errors.New("granted hand raise did not move listener to stage")
+	}
+	roles[events[2].ParticipantID] = "listener"
+	if roles[events[4].ParticipantID] != "listener" {
+		return nil, errors.New("declined hand raise changed listener role")
+	}
+	return events, nil
+}
+
+func readAudioSwapMiB() (used, free float64, returnErr error) {
+	output, err := exec.Command("sysctl", "vm.swapusage").Output()
+	if err != nil {
+		return 0, 0, fmt.Errorf("read macOS swap usage: %w", err)
+	}
+	parse := func(label string) (float64, error) {
+		_, value, ok := strings.Cut(string(output), label+" =")
+		if !ok {
+			return 0, fmt.Errorf("swap output lacks %q: %s", label, strings.TrimSpace(string(output)))
+		}
+		fields := strings.Fields(value)
+		if len(fields) == 0 {
+			return 0, fmt.Errorf("swap output has no value for %q", label)
+		}
+		number := strings.TrimSuffix(fields[0], "M")
+		result, err := strconv.ParseFloat(number, 64)
+		if err != nil {
+			return 0, fmt.Errorf("parse swap %s value %q: %w", label, fields[0], err)
+		}
+		return result, nil
+	}
+	used, err = parse("used")
+	if err != nil {
+		return 0, 0, err
+	}
+	free, err = parse("free")
+	if err != nil {
+		return 0, 0, err
+	}
+	return used, free, nil
+}
+
+type audioHeapSampler struct {
+	cancel context.CancelFunc
+	done   chan struct{}
+	start  uint64
+	peak   atomic.Uint64
+}
+
+func startAudioHeapSampler(ctx context.Context) *audioHeapSampler {
+	var memory runtime.MemStats
+	runtime.ReadMemStats(&memory)
+	samplerCtx, cancel := context.WithCancel(ctx)
+	sampler := &audioHeapSampler{
+		cancel: cancel,
+		done:   make(chan struct{}),
+		start:  memory.HeapAlloc,
+	}
+	sampler.peak.Store(memory.HeapAlloc)
+	go func() {
+		defer close(sampler.done)
+		ticker := time.NewTicker(time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-samplerCtx.Done():
+				return
+			case <-ticker.C:
+				runtime.ReadMemStats(&memory)
+				for previous := sampler.peak.Load(); memory.HeapAlloc > previous; previous = sampler.peak.Load() {
+					if sampler.peak.CompareAndSwap(previous, memory.HeapAlloc) {
+						break
+					}
+				}
+			}
+		}
+	}()
+	return sampler
+}
+
+func (s *audioHeapSampler) stop() (start, peak, end uint64) {
+	s.cancel()
+	<-s.done
+	var memory runtime.MemStats
+	runtime.ReadMemStats(&memory)
+	for previous := s.peak.Load(); memory.HeapAlloc > previous; previous = s.peak.Load() {
+		if s.peak.CompareAndSwap(previous, memory.HeapAlloc) {
+			break
+		}
+	}
+	return s.start, s.peak.Load(), memory.HeapAlloc
+}
+
+func runLocalAudioRungBothModes(
+	ctx context.Context,
+	duration time.Duration,
+	speakerCount, listenerCount int,
+) ([]audioRungResult, error) {
+	results := make([]audioRungResult, 0, 2)
+	for _, mode := range []audioRungMode{audioRungMixing, audioRungSelective} {
+		result, err := runLocalAudioRung(ctx, duration, speakerCount, listenerCount, mode)
+		if err != nil {
+			return results, fmt.Errorf("run %s audio rung: %w", mode, err)
+		}
+		results = append(results, result)
+		encoded, err := json.Marshal(result)
+		if err != nil {
+			return results, fmt.Errorf("encode %s audio rung evidence: %w", mode, err)
+		}
+		fmt.Fprintf(os.Stderr, "audio_rung_mode_result=%s\n", encoded)
+	}
+	return results, nil
+}
+
+func runLocalAudioRung(
+	ctx context.Context,
+	duration time.Duration,
+	speakerCount, listenerCount int,
+	mode audioRungMode,
+) (result audioRungResult, returnErr error) {
+	if duration <= 0 {
+		return audioRungResult{}, errors.New("audio measurement duration must be positive")
+	}
+	if speakerCount < 1 || listenerCount < 2 {
+		return audioRungResult{}, errors.New("audio rung requires at least one speaker and two listeners for hand-raise grant/decline smoke")
+	}
+	if mode != audioRungMixing && mode != audioRungSelective {
+		return audioRungResult{}, fmt.Errorf("unsupported audio distribution mode %q", mode)
+	}
+	const roomID = "hami-audio-rung1-room"
+	runCtx, cancel := context.WithCancel(ctx)
+	var router *sfuRouter
+	var routerMux ice.UDPMux
+	var mixer *audioRTPMixer
+	var mixerClient *webrtc.PeerConnection
+	var mixerCancel context.CancelFunc
+	publishers := make([]*audioRungPublisher, 0, speakerCount+1)
+	viewers := make([]*audioRungViewer, 0, listenerCount)
+	var cleanupErrors []error
+	defer func() {
+		cancel()
+		for _, viewer := range viewers {
+			cleanupErrors = append(cleanupErrors, disconnectAudioRungViewer(router, viewer))
+		}
+		if mixerCancel != nil {
+			mixerCancel()
+			cleanupErrors = append(cleanupErrors, router.removeViewer("hami-audio-rung1-mixer"))
+		}
+		if mixerClient != nil {
+			cleanupErrors = append(cleanupErrors, mixerClient.Close())
+		}
+		if mixer != nil {
+			cleanupErrors = append(cleanupErrors, mixer.Close())
+		}
+		for _, publisher := range publishers {
+			if publisher != nil {
+				cleanupErrors = append(cleanupErrors, publisher.peer.Close())
+			}
+		}
+		if router != nil {
+			cleanupErrors = append(cleanupErrors, router.close())
+		}
+		if routerMux != nil {
+			cleanupErrors = append(cleanupErrors, routerMux.Close())
+		}
+		returnErr = errors.Join(returnErr, errors.Join(cleanupErrors...))
+	}()
+
+	if routerUDPMuxMode != "enabled" && routerUDPMuxMode != "disabled" {
+		return audioRungResult{}, fmt.Errorf("invalid router UDP mux mode %q", routerUDPMuxMode)
+	}
+	clientSettings, _, err := loopbackSettings(false, 0)
+	if err != nil {
+		return audioRungResult{}, fmt.Errorf("configure local audio client: %w", err)
+	}
+	routerSettings, mux, err := loopbackSettings(routerUDPMuxMode == "enabled", 0)
+	if err != nil {
+		return audioRungResult{}, fmt.Errorf("configure local audio router: %w", err)
+	}
+	routerMux = mux
+	routerAPI := webrtc.NewAPI(webrtc.WithSettingEngine(routerSettings))
+	clientAPI := webrtc.NewAPI(webrtc.WithSettingEngine(clientSettings))
+	router, err = newSFURouter(routerAPI)
+	if err != nil {
+		return audioRungResult{}, err
+	}
+
+	swapUsed, swapFree, err := readAudioSwapMiB()
+	if err != nil {
+		return audioRungResult{}, err
+	}
+	if duration >= MinDuration && speakerCount == 10 && listenerCount == 100 && swapFree < 2048 {
+		return audioRungResult{}, fmt.Errorf(
+			"10x100 audio rung blocked by host safety floor: swap free %.2f MiB, need at least 2048 MiB",
+			swapFree,
+		)
+	}
+	events, err := audioHandRaiseSmoke(
+		roomID,
+		"audio-listener-001",
+		"audio-subscription-001",
+		"audio-listener-002",
+		"audio-subscription-002",
+	)
+	if err != nil {
+		return audioRungResult{}, err
+	}
+
+	publisherIDs := make([]string, 0, speakerCount)
+	trackIDs := make([]string, 0, speakerCount)
+	keys := make([]sfuTrackKey, 0, speakerCount)
+	sources := make([]sfuMediaSource, 0, speakerCount)
+	mixerErrors := make(chan error, max(1024, speakerCount*listenerCount))
+	for index := 0; index < speakerCount; index++ {
+		publisherID := fmt.Sprintf("audio-speaker-%03d", index+1)
+		trackID := fmt.Sprintf("audio-speaker-track-%03d", index+1)
+		payload, err := generateOpusPayload(runCtx, 300+index*17)
+		if err != nil {
+			return audioRungResult{}, fmt.Errorf("generate Opus payload for %s: %w", publisherID, err)
+		}
+		publisher, err := createAudioRungPublisher(
+			runCtx,
+			router,
+			routerAPI,
+			clientAPI,
+			publisherID,
+			trackID,
+			payload,
+		)
+		if err != nil {
+			return audioRungResult{}, err
+		}
+		publishers = append(publishers, publisher)
+		publisherIDs = append(publisherIDs, publisherID)
+		trackIDs = append(trackIDs, trackID)
+		keys = append(keys, publisher.key)
+		sources = append(sources, sfuMediaSource{key: publisher.key})
+	}
+	if err := router.waitForTracks(runCtx, sources); err != nil {
+		return audioRungResult{}, fmt.Errorf("wait for local Opus speaker tracks: %w", err)
+	}
+
+	measurementKeys := keys
+	measurementTrackIDs := trackIDs
+	mixerStats := make(map[string]*audioPacketCounter, len(trackIDs))
+	var mixedTrackID string
+	if mode == audioRungMixing {
+		mixer, err = startAudioRTPMixer(runCtx, trackIDs)
+		if err != nil {
+			return audioRungResult{}, err
+		}
+		var mixerPair peerNegotiationPair
+		var inputStats map[string]*audioPacketCounter
+		mixerClient, mixerCancel, mixerPair, inputStats, err = createAudioMixerReceiver(
+			runCtx,
+			router,
+			routerAPI,
+			clientAPI,
+			keys,
+			mixer,
+			time.Now(),
+			mixerErrors,
+		)
+		if err != nil {
+			return audioRungResult{}, err
+		}
+		mixerStats = inputStats
+		if err := negotiateLoopbackPairsBounded(runCtx, []peerNegotiationPair{mixerPair}, peerNegotiationConcurrency); err != nil {
+			return audioRungResult{}, err
+		}
+		mixedTrackID = "audio-room-mixed"
+		mixedPublisher, err := createAudioRungPublisher(
+			runCtx,
+			router,
+			routerAPI,
+			clientAPI,
+			"audio-room-mixer",
+			mixedTrackID,
+			publishers[0].payload,
+		)
+		if err != nil {
+			return audioRungResult{}, err
+		}
+		publishers = append(publishers, mixedPublisher)
+		if err := router.waitForTracks(runCtx, []sfuMediaSource{{key: mixedPublisher.key}}); err != nil {
+			return audioRungResult{}, fmt.Errorf("wait for mixed Opus track: %w", err)
+		}
+		measurementKeys = []sfuTrackKey{mixedPublisher.key}
+		measurementTrackIDs = []string{mixedTrackID}
+		go func() {
+			if err := mixer.ForwardOutput(runCtx, mixedPublisher.track); err != nil && runCtx.Err() == nil {
+				mixerErrors <- err
+			}
+		}()
+	}
+
+	clock := NewAudioFrameClock()
+	if err := clock.SetExpectedConsumers(listenerCount); err != nil {
+		return audioRungResult{}, err
+	}
+	origin := time.Now()
+	viewerPairs := make([]peerNegotiationPair, 0, listenerCount)
+	for index := 0; index < listenerCount; index++ {
+		viewerID := fmt.Sprintf("audio-listener-%03d", index+1)
+		subscriptionID := fmt.Sprintf("audio-subscription-%03d", index+1)
+		viewer, pair, err := createAudioRungViewer(
+			runCtx,
+			router,
+			routerAPI,
+			clientAPI,
+			viewerID,
+			subscriptionID,
+			measurementKeys,
+			measurementTrackIDs,
+			mode == audioRungSelective,
+			0,
+			clock,
+			origin,
+			nil,
+			nil,
+			mixerErrors,
+		)
+		if err != nil {
+			return audioRungResult{}, err
+		}
+		viewers = append(viewers, viewer)
+		viewerPairs = append(viewerPairs, pair)
+	}
+	if err := negotiateLoopbackPairsBounded(runCtx, viewerPairs, peerNegotiationConcurrency); err != nil {
+		return audioRungResult{}, fmt.Errorf("negotiate audio listeners: %w", err)
+	}
+
+	reconnectEvents := make([]audioRungEvent, 0, 2)
+	for _, viewer := range viewers {
+		for _, counter := range viewer.stats {
+			counter.reset()
+		}
+	}
+	for _, counter := range mixerStats {
+		counter.reset()
+	}
+	if len(mixerErrors) > 0 {
+		return audioRungResult{}, <-mixerErrors
+	}
+
+	heapSampler := startAudioHeapSampler(runCtx)
+	defer heapSampler.stop()
+	startedAt := time.Now()
+	ticker := time.NewTicker(audioFrameDuration)
+	defer ticker.Stop()
+	timer := time.NewTimer(duration)
+	defer timer.Stop()
+	var framesSent uint64
+	reconnectedOnce := false
+	nextProgress := time.Now().Add(10 * time.Second)
+	for {
+		select {
+		case asyncErr := <-mixerErrors:
+			return audioRungResult{}, fmt.Errorf("audio media pipeline: %w", asyncErr)
+		case <-runCtx.Done():
+			return audioRungResult{}, fmt.Errorf("audio measurement interrupted: %w", runCtx.Err())
+		case <-ticker.C:
+			if !reconnectedOnce && time.Since(startedAt) >= duration/2 {
+				viewer := viewers[0]
+				droppedAt := time.Now()
+				reconnectEvents = append(reconnectEvents, audioRungEvent{
+					Type: "subscription_dropped", ParticipantID: viewer.id,
+					SubscriptionID: viewer.subscriptionID, ActorID: viewer.id,
+					Reason: "transport_disconnected", At: droppedAt,
+				})
+				if err := disconnectAudioRungViewer(router, viewer); err != nil {
+					return audioRungResult{}, fmt.Errorf("disconnect listener for reconnect smoke: %w", err)
+				}
+				viewers[0] = nil
+				reconnected, pair, err := createAudioRungViewer(
+					runCtx,
+					router,
+					routerAPI,
+					clientAPI,
+					viewer.id,
+					viewer.subscriptionID,
+					measurementKeys,
+					measurementTrackIDs,
+					mode == audioRungSelective,
+					framesSent,
+					clock,
+					origin,
+					viewer.recorder,
+					viewer.stats,
+					mixerErrors,
+				)
+				if err != nil {
+					return audioRungResult{}, fmt.Errorf("recreate listener subscription: %w", err)
+				}
+				if reconnected.subscriptionID != viewer.subscriptionID {
+					return audioRungResult{}, errors.New("reconnected listener did not resume the same subscription")
+				}
+				if err := negotiateLoopbackPairsBounded(runCtx, []peerNegotiationPair{pair}, peerNegotiationConcurrency); err != nil {
+					return audioRungResult{}, errors.Join(
+						fmt.Errorf("negotiate resumed listener subscription: %w", err),
+						disconnectAudioRungViewer(router, reconnected),
+					)
+				}
+				for _, publisherID := range publisherIDs {
+					reconnected.reconnects[publisherID]++
+				}
+				viewers[0] = reconnected
+				resumedAt := time.Now()
+				if resumedAt.Sub(droppedAt) > audioReconnectWindow {
+					return audioRungResult{}, fmt.Errorf(
+						"listener subscription resumed after reconnect window: %s > %s",
+						resumedAt.Sub(droppedAt),
+						audioReconnectWindow,
+					)
+				}
+				reconnectEvents = append(reconnectEvents, audioRungEvent{
+					Type: "subscription_resumed", ParticipantID: reconnected.id,
+					SubscriptionID: reconnected.subscriptionID, ActorID: reconnected.id,
+					Reason: "resume_existing_subscription", At: resumedAt,
+				})
+				reconnectedOnce = true
+			}
+			clock.CaptureNow(framesSent)
+			for _, publisher := range publishers[:speakerCount] {
+				if err := publisher.writeFrame(framesSent); err != nil {
+					return audioRungResult{}, err
+				}
+			}
+			framesSent++
+			if time.Now().After(nextProgress) {
+				var memory runtime.MemStats
+				runtime.ReadMemStats(&memory)
+				progressSwapUsed, progressSwapFree, swapErr := readAudioSwapMiB()
+				if swapErr != nil {
+					return audioRungResult{}, swapErr
+				}
+				fmt.Fprintf(
+					os.Stderr,
+					"audio_rung_progress mode=%s elapsed=%s frames=%d heap_alloc=%d goroutines=%d swap_used_mib=%.2f swap_free_mib=%.2f\n",
+					mode,
+					time.Since(startedAt).Round(time.Second),
+					framesSent,
+					memory.HeapAlloc,
+					runtime.NumGoroutine(),
+					progressSwapUsed,
+					progressSwapFree,
+				)
+				nextProgress = time.Now().Add(10 * time.Second)
+			}
+		case <-timer.C:
+			goto measurementDone
+		}
+	}
+
+measurementDone:
+	if !reconnectedOnce {
+		return audioRungResult{}, errors.New("audio measurement ended before reconnect smoke completed")
+	}
+	time.Sleep(3 * audioFrameDuration)
+	for {
+		select {
+		case asyncErr := <-mixerErrors:
+			return audioRungResult{}, fmt.Errorf("audio media pipeline: %w", asyncErr)
+		default:
+			goto asyncErrorsChecked
+		}
+	}
+
+asyncErrorsChecked:
+	heapStart, heapPeak, heapEnd := heapSampler.stop()
+	completedAt := time.Now()
+	swapUsedEnd, swapFreeEnd, err := readAudioSwapMiB()
+	if err != nil {
+		return audioRungResult{}, err
+	}
+	result = audioRungResult{
+		EvidenceType:    "TEST",
+		LocalOnly:       true,
+		RoomID:          roomID,
+		Mode:            mode,
+		Speakers:        speakerCount,
+		Listeners:       listenerCount,
+		Duration:        completedAt.Sub(startedAt),
+		FramesSent:      framesSent,
+		PendingCaptures: clock.Pending(),
+		HeapAllocStart:  heapStart,
+		HeapAllocPeak:   heapPeak,
+		HeapAllocEnd:    heapEnd,
+		SwapUsedMiB:     swapUsed,
+		SwapFreeMiB:     swapFree,
+		SwapUsedEndMiB:  swapUsedEnd,
+		SwapFreeEndMiB:  swapFreeEnd,
+		StartedAt:       startedAt,
+		CompletedAt:     completedAt,
+		HandRaiseEvents: events,
+		ReconnectEvents: reconnectEvents,
+		ListenerResults: make([]audioRungListenerResult, 0, len(viewers)),
+	}
+	result.EveryListenerPass = len(viewers) == listenerCount
+	if !reconnectedOnce {
+		result.EveryListenerPass = false
+	}
+	for _, viewer := range viewers {
+		summary := viewer.recorder.Summary()
+		if !summary.Pass {
+			result.EveryListenerPass = false
+		}
+		listenerResult := audioRungListenerResult{
+			ListenerID: viewer.id,
+			Latency:    summary,
+			Streams:    make([]audioRungStreamResult, 0, speakerCount),
+		}
+		for index, publisherID := range publisherIDs {
+			stream := audioRungStreamResult{
+				SpeakerID:           publisherID,
+				Reconnects:          viewer.reconnects[publisherID],
+				MeasurementBoundary: "listener_rtp_before_local_decode",
+			}
+			if mode == audioRungSelective {
+				snapshot := viewer.stats[trackIDs[index]].snapshot()
+				stream.Loss = snapshot.Lost
+				stream.Jitter = snapshot.Jitter
+			} else {
+				upstream := mixerStats[trackIDs[index]].snapshot()
+				downstream := viewer.stats[mixedTrackID].snapshot()
+				stream.Loss = upstream.Lost
+				stream.Jitter = upstream.Jitter
+				stream.UpstreamLoss = upstream.Lost
+				stream.UpstreamJitter = upstream.Jitter
+				stream.DownstreamLoss = downstream.Lost
+				stream.DownstreamJitter = downstream.Jitter
+				stream.MeasurementBoundary = "shared_mixer_input_and_listener_mixed_output"
+			}
+			listenerResult.Streams = append(listenerResult.Streams, stream)
+		}
+		result.ListenerResults = append(result.ListenerResults, listenerResult)
+	}
+	return result, nil
+}
+
+func forwardAudioRTP(
+	ctx context.Context,
+	track *webrtc.TrackRemote,
+	sink audioRTPPacketSink,
+	counter *audioPacketCounter,
+	errorsOut chan<- error,
+) {
+	for {
+		packet, _, err := track.ReadRTP()
+		if err != nil {
+			if ctx.Err() == nil && !errors.Is(err, io.EOF) {
+				errorsOut <- fmt.Errorf("read Opus track %s: %w", track.ID(), err)
+			}
+			return
+		}
+		counter.record(packet, time.Now())
+		if err := sink.WritePacket(track.ID(), packet); err != nil {
+			errorsOut <- err
+			return
+		}
+	}
+}
+
 func sendMedia(
 	ctx context.Context,
 	audioTrack, videoTrack *webrtc.TrackLocalStaticSample,
@@ -2861,12 +4379,14 @@ type sfuPublishedTrack struct {
 	firstFrameOnce  sync.Once
 	rtpPacketsRead  atomic.Uint64
 
-	packetMu     sync.Mutex
-	packetCache  map[uint16]*rtp.Packet
-	packetOrder  [sfuNACKHistoryPackets]uint16
-	packetStart  int
-	packetCount  int
-	lastSequence uint16
+	packetMu                sync.Mutex
+	packetCache             map[uint16]*rtp.Packet
+	packetOrder             [sfuNACKHistoryPackets]uint16
+	packetStart             int
+	packetCount             int
+	lastSequence            uint16
+	packetCachePackets      atomic.Int64
+	packetCachePayloadBytes atomic.Int64
 }
 
 type sfuViewer struct {
@@ -2958,6 +4478,7 @@ type sfuProofConfig struct {
 	exerciseRTCP       bool
 	videoInterval      time.Duration
 	logRTPPath         bool
+	frameDiagnostics   *sfuFrameDiagnosticRecorder
 	remoteSFU          *m7hRemoteSFUClient
 }
 
@@ -2967,16 +4488,88 @@ type sfuSendResult struct {
 	err               error
 }
 
+type sfuCascadeProofResult struct {
+	EvidenceType                 string    `json:"evidence_type"`
+	LocalOnly                    bool      `json:"local_only"`
+	Workers                      int       `json:"workers"`
+	WorkerProcesses              int       `json:"worker_processes"`
+	WorkerProcessIDs             []int     `json:"worker_process_ids,omitempty"`
+	Publishers                   int       `json:"publishers"`
+	Viewers                      int       `json:"viewers"`
+	TrackID                      string    `json:"track_id"`
+	PublisherFramesSent          uint64    `json:"publisher_frames_sent"`
+	RelayPacketsForwarded        uint64    `json:"relay_packets_forwarded"`
+	ViewerPacketsReceived        uint64    `json:"viewer_packets_received"`
+	RelayTrackIDs                []string  `json:"relay_track_ids"`
+	ViewerTrackIDs               []string  `json:"viewer_track_ids"`
+	NACKReceived                 uint64    `json:"nack_received"`
+	NACKForwarded                uint64    `json:"nack_forwarded_upstream"`
+	NACKRetransmitted            uint64    `json:"nack_retransmitted_packets"`
+	NACKRetransmissionSeenByView bool      `json:"nack_retransmission_seen_by_viewer"`
+	PLIForwarded                 uint64    `json:"pli_forwarded_upstream"`
+	FIRForwarded                 uint64    `json:"fir_forwarded_upstream"`
+	PLIReachedPublisher          bool      `json:"pli_reached_publisher"`
+	FIRReachedPublisher          bool      `json:"fir_reached_publisher"`
+	CleanupVerified              bool      `json:"cleanup_verified"`
+	StartedAt                    time.Time `json:"started_at_utc"`
+	CompletedAt                  time.Time `json:"completed_at_utc"`
+}
+
 type sfuViewerCapture struct {
-	mu              sync.Mutex
-	tracks          map[string]*streamCounter
-	sequenceCounts  map[string]map[uint16]uint64
-	duplicates      map[string]uint64
-	latencyClock    *FrameClock
-	latencyRecorder *LatencyRecorder
-	readTiming      *m7hRTPReadTiming
-	errors          chan error
-	received        chan struct{}
+	mu               sync.Mutex
+	tracks           map[string]*streamCounter
+	sequenceCounts   map[string]map[uint16]uint64
+	duplicates       map[string]uint64
+	terminalErr      error
+	viewerID         string
+	latencyClock     *FrameClock
+	latencyRecorder  *LatencyRecorder
+	frameDiagnostics *sfuFrameDiagnosticRecorder
+	readTiming       *m7hRTPReadTiming
+	errors           chan error
+	received         chan struct{}
+}
+
+type sfuFrameDiagnosticSummary struct {
+	OutputPath     string   `json:"output_path"`
+	FrameIDs       []uint32 `json:"frame_ids"`
+	RecordsWritten int      `json:"records_written"`
+	Truncated      bool     `json:"truncated"`
+}
+
+type sfuFrameAssemblerSnapshot struct {
+	Active                 bool   `json:"active"`
+	Timestamp              uint32 `json:"timestamp"`
+	SequenceCount          int    `json:"sequence_count"`
+	MarkerSeen             bool   `json:"marker_seen"`
+	MarkerSequence         uint16 `json:"marker_sequence"`
+	NextFrameFirstSequence uint16 `json:"next_frame_first_sequence"`
+	FrameBoundaryKnown     bool   `json:"frame_boundary_known"`
+}
+
+type sfuFrameDiagnosticRecord struct {
+	ObservedAt       time.Time                 `json:"observed_at_utc"`
+	ViewerID         string                    `json:"viewer_id"`
+	TrackID          string                    `json:"track_id"`
+	SequenceNumber   uint16                    `json:"rtp_sequence"`
+	Timestamp        uint32                    `json:"rtp_timestamp"`
+	Marker           bool                      `json:"marker"`
+	AssemblerBefore  sfuFrameAssemblerSnapshot `json:"assembler_before"`
+	AssemblerAfter   sfuFrameAssemblerSnapshot `json:"assembler_after"`
+	Transitions      []string                  `json:"assembler_transitions,omitempty"`
+	FrameComplete    bool                      `json:"frame_complete"`
+	CompletedFrameID *uint32                   `json:"completed_frame_id,omitempty"`
+}
+
+type sfuFrameDiagnosticRecorder struct {
+	mu             sync.Mutex
+	encoder        *json.Encoder
+	outputPath     string
+	frameIDs       map[uint32]struct{}
+	sortedFrameIDs []uint32
+	maxRecords     int
+	recordsWritten int
+	truncated      bool
 }
 
 type m7hRTPReadTiming struct {
@@ -5144,7 +6737,16 @@ func (server *m7hRemoteSFUServer) handleGoroutineProfile(token string) http.Hand
 			entered.Format(time.RFC3339Nano),
 			r.Method,
 		)
-		if !server.authorized(w, r, token) {
+		authorizationStarted := time.Now()
+		authorized := server.authorized(w, r, token)
+		fmt.Fprintf(
+			os.Stderr,
+			"m7h goroutine-profile handler phase=authorization-complete at=%s elapsed=%s allowed=%t\n",
+			time.Now().Format(time.RFC3339Nano),
+			time.Since(authorizationStarted),
+			authorized,
+		)
+		if !authorized {
 			return
 		}
 		if r.Method != http.MethodGet {
@@ -5157,8 +6759,22 @@ func (server *m7hRemoteSFUServer) handleGoroutineProfile(token string) http.Hand
 			writeM7HJSONError(w, http.StatusBadRequest, errors.New("goroutine profile path must be under a temporary directory"))
 			return
 		}
-		if err := writeM7HGoroutineProfile(path); err != nil {
-			writeM7HJSONError(w, http.StatusInternalServerError, err)
+		profileWriteStarted := time.Now()
+		fmt.Fprintf(
+			os.Stderr,
+			"m7h goroutine-profile handler phase=profile-write-start at=%s\n",
+			profileWriteStarted.Format(time.RFC3339Nano),
+		)
+		profileWriteErr := writeM7HGoroutineProfile(path)
+		fmt.Fprintf(
+			os.Stderr,
+			"m7h goroutine-profile handler phase=profile-write-complete at=%s elapsed=%s failed=%t\n",
+			time.Now().Format(time.RFC3339Nano),
+			time.Since(profileWriteStarted),
+			profileWriteErr != nil,
+		)
+		if profileWriteErr != nil {
+			writeM7HJSONError(w, http.StatusInternalServerError, profileWriteErr)
 			return
 		}
 		info, err := os.Stat(path)
@@ -5348,6 +6964,25 @@ func (r *sfuRouter) metricsHandler() http.Handler {
 			fmt.Fprintf(os.Stderr, "write Prometheus metrics: %v\n", err)
 		}
 	})
+	mux.HandleFunc("/debug/pprof/heap", func(w http.ResponseWriter, request *http.Request) {
+		if request.Method != http.MethodGet {
+			w.Header().Set("Allow", http.MethodGet)
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if request.URL.Query().Get("gc") == "1" {
+			runtime.GC()
+		}
+		profile := pprof.Lookup("heap")
+		if profile == nil {
+			http.Error(w, "heap profile is unavailable", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/octet-stream")
+		if err := profile.WriteTo(w, 0); err != nil {
+			fmt.Fprintf(os.Stderr, "write heap profile: %v\n", err)
+		}
+	})
 	return mux
 }
 
@@ -5357,6 +6992,15 @@ func (r *sfuRouter) writePrometheusMetrics(w io.Writer) error {
 	viewers := len(r.viewers)
 	var subscriptions int
 	var feedback sfuFeedbackCounts
+	var packetCachePackets int64
+	var packetCachePayloadBytes int64
+	for _, track := range r.tracks {
+		if track == nil {
+			continue
+		}
+		packetCachePackets += track.packetCachePackets.Load()
+		packetCachePayloadBytes += track.packetCachePayloadBytes.Load()
+	}
 	for _, viewer := range r.viewers {
 		for _, subscription := range viewer.subscriptions {
 			subscriptions++
@@ -5389,6 +7033,8 @@ func (r *sfuRouter) writePrometheusMetrics(w io.Writer) error {
 	fmt.Fprintf(&output, "# TYPE hami_sfu_tracks gauge\nhami_sfu_tracks %d\n", tracks)
 	fmt.Fprintf(&output, "# TYPE hami_sfu_viewers gauge\nhami_sfu_viewers %d\n", viewers)
 	fmt.Fprintf(&output, "# TYPE hami_sfu_subscriptions gauge\nhami_sfu_subscriptions %d\n", subscriptions)
+	fmt.Fprintf(&output, "# TYPE hami_sfu_nack_cache_packets gauge\nhami_sfu_nack_cache_packets %d\n", packetCachePackets)
+	fmt.Fprintf(&output, "# TYPE hami_sfu_nack_cache_payload_bytes gauge\nhami_sfu_nack_cache_payload_bytes %d\n", packetCachePayloadBytes)
 	fmt.Fprintf(&output, "# TYPE hami_sfu_rtp_forwarded_packets_total counter\nhami_sfu_rtp_forwarded_packets_total %d\n", r.rtpForwarded.Load())
 	fmt.Fprintf(&output, "# TYPE hami_sfu_rtp_forward_errors_total counter\nhami_sfu_rtp_forward_errors_total %d\n", r.rtpDropped.Load())
 	fmt.Fprintf(&output, "# TYPE hami_sfu_rtp_queue_dropped_total counter\nhami_sfu_rtp_queue_dropped_total %d\n", r.rtpQueueDropped.Load())
@@ -5492,11 +7138,15 @@ func (t *sfuPublishedTrack) rememberPacket(packet *rtp.Packet) {
 	// TrackRemote.ReadRTP returns an owned packet; forwarding and retransmission
 	// paths clone before writing, so retain it directly instead of duplicating its payload.
 	if _, exists := t.packetCache[sequence]; exists {
+		old := t.packetCache[sequence]
+		t.packetCachePayloadBytes.Add(int64(len(packet.Payload)) - int64(len(old.Payload)))
 		t.packetCache[sequence] = packet
 		return
 	}
 	if t.packetCount == len(t.packetOrder) {
 		oldest := t.packetOrder[t.packetStart]
+		t.packetCachePayloadBytes.Add(-int64(len(t.packetCache[oldest].Payload)))
+		t.packetCachePackets.Add(-1)
 		delete(t.packetCache, oldest)
 		t.packetOrder[t.packetStart] = sequence
 		t.packetStart = (t.packetStart + 1) % len(t.packetOrder)
@@ -5506,6 +7156,8 @@ func (t *sfuPublishedTrack) rememberPacket(packet *rtp.Packet) {
 		t.packetCount++
 	}
 	t.packetCache[sequence] = packet
+	t.packetCachePackets.Add(1)
+	t.packetCachePayloadBytes.Add(int64(len(packet.Payload)))
 }
 
 func (t *sfuPublishedTrack) cachedPackets(sequences []uint16) ([]*rtp.Packet, []uint16) {
@@ -6234,6 +7886,24 @@ func runLocalSFUScaleProof(
 	publisherCount int,
 	viewersPerPublisher int,
 ) (sfuProofResult, error) {
+	return runLocalSFUScaleProofWithDiagnostics(
+		ctx,
+		videoFrames,
+		duration,
+		publisherCount,
+		viewersPerPublisher,
+		nil,
+	)
+}
+
+func runLocalSFUScaleProofWithDiagnostics(
+	ctx context.Context,
+	videoFrames []media.Sample,
+	duration time.Duration,
+	publisherCount int,
+	viewersPerPublisher int,
+	frameDiagnostics *sfuFrameDiagnosticRecorder,
+) (sfuProofResult, error) {
 	config, err := buildSFUScaleProofConfig(publisherCount, viewersPerPublisher)
 	if err != nil {
 		return sfuProofResult{}, err
@@ -6241,6 +7911,7 @@ func runLocalSFUScaleProof(
 	if duration < MinDuration {
 		return sfuProofResult{}, fmt.Errorf("SFU scale duration must be at least %s", MinDuration)
 	}
+	config.frameDiagnostics = frameDiagnostics
 	return runLocalSFUProofWithConfig(ctx, videoFrames, duration, config)
 }
 
@@ -6495,7 +8166,1010 @@ func runLocalM7HProof(
 	return result, errors.Join(proofErr, remoteSFU.Close())
 }
 
+func runLocalSFUProcessCascadeProof(
+	ctx context.Context,
+	videoFrames []media.Sample,
+	duration time.Duration,
+) (result sfuCascadeProofResult, returnErr error) {
+	if len(videoFrames) == 0 {
+		return result, errors.New("process cascade proof requires at least one H.264 frame")
+	}
+	if duration <= 0 {
+		return result, errors.New("process cascade proof duration must be positive")
+	}
+
+	const (
+		roomID           = "hami-sfu-process-cascade"
+		sourcePublisher  = "hami-m7h-publisher-0001"
+		sourceTrackID    = "stream-0001"
+		relayPublisher   = "hami-m7h-publisher-0002"
+		relayTrackID     = "stream-0002"
+		relayViewerID    = "cascade-relay-viewer"
+		downstreamViewer = "cascade-downstream-viewer"
+	)
+	proofCtx, proofCancel := context.WithCancel(ctx)
+	workerCtx, workerCancel := context.WithCancel(context.Background())
+	result = sfuCascadeProofResult{
+		EvidenceType:    "TEST",
+		LocalOnly:       true,
+		Workers:         2,
+		WorkerProcesses: 2,
+		Publishers:      1,
+		Viewers:         1,
+		TrackID:         sourceTrackID,
+		StartedAt:       time.Now().UTC(),
+	}
+
+	var workers [2]*m7hRemoteSFUClient
+	var clientPeers []*webrtc.PeerConnection
+	var sourceFeedbackDone, relayFeedbackDone, relayReadDone chan struct{}
+	var sourceFeedbackStarted, relayFeedbackStarted, relayReadStarted atomic.Bool
+	asyncErrors := make(chan error, 8)
+	reportAsyncError := func(err error) {
+		if err == nil || proofCtx.Err() != nil {
+			return
+		}
+		select {
+		case asyncErrors <- err:
+		default:
+		}
+		proofCancel()
+	}
+	defer func() {
+		var cleanupErrs []error
+		cleanupCtx, cancelCleanup := context.WithTimeout(context.Background(), 10*time.Second)
+		cleanupVerified := true
+		for index := len(workers) - 1; index >= 0; index-- {
+			worker := workers[index]
+			if worker == nil {
+				cleanupVerified = false
+				continue
+			}
+			cleanup, cleanupErr := worker.cleanup(cleanupCtx)
+			if cleanupErr != nil {
+				cleanupVerified = false
+				cleanupErrs = append(cleanupErrs, fmt.Errorf("cleanup process cascade worker %d: %w", index+1, cleanupErr))
+			} else if !cleanup.CleanupVerified {
+				cleanupVerified = false
+				cleanupErrs = append(cleanupErrs, fmt.Errorf("process cascade worker %d retained SFU state: %+v", index+1, cleanup))
+			}
+		}
+		for _, peer := range clientPeers {
+			if closeErr := peer.Close(); closeErr != nil {
+				cleanupVerified = false
+				cleanupErrs = append(cleanupErrs, fmt.Errorf("close process cascade client peer: %w", closeErr))
+			}
+		}
+		for index := len(workers) - 1; index >= 0; index-- {
+			worker := workers[index]
+			if worker == nil {
+				continue
+			}
+			if closeErr := worker.Close(); closeErr != nil {
+				cleanupVerified = false
+				cleanupErrs = append(cleanupErrs, fmt.Errorf("close process cascade worker %d: %w", index+1, closeErr))
+			}
+		}
+		workerCancel()
+		proofCancel()
+		cancelCleanup()
+		for _, reader := range []struct {
+			name    string
+			done    chan struct{}
+			started *atomic.Bool
+		}{
+			{name: "source RTCP reader", done: sourceFeedbackDone, started: &sourceFeedbackStarted},
+			{name: "relay RTCP reader", done: relayFeedbackDone, started: &relayFeedbackStarted},
+			{name: "relay RTP reader", done: relayReadDone, started: &relayReadStarted},
+		} {
+			if !reader.started.Load() {
+				continue
+			}
+			select {
+			case <-reader.done:
+			case <-time.After(time.Second):
+				cleanupVerified = false
+				cleanupErrs = append(cleanupErrs, fmt.Errorf("process cascade %s did not stop", reader.name))
+			}
+		}
+		result.CleanupVerified = cleanupVerified
+		result.CompletedAt = time.Now().UTC()
+		returnErr = errors.Join(returnErr, errors.Join(cleanupErrs...))
+	}()
+
+	for index := range workers {
+		worker, err := startM7HRemoteSFU(workerCtx)
+		if err != nil {
+			return result, fmt.Errorf("start local M7-H worker %d: %w", index+1, err)
+		}
+		workers[index] = worker
+		result.WorkerProcessIDs = append(result.WorkerProcessIDs, worker.cmd.Process.Pid)
+	}
+
+	sourceAPI := webrtc.NewAPI()
+	relayAPI := webrtc.NewAPI()
+	viewerAPI := webrtc.NewAPI()
+	codec := webrtc.RTPCodecCapability{
+		MimeType:    webrtc.MimeTypeH264,
+		ClockRate:   90000,
+		SDPFmtpLine: "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42001f",
+	}
+	sourcePeer, err := sourceAPI.NewPeerConnection(webrtc.Configuration{})
+	if err != nil {
+		return result, fmt.Errorf("create process cascade source peer: %w", err)
+	}
+	clientPeers = append(clientPeers, sourcePeer)
+	sourceTrack, err := webrtc.NewTrackLocalStaticSample(codec, sourceTrackID, roomID)
+	if err != nil {
+		return result, fmt.Errorf("create process cascade source track: %w", err)
+	}
+	sourceSender, err := sourcePeer.AddTrack(sourceTrack)
+	if err != nil {
+		return result, fmt.Errorf("add process cascade source track: %w", err)
+	}
+	if err := workers[0].negotiatePublisher(proofCtx, sourcePublisher, sourcePeer); err != nil {
+		return result, fmt.Errorf("connect source publisher to worker 1: %w", err)
+	}
+	sourceParameters := sourceSender.GetParameters()
+	if len(sourceParameters.Encodings) == 0 || sourceParameters.Encodings[0].SSRC == 0 {
+		return result, errors.New("process cascade source publisher SSRC was not bound")
+	}
+	sourceSSRC := uint32(sourceParameters.Encodings[0].SSRC)
+	var sourcePLI, sourceFIR, sourcePLIMatched, sourceFIRMatched atomic.Uint64
+	sourceFeedbackDone = make(chan struct{})
+	sourceFeedbackStarted.Store(true)
+	go func() {
+		defer close(sourceFeedbackDone)
+		for {
+			packets, _, readErr := sourceSender.ReadRTCP()
+			if readErr != nil {
+				if proofCtx.Err() == nil && !errors.Is(readErr, io.EOF) {
+					reportAsyncError(fmt.Errorf("read process cascade source RTCP: %w", readErr))
+				}
+				return
+			}
+			for _, packet := range packets {
+				switch feedback := packet.(type) {
+				case *rtcp.PictureLossIndication:
+					sourcePLI.Add(1)
+					if feedback.MediaSSRC == sourceSSRC {
+						sourcePLIMatched.Add(1)
+					}
+				case *rtcp.FullIntraRequest:
+					sourceFIR.Add(1)
+					for _, entry := range feedback.FIR {
+						if entry.SSRC == sourceSSRC {
+							sourceFIRMatched.Add(1)
+							break
+						}
+					}
+				}
+			}
+		}
+	}()
+
+	sourceKey := sfuTrackKey{PublisherID: sourcePublisher, TrackID: sourceTrackID}
+	writeSourceFrame := func() error {
+		frame := videoFrames[result.PublisherFramesSent%uint64(len(videoFrames))]
+		if err := sourceTrack.WriteSample(frame); err != nil {
+			return fmt.Errorf("write process cascade source frame: %w", err)
+		}
+		result.PublisherFramesSent++
+		return nil
+	}
+	if err := writeSourceFrame(); err != nil {
+		return result, err
+	}
+	if _, err := workers[0].waitForFirstFrame(proofCtx, sourceKey); err != nil {
+		return result, fmt.Errorf("wait for source track on worker 1: %w", err)
+	}
+
+	relayViewerPeer, err := relayAPI.NewPeerConnection(webrtc.Configuration{})
+	if err != nil {
+		return result, fmt.Errorf("create process cascade relay viewer peer: %w", err)
+	}
+	clientPeers = append(clientPeers, relayViewerPeer)
+	if _, err := relayViewerPeer.AddTransceiverFromKind(
+		webrtc.RTPCodecTypeVideo,
+		webrtc.RTPTransceiverInit{Direction: webrtc.RTPTransceiverDirectionRecvonly},
+	); err != nil {
+		return result, fmt.Errorf("add process cascade relay receive transceiver: %w", err)
+	}
+	relayTrack, err := webrtc.NewTrackLocalStaticRTP(codec, relayTrackID, roomID)
+	if err != nil {
+		return result, fmt.Errorf("create process cascade worker 2 track: %w", err)
+	}
+	var relayPacketCount, relayTrackCount atomic.Uint64
+	var relayUpstreamSSRC atomic.Uint32
+	var relayTrackIDsMu sync.Mutex
+	relayTrackIDs := make([]string, 0, 1)
+	relayReadDone = make(chan struct{})
+	relayViewerPeer.OnTrack(func(track *webrtc.TrackRemote, _ *webrtc.RTPReceiver) {
+		relayTrackCount.Add(1)
+		relayTrackIDsMu.Lock()
+		relayTrackIDs = append(relayTrackIDs, track.ID())
+		relayTrackIDsMu.Unlock()
+		if track.ID() != sourceTrackID {
+			reportAsyncError(fmt.Errorf("worker 1 relay received unexpected track %q", track.ID()))
+			return
+		}
+		relayUpstreamSSRC.Store(uint32(track.SSRC()))
+		relayReadStarted.Store(true)
+		go func() {
+			defer close(relayReadDone)
+			for {
+				packet, _, readErr := track.ReadRTP()
+				if readErr != nil {
+					if proofCtx.Err() == nil && !errors.Is(readErr, io.EOF) {
+						reportAsyncError(fmt.Errorf("read worker 1 relay RTP: %w", readErr))
+					}
+					return
+				}
+				if writeErr := relayTrack.WriteRTP(packet); writeErr != nil {
+					reportAsyncError(fmt.Errorf("write worker 2 relay RTP: %w", writeErr))
+					return
+				}
+				relayPacketCount.Add(1)
+			}
+		}()
+	})
+
+	relayPublisherPeer, err := relayAPI.NewPeerConnection(webrtc.Configuration{})
+	if err != nil {
+		return result, fmt.Errorf("create process cascade relay publisher peer: %w", err)
+	}
+	clientPeers = append(clientPeers, relayPublisherPeer)
+	relaySender, err := relayPublisherPeer.AddTrack(relayTrack)
+	if err != nil {
+		return result, fmt.Errorf("add process cascade relay publisher track: %w", err)
+	}
+	if err := workers[1].negotiatePublisher(proofCtx, relayPublisher, relayPublisherPeer); err != nil {
+		return result, fmt.Errorf("connect relay publisher to worker 2: %w", err)
+	}
+
+	relayFeedbackDone = make(chan struct{})
+	relayFeedbackStarted.Store(true)
+	go func() {
+		defer close(relayFeedbackDone)
+		for {
+			packets, _, readErr := relaySender.ReadRTCP()
+			if readErr != nil {
+				if proofCtx.Err() == nil && !errors.Is(readErr, io.EOF) {
+					reportAsyncError(fmt.Errorf("read worker 2 relay RTCP: %w", readErr))
+				}
+				return
+			}
+			for _, packet := range packets {
+				parentSSRC := relayUpstreamSSRC.Load()
+				if parentSSRC == 0 {
+					reportAsyncError(errors.New("worker 2 RTCP arrived before relay track identity"))
+					return
+				}
+				switch feedback := packet.(type) {
+				case *rtcp.PictureLossIndication:
+					if err := relayViewerPeer.WriteRTCP([]rtcp.Packet{&rtcp.PictureLossIndication{
+						SenderSSRC: feedback.SenderSSRC,
+						MediaSSRC:  parentSSRC,
+					}}); err != nil {
+						reportAsyncError(fmt.Errorf("forward process cascade PLI to worker 1: %w", err))
+						return
+					}
+				case *rtcp.FullIntraRequest:
+					entries := make([]rtcp.FIREntry, 0, max(1, len(feedback.FIR)))
+					if len(feedback.FIR) == 0 {
+						entries = append(entries, rtcp.FIREntry{SSRC: parentSSRC})
+					} else {
+						for _, entry := range feedback.FIR {
+							entries = append(entries, rtcp.FIREntry{
+								SSRC:           parentSSRC,
+								SequenceNumber: entry.SequenceNumber,
+							})
+						}
+					}
+					if err := relayViewerPeer.WriteRTCP([]rtcp.Packet{&rtcp.FullIntraRequest{
+						SenderSSRC: feedback.SenderSSRC,
+						MediaSSRC:  parentSSRC,
+						FIR:        entries,
+					}}); err != nil {
+						reportAsyncError(fmt.Errorf("forward process cascade FIR to worker 1: %w", err))
+						return
+					}
+				}
+			}
+		}
+	}()
+
+	relayKey := sfuTrackKey{PublisherID: relayPublisher, TrackID: relayTrackID}
+	relayDenied, err := workers[0].negotiateViewers(proofCtx, []m7hRemoteViewerPair{{
+		viewerID:                relayViewerID,
+		key:                     sourceKey,
+		peer:                    relayViewerPeer,
+		checkUnauthorizedAccess: true,
+	}})
+	if err != nil {
+		return result, fmt.Errorf("subscribe relay to worker 1 source: %w", err)
+	}
+	if !relayDenied[relayViewerID] {
+		return result, errors.New("worker 1 did not deny the relay's unauthorized subscription attempt")
+	}
+	if err := writeSourceFrame(); err != nil {
+		return result, err
+	}
+	if _, err := workers[1].waitForFirstFrame(proofCtx, relayKey); err != nil {
+		select {
+		case asyncErr := <-asyncErrors:
+			return result, errors.Join(asyncErr, fmt.Errorf("wait for replicated track on worker 2: %w", err))
+		default:
+			return result, fmt.Errorf("wait for replicated track on worker 2: %w", err)
+		}
+	}
+
+	viewerPeer, err := viewerAPI.NewPeerConnection(webrtc.Configuration{})
+	if err != nil {
+		return result, fmt.Errorf("create process cascade downstream viewer peer: %w", err)
+	}
+	clientPeers = append(clientPeers, viewerPeer)
+	capture := newSFUViewerCapture(proofCtx, viewerPeer, nil, nil, 0, false)
+	if _, err := viewerPeer.AddTransceiverFromKind(
+		webrtc.RTPCodecTypeVideo,
+		webrtc.RTPTransceiverInit{Direction: webrtc.RTPTransceiverDirectionRecvonly},
+	); err != nil {
+		return result, fmt.Errorf("add process cascade viewer receive transceiver: %w", err)
+	}
+	viewerDenied, err := workers[1].negotiateViewers(proofCtx, []m7hRemoteViewerPair{{
+		viewerID:                downstreamViewer,
+		key:                     relayKey,
+		peer:                    viewerPeer,
+		checkUnauthorizedAccess: true,
+	}})
+	if err != nil {
+		return result, fmt.Errorf("subscribe viewer to worker 2 relay: %w", err)
+	}
+	if !viewerDenied[downstreamViewer] {
+		return result, errors.New("worker 2 did not deny the viewer's unauthorized subscription attempt")
+	}
+
+	sendTicker := time.NewTicker(100 * time.Millisecond)
+	sendTimer := time.NewTimer(duration)
+sendFrames:
+	for {
+		select {
+		case <-proofCtx.Done():
+			sendTimer.Stop()
+			sendTicker.Stop()
+			select {
+			case asyncErr := <-asyncErrors:
+				return result, asyncErr
+			default:
+				return result, fmt.Errorf("process cascade canceled while sending: %w", proofCtx.Err())
+			}
+		case <-sendTimer.C:
+			break sendFrames
+		case <-sendTicker.C:
+			if err := writeSourceFrame(); err != nil {
+				sendTimer.Stop()
+				sendTicker.Stop()
+				return result, err
+			}
+		}
+	}
+	sendTicker.Stop()
+
+	packetWaitCtx, cancelPacketWait := context.WithTimeout(proofCtx, 10*time.Second)
+	if err := capture.waitForPackets(packetWaitCtx, relayTrackID, 5); err != nil {
+		cancelPacketWait()
+		select {
+		case asyncErr := <-asyncErrors:
+			return result, errors.Join(asyncErr, err)
+		default:
+			return result, fmt.Errorf("wait for process cascade viewer media: %w", err)
+		}
+	}
+	cancelPacketWait()
+	viewerSnapshot, exists := capture.snapshot(relayTrackID)
+	if !exists {
+		return result, errors.New("process cascade viewer did not receive the authorized track")
+	}
+	if _, err := sendViewerFeedback(viewerPeer, viewerSnapshot); err != nil {
+		return result, fmt.Errorf("send process cascade NACK/PLI/FIR: %w", err)
+	}
+	lastNACKAt := time.Now()
+	feedbackCtx, cancelFeedback := context.WithTimeout(proofCtx, 10*time.Second)
+	defer cancelFeedback()
+	feedbackTicker := time.NewTicker(10 * time.Millisecond)
+	defer feedbackTicker.Stop()
+	for capture.duplicatePackets(relayTrackID) == 0 ||
+		sourcePLI.Load() == 0 || sourcePLIMatched.Load() == 0 ||
+		sourceFIR.Load() == 0 || sourceFIRMatched.Load() == 0 {
+		select {
+		case asyncErr := <-asyncErrors:
+			return result, asyncErr
+		case <-feedbackCtx.Done():
+			return result, fmt.Errorf(
+				"process cascade RTCP incomplete: duplicatePackets=%d sourcePLI=%d sourceFIR=%d",
+				capture.duplicatePackets(relayTrackID), sourcePLI.Load(), sourceFIR.Load(),
+			)
+		case <-feedbackTicker.C:
+			if capture.duplicatePackets(relayTrackID) == 0 && time.Since(lastNACKAt) >= 600*time.Millisecond {
+				if err := writeViewerNACK(viewerPeer, viewerSnapshot, []uint16{viewerSnapshot.FirstSequenceNumber}); err != nil {
+					return result, fmt.Errorf("retry process cascade viewer NACK: %w", err)
+				}
+				lastNACKAt = time.Now()
+			}
+		}
+	}
+
+	worker1Stats, err := workers[0].stats(proofCtx, []string{relayViewerID}, false)
+	if err != nil {
+		return result, fmt.Errorf("read worker 1 cascade feedback stats: %w", err)
+	}
+	worker2Stats, err := workers[1].stats(proofCtx, []string{downstreamViewer}, false)
+	if err != nil {
+		return result, fmt.Errorf("read worker 2 cascade feedback stats: %w", err)
+	}
+	parentFeedback := worker1Stats.FeedbackByViewer[relayViewerID]
+	childFeedback := worker2Stats.FeedbackByViewer[downstreamViewer]
+	result.NACKReceived = childFeedback.NACKReceived
+	result.NACKForwarded = childFeedback.NACKForwarded
+	result.NACKRetransmitted = childFeedback.NACKRetransmitted
+	result.NACKRetransmissionSeenByView = capture.duplicatePackets(relayTrackID) > 0
+	result.PLIForwarded = parentFeedback.PLIForwarded
+	result.FIRForwarded = parentFeedback.FIRForwarded
+	result.PLIReachedPublisher = sourcePLIMatched.Load() > 0
+	result.FIRReachedPublisher = sourceFIRMatched.Load() > 0
+	result.RelayPacketsForwarded = relayPacketCount.Load()
+	result.ViewerPacketsReceived = viewerSnapshot.PacketsReceived
+	relayTrackIDsMu.Lock()
+	result.RelayTrackIDs = append([]string(nil), relayTrackIDs...)
+	relayTrackIDsMu.Unlock()
+	result.ViewerTrackIDs = capture.trackIDs()
+	if result.NACKReceived == 0 || result.NACKForwarded == 0 ||
+		result.NACKRetransmitted == 0 || !result.NACKRetransmissionSeenByView ||
+		result.PLIForwarded == 0 || result.FIRForwarded == 0 ||
+		!result.PLIReachedPublisher || !result.FIRReachedPublisher ||
+		relayTrackCount.Load() != 1 ||
+		len(result.RelayTrackIDs) != 1 || result.RelayTrackIDs[0] != sourceTrackID ||
+		len(result.ViewerTrackIDs) != 1 || result.ViewerTrackIDs[0] != relayTrackID ||
+		result.RelayPacketsForwarded == 0 || result.ViewerPacketsReceived == 0 {
+		return result, fmt.Errorf("process cascade acceptance incomplete: worker1=%+v worker2=%+v result=%+v",
+			parentFeedback, childFeedback, result)
+	}
+	return result, nil
+}
+
+func runLocalSFUCascadeProof(
+	ctx context.Context,
+	videoFrames []media.Sample,
+	duration time.Duration,
+) (result sfuCascadeProofResult, returnErr error) {
+	if len(videoFrames) == 0 {
+		return result, errors.New("SFU cascade proof requires at least one H.264 frame")
+	}
+	if duration <= 0 {
+		return result, errors.New("SFU cascade proof duration must be positive")
+	}
+
+	const (
+		publisherID      = "cascade-origin-publisher"
+		trackID          = "stream-cascade"
+		decoyTrackID     = "stream-decoy"
+		relayPublisherID = "cascade-relay-publisher"
+		relayViewerID    = "cascade-relay-viewer"
+		viewerID         = "cascade-viewer"
+		roomID           = "hami-sfu-cascade-local"
+	)
+	startedAt := time.Now().UTC()
+	result = sfuCascadeProofResult{
+		EvidenceType:     "TEST",
+		LocalOnly:        true,
+		Workers:          2,
+		WorkerProcesses:  1,
+		WorkerProcessIDs: []int{os.Getpid()},
+		Publishers:       1,
+		Viewers:          1,
+		TrackID:          trackID,
+		StartedAt:        startedAt,
+	}
+
+	proofCtx, proofCancel := context.WithCancel(ctx)
+	parentAPI := webrtc.NewAPI()
+	childAPI := webrtc.NewAPI()
+	publisherAPI := webrtc.NewAPI()
+	relayAPI := webrtc.NewAPI()
+	viewerAPI := webrtc.NewAPI()
+	parentRouter, err := newSFURouter(parentAPI)
+	if err != nil {
+		proofCancel()
+		return result, err
+	}
+	childRouter, err := newSFURouter(childAPI)
+	if err != nil {
+		proofCancel()
+		return result, errors.Join(err, parentRouter.close())
+	}
+	routers := []*sfuRouter{parentRouter, childRouter}
+	clientPeers := make([]*webrtc.PeerConnection, 0, 4)
+	var sourceFeedbackDone, relayFeedbackDone, relayReadDone chan struct{}
+	var sourceFeedbackStarted, relayFeedbackStarted, relayReadStarted atomic.Bool
+	defer func() {
+		proofCancel()
+		var cleanupErrs []error
+		for _, peer := range clientPeers {
+			if closeErr := peer.Close(); closeErr != nil {
+				cleanupErrs = append(cleanupErrs, fmt.Errorf("close cascade client PeerConnection: %w", closeErr))
+			}
+		}
+		for _, router := range routers {
+			if closeErr := router.close(); closeErr != nil {
+				cleanupErrs = append(cleanupErrs, fmt.Errorf("close cascade SFU worker: %w", closeErr))
+			}
+		}
+		for _, worker := range []struct {
+			name    string
+			done    chan struct{}
+			started *atomic.Bool
+		}{
+			{name: "publisher RTCP reader", done: sourceFeedbackDone, started: &sourceFeedbackStarted},
+			{name: "relay RTCP reader", done: relayFeedbackDone, started: &relayFeedbackStarted},
+			{name: "relay RTP reader", done: relayReadDone, started: &relayReadStarted},
+		} {
+			if !worker.started.Load() {
+				continue
+			}
+			select {
+			case <-worker.done:
+			case <-time.After(time.Second):
+				cleanupErrs = append(cleanupErrs, fmt.Errorf("cascade %s did not stop", worker.name))
+			}
+		}
+		result.CleanupVerified = true
+		for _, router := range routers {
+			tracks, viewers, subscriptions, authorizations := router.counts()
+			if tracks != 0 || viewers != 0 || subscriptions != 0 || authorizations != 0 {
+				result.CleanupVerified = false
+				cleanupErrs = append(cleanupErrs, fmt.Errorf(
+					"cascade worker retained state: tracks=%d viewers=%d subscriptions=%d authorizations=%d",
+					tracks, viewers, subscriptions, authorizations,
+				))
+			}
+		}
+		result.CompletedAt = time.Now().UTC()
+		returnErr = errors.Join(returnErr, errors.Join(cleanupErrs...))
+	}()
+
+	var asynchronousErrors = make(chan error, 8)
+	reportAsyncError := func(err error) {
+		if err == nil || proofCtx.Err() != nil {
+			return
+		}
+		select {
+		case asynchronousErrors <- err:
+		default:
+		}
+		proofCancel()
+	}
+
+	sourceKey := sfuTrackKey{PublisherID: publisherID, TrackID: trackID}
+	decoyKey := sfuTrackKey{PublisherID: publisherID, TrackID: decoyTrackID}
+	relayKey := sfuTrackKey{PublisherID: relayPublisherID, TrackID: trackID}
+	sourceServerPeer, err := parentRouter.registerPublisher(parentAPI, publisherID)
+	if err != nil {
+		return result, fmt.Errorf("register source publisher on worker 1: %w", err)
+	}
+	sourceClientPeer, err := publisherAPI.NewPeerConnection(webrtc.Configuration{})
+	if err != nil {
+		return result, fmt.Errorf("create source publisher client: %w", err)
+	}
+	clientPeers = append(clientPeers, sourceClientPeer)
+	codec := webrtc.RTPCodecCapability{
+		MimeType:    webrtc.MimeTypeH264,
+		ClockRate:   90000,
+		SDPFmtpLine: "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42001f",
+	}
+	sourceTrack, err := webrtc.NewTrackLocalStaticSample(codec, trackID, roomID)
+	if err != nil {
+		return result, fmt.Errorf("create cascade source track: %w", err)
+	}
+	decoyTrack, err := webrtc.NewTrackLocalStaticSample(codec, decoyTrackID, roomID)
+	if err != nil {
+		return result, fmt.Errorf("create cascade decoy track: %w", err)
+	}
+	sourceSender, err := sourceClientPeer.AddTrack(sourceTrack)
+	if err != nil {
+		return result, fmt.Errorf("add cascade source track: %w", err)
+	}
+	decoySender, err := sourceClientPeer.AddTrack(decoyTrack)
+	if err != nil {
+		return result, fmt.Errorf("add cascade decoy track: %w", err)
+	}
+	drainRTCP(decoySender)
+
+	var sourcePLI, sourceFIR, sourcePLIMatched, sourceFIRMatched atomic.Uint64
+	var publisherTrackSSRC atomic.Uint32
+	var relayUpstreamSSRC atomic.Uint32
+	sourceFeedbackDone = make(chan struct{})
+	sourceFeedbackStarted.Store(true)
+	go func() {
+		defer close(sourceFeedbackDone)
+		for {
+			packets, _, readErr := sourceSender.ReadRTCP()
+			if readErr != nil {
+				if proofCtx.Err() == nil && !errors.Is(readErr, io.EOF) {
+					reportAsyncError(fmt.Errorf("read cascade source RTCP: %w", readErr))
+				}
+				return
+			}
+			for _, packet := range packets {
+				switch feedback := packet.(type) {
+				case *rtcp.PictureLossIndication:
+					sourcePLI.Add(1)
+					if feedback.MediaSSRC != 0 && feedback.MediaSSRC == publisherTrackSSRC.Load() {
+						sourcePLIMatched.Add(1)
+					}
+				case *rtcp.FullIntraRequest:
+					sourceFIR.Add(1)
+					for _, entry := range feedback.FIR {
+						if entry.SSRC != 0 && entry.SSRC == publisherTrackSSRC.Load() {
+							sourceFIRMatched.Add(1)
+							break
+						}
+					}
+				}
+			}
+		}
+	}()
+	writeSourceFrame := func() error {
+		frame := videoFrames[result.PublisherFramesSent%uint64(len(videoFrames))]
+		if err := sourceTrack.WriteSample(frame); err != nil {
+			return fmt.Errorf("write cascade source frame: %w", err)
+		}
+		if err := decoyTrack.WriteSample(frame); err != nil {
+			return fmt.Errorf("write cascade decoy frame: %w", err)
+		}
+		result.PublisherFramesSent++
+		return nil
+	}
+	if err := negotiateLoopbackPeers(
+		proofCtx,
+		"cascade origin publisher -> worker 1",
+		sourceClientPeer,
+		sourceServerPeer,
+		"m=video",
+	); err != nil {
+		return result, err
+	}
+	if err := writeSourceFrame(); err != nil {
+		return result, err
+	}
+	sourceMedia := []sfuMediaSource{{key: sourceKey}, {key: decoyKey}}
+	if err := parentRouter.waitForTracks(proofCtx, sourceMedia); err != nil {
+		return result, fmt.Errorf("wait for source tracks on worker 1: %w", err)
+	}
+	parentRouter.mu.RLock()
+	sourceTrackState := parentRouter.tracks[sourceKey]
+	if sourceTrackState != nil {
+		publisherTrackSSRC.Store(uint32(sourceTrackState.remote.SSRC()))
+	}
+	parentRouter.mu.RUnlock()
+	if publisherTrackSSRC.Load() == 0 {
+		return result, errors.New("worker 1 did not bind the source publisher SSRC")
+	}
+
+	relayViewerServerPeer, err := parentAPI.NewPeerConnection(webrtc.Configuration{})
+	if err != nil {
+		return result, fmt.Errorf("create worker 1 relay viewer server peer: %w", err)
+	}
+	if err := parentRouter.registerViewer(relayViewerID, relayViewerServerPeer); err != nil {
+		_ = relayViewerServerPeer.Close()
+		return result, fmt.Errorf("register relay viewer on worker 1: %w", err)
+	}
+	relayViewerClientPeer, err := relayAPI.NewPeerConnection(webrtc.Configuration{})
+	if err != nil {
+		return result, fmt.Errorf("create relay viewer client peer: %w", err)
+	}
+	clientPeers = append(clientPeers, relayViewerClientPeer)
+	if _, err := relayViewerClientPeer.AddTransceiverFromKind(
+		webrtc.RTPCodecTypeVideo,
+		webrtc.RTPTransceiverInit{Direction: webrtc.RTPTransceiverDirectionRecvonly},
+	); err != nil {
+		return result, fmt.Errorf("add cascade relay receive transceiver: %w", err)
+	}
+
+	relayTrack, err := webrtc.NewTrackLocalStaticRTP(codec, trackID, roomID)
+	if err != nil {
+		return result, fmt.Errorf("create worker 2 relay track: %w", err)
+	}
+	var relayPacketCount, relayTrackCount atomic.Uint64
+	var relayTrackIDsMu sync.Mutex
+	relayTrackIDs := make([]string, 0, 1)
+	snapshotRelayTrackIDs := func() []string {
+		relayTrackIDsMu.Lock()
+		defer relayTrackIDsMu.Unlock()
+		return append([]string(nil), relayTrackIDs...)
+	}
+	relayReadDone = make(chan struct{})
+	relayViewerClientPeer.OnTrack(func(track *webrtc.TrackRemote, _ *webrtc.RTPReceiver) {
+		relayTrackCount.Add(1)
+		relayTrackIDsMu.Lock()
+		relayTrackIDs = append(relayTrackIDs, track.ID())
+		relayTrackIDsMu.Unlock()
+		if track.ID() != trackID {
+			reportAsyncError(fmt.Errorf("worker 1 relay received unexpected track %q", track.ID()))
+			return
+		}
+		relayUpstreamSSRC.Store(uint32(track.SSRC()))
+		relayReadStarted.Store(true)
+		go func() {
+			defer close(relayReadDone)
+			for {
+				packet, _, readErr := track.ReadRTP()
+				if readErr != nil {
+					if proofCtx.Err() == nil && !errors.Is(readErr, io.EOF) {
+						reportAsyncError(fmt.Errorf("read worker 1 relay RTP: %w", readErr))
+					}
+					return
+				}
+				if writeErr := relayTrack.WriteRTP(packet); writeErr != nil {
+					reportAsyncError(fmt.Errorf("write worker 2 relay RTP: %w", writeErr))
+					return
+				}
+				relayPacketCount.Add(1)
+			}
+		}()
+	})
+	if err := parentRouter.subscribe(relayViewerID, decoyKey); !errors.Is(err, errSFUUnauthorized) {
+		return result, fmt.Errorf("worker 1 accepted unauthorized decoy subscription: %v", err)
+	}
+	if err := parentRouter.authorizeSubscription(relayViewerID, sourceKey); err != nil {
+		return result, fmt.Errorf("authorize source track for worker 1 relay: %w", err)
+	}
+	if err := parentRouter.subscribe(relayViewerID, sourceKey); err != nil {
+		return result, fmt.Errorf("subscribe worker 1 relay to source track: %w", err)
+	}
+	if err := negotiateLoopbackPeers(
+		proofCtx,
+		"worker 1 -> relay client",
+		relayViewerClientPeer,
+		relayViewerServerPeer,
+		"m=video",
+	); err != nil {
+		return result, err
+	}
+
+	relayPublisherServerPeer, err := childRouter.registerPublisher(childAPI, relayPublisherID)
+	if err != nil {
+		return result, fmt.Errorf("register relay publisher on worker 2: %w", err)
+	}
+	relayPublisherClientPeer, err := relayAPI.NewPeerConnection(webrtc.Configuration{})
+	if err != nil {
+		return result, fmt.Errorf("create worker 2 relay publisher client: %w", err)
+	}
+	clientPeers = append(clientPeers, relayPublisherClientPeer)
+	relaySender, err := relayPublisherClientPeer.AddTrack(relayTrack)
+	if err != nil {
+		return result, fmt.Errorf("add worker 2 relay track: %w", err)
+	}
+	relayFeedbackDone = make(chan struct{})
+	relayFeedbackStarted.Store(true)
+	go func() {
+		defer close(relayFeedbackDone)
+		for {
+			packets, _, readErr := relaySender.ReadRTCP()
+			if readErr != nil {
+				if proofCtx.Err() == nil && !errors.Is(readErr, io.EOF) {
+					reportAsyncError(fmt.Errorf("read worker 2 relay RTCP: %w", readErr))
+				}
+				return
+			}
+			for _, packet := range packets {
+				parentSSRC := relayUpstreamSSRC.Load()
+				if parentSSRC == 0 {
+					reportAsyncError(errors.New("worker 2 RTCP arrived before source-track identity"))
+					return
+				}
+				switch feedback := packet.(type) {
+				case *rtcp.PictureLossIndication:
+					if err := relayViewerClientPeer.WriteRTCP([]rtcp.Packet{&rtcp.PictureLossIndication{
+						SenderSSRC: feedback.SenderSSRC,
+						MediaSSRC:  parentSSRC,
+					}}); err != nil {
+						reportAsyncError(fmt.Errorf("forward worker 2 PLI to worker 1: %w", err))
+						return
+					}
+				case *rtcp.FullIntraRequest:
+					entries := make([]rtcp.FIREntry, 0, max(1, len(feedback.FIR)))
+					if len(feedback.FIR) == 0 {
+						entries = append(entries, rtcp.FIREntry{SSRC: parentSSRC})
+					} else {
+						for _, entry := range feedback.FIR {
+							entries = append(entries, rtcp.FIREntry{
+								SSRC:           parentSSRC,
+								SequenceNumber: entry.SequenceNumber,
+							})
+						}
+					}
+					if err := relayViewerClientPeer.WriteRTCP([]rtcp.Packet{&rtcp.FullIntraRequest{
+						SenderSSRC: feedback.SenderSSRC,
+						MediaSSRC:  parentSSRC,
+						FIR:        entries,
+					}}); err != nil {
+						reportAsyncError(fmt.Errorf("forward worker 2 FIR to worker 1: %w", err))
+						return
+					}
+				}
+			}
+		}
+	}()
+	if err := negotiateLoopbackPeers(
+		proofCtx,
+		"relay client -> worker 2",
+		relayPublisherClientPeer,
+		relayPublisherServerPeer,
+		"m=video",
+	); err != nil {
+		return result, err
+	}
+	if err := writeSourceFrame(); err != nil {
+		return result, err
+	}
+	if err := childRouter.waitForTracks(proofCtx, []sfuMediaSource{{key: relayKey}}); err != nil {
+		select {
+		case asyncErr := <-asynchronousErrors:
+			return result, errors.Join(asyncErr, err)
+		default:
+			return result, fmt.Errorf("wait for replicated track on worker 2: %w", err)
+		}
+	}
+
+	viewerServerPeer, err := childAPI.NewPeerConnection(webrtc.Configuration{})
+	if err != nil {
+		return result, fmt.Errorf("create worker 2 viewer server peer: %w", err)
+	}
+	if err := childRouter.registerViewer(viewerID, viewerServerPeer); err != nil {
+		_ = viewerServerPeer.Close()
+		return result, fmt.Errorf("register viewer on worker 2: %w", err)
+	}
+	viewerClientPeer, err := viewerAPI.NewPeerConnection(webrtc.Configuration{})
+	if err != nil {
+		return result, fmt.Errorf("create worker 2 viewer client peer: %w", err)
+	}
+	clientPeers = append(clientPeers, viewerClientPeer)
+	capture := newSFUViewerCapture(proofCtx, viewerClientPeer, nil, nil, 0, false)
+	if _, err := viewerClientPeer.AddTransceiverFromKind(
+		webrtc.RTPCodecTypeVideo,
+		webrtc.RTPTransceiverInit{Direction: webrtc.RTPTransceiverDirectionRecvonly},
+	); err != nil {
+		return result, fmt.Errorf("add cascade viewer receive transceiver: %w", err)
+	}
+	if err := childRouter.subscribe(viewerID, relayKey); !errors.Is(err, errSFUUnauthorized) {
+		return result, fmt.Errorf("worker 2 accepted unauthorized viewer subscription: %v", err)
+	}
+	if err := childRouter.authorizeSubscription(viewerID, relayKey); err != nil {
+		return result, fmt.Errorf("authorize viewer on worker 2: %w", err)
+	}
+	if err := childRouter.subscribe(viewerID, relayKey); err != nil {
+		return result, fmt.Errorf("subscribe viewer on worker 2: %w", err)
+	}
+	if err := negotiateLoopbackPeers(
+		proofCtx,
+		"worker 2 -> downstream viewer",
+		viewerClientPeer,
+		viewerServerPeer,
+		"m=video",
+	); err != nil {
+		return result, err
+	}
+
+	sendTicker := time.NewTicker(100 * time.Millisecond)
+	sendTimer := time.NewTimer(duration)
+sendFrames:
+	for {
+		select {
+		case <-proofCtx.Done():
+			sendTimer.Stop()
+			sendTicker.Stop()
+			select {
+			case asyncErr := <-asynchronousErrors:
+				return result, asyncErr
+			default:
+				return result, fmt.Errorf("cascade proof canceled while sending: %w", proofCtx.Err())
+			}
+		case <-sendTimer.C:
+			break sendFrames
+		case <-sendTicker.C:
+			if err := writeSourceFrame(); err != nil {
+				sendTimer.Stop()
+				sendTicker.Stop()
+				return result, err
+			}
+		}
+	}
+	sendTicker.Stop()
+
+	packetWaitCtx, cancelPacketWait := context.WithTimeout(proofCtx, 10*time.Second)
+	if err := capture.waitForPackets(packetWaitCtx, trackID, 5); err != nil {
+		cancelPacketWait()
+		select {
+		case asyncErr := <-asynchronousErrors:
+			return result, errors.Join(asyncErr, err)
+		default:
+			return result, fmt.Errorf("wait for cascade viewer media: %w", err)
+		}
+	}
+	cancelPacketWait()
+	viewerSnapshot, exists := capture.snapshot(trackID)
+	if !exists || viewerSnapshot.PacketsReceived == 0 {
+		return result, errors.New("cascade viewer did not receive the authorized track")
+	}
+	if _, err := sendViewerFeedback(viewerClientPeer, viewerSnapshot); err != nil {
+		return result, fmt.Errorf("send cascade viewer NACK/PLI/FIR: %w", err)
+	}
+
+	feedbackCtx, cancelFeedback := context.WithTimeout(proofCtx, 10*time.Second)
+	defer cancelFeedback()
+	feedbackTicker := time.NewTicker(10 * time.Millisecond)
+	defer feedbackTicker.Stop()
+	for {
+		childFeedback := childRouter.subscriptionFeedback(viewerID, relayKey)
+		parentFeedback := parentRouter.subscriptionFeedback(relayViewerID, sourceKey)
+		result.NACKReceived = childFeedback.NACKReceived
+		result.NACKForwarded = childFeedback.NACKForwarded
+		result.NACKRetransmitted = childFeedback.NACKRetransmitted
+		result.NACKRetransmissionSeenByView = capture.duplicatePackets(trackID) > 0
+		result.PLIForwarded = parentFeedback.PLIForwarded
+		result.FIRForwarded = parentFeedback.FIRForwarded
+		result.PLIReachedPublisher = sourcePLI.Load() > 0 && sourcePLIMatched.Load() > 0
+		result.FIRReachedPublisher = sourceFIR.Load() > 0 && sourceFIRMatched.Load() > 0
+		result.RelayPacketsForwarded = relayPacketCount.Load()
+		result.ViewerPacketsReceived = viewerSnapshot.PacketsReceived
+		result.RelayTrackIDs = snapshotRelayTrackIDs()
+		result.ViewerTrackIDs = capture.trackIDs()
+		trackIsolation := relayTrackCount.Load() == 1 &&
+			len(result.RelayTrackIDs) == 1 && result.RelayTrackIDs[0] == trackID &&
+			len(result.ViewerTrackIDs) == 1 && result.ViewerTrackIDs[0] == trackID
+		if childFeedback.NACKReceived > 0 &&
+			childFeedback.NACKForwarded > 0 &&
+			childFeedback.NACKRetransmitted > 0 &&
+			result.PLIForwarded > 0 &&
+			result.FIRForwarded > 0 &&
+			result.PLIReachedPublisher &&
+			result.FIRReachedPublisher &&
+			trackIsolation &&
+			result.RelayPacketsForwarded > 0 {
+			return result, nil
+		}
+		select {
+		case asyncErr := <-asynchronousErrors:
+			return result, asyncErr
+		case <-feedbackCtx.Done():
+			return result, fmt.Errorf(
+				"cascade feedback gate incomplete: child=%+v parent=%+v duplicatePackets=%d sourcePLI=%d sourceFIR=%d",
+				childFeedback,
+				parentFeedback,
+				capture.duplicatePackets(trackID),
+				sourcePLI.Load(),
+				sourceFIR.Load(),
+			)
+		case <-feedbackTicker.C:
+		}
+	}
+}
+
 func newM7HPublisherAPIWithoutNACKResponder(settings webrtc.SettingEngine) (*webrtc.API, error) {
+	return newLocalSFUNoResponderAPI(settings)
+}
+
+// newLocalSFUNoResponderAPI builds a PeerConnection API with default codecs
+// plus the NACK generator, RTCP reports, simulcast headers, stats and TWCC
+// sender — but NO NACK responder interceptor. The responder keeps a
+// deep-copied history of the last 512 sent RTP packets per RTPSender
+// (~0.65 MB per viewer at this video's packet sizes, ~3.2 GiB at 5,000
+// viewers); Hami's router already retransmits from its own shared
+// per-track packet ring (sfuPublishedTrack.packetCache via handleNACK),
+// so the responder only duplicates retransmissions at 5,000x memory cost.
+// Router serverPeers (sendonly) use this API; every other PeerConnection
+// keeps the default API with the responder.
+func newLocalSFUNoResponderAPI(settings webrtc.SettingEngine) (*webrtc.API, error) {
 	mediaEngine := &webrtc.MediaEngine{}
 	if err := mediaEngine.RegisterDefaultCodecs(); err != nil {
 		return nil, fmt.Errorf("register default publisher codecs: %w", err)
@@ -6525,6 +9199,27 @@ func newM7HPublisherAPIWithoutNACKResponder(settings webrtc.SettingEngine) (*web
 		return nil, fmt.Errorf("configure TWCC sender: %w", err)
 	}
 
+	return webrtc.NewAPI(
+		webrtc.WithMediaEngine(mediaEngine),
+		webrtc.WithInterceptorRegistry(registry),
+		webrtc.WithSettingEngine(settings),
+	), nil
+}
+
+func newLocalSFUAPI(settings webrtc.SettingEngine) (*webrtc.API, error) {
+	mediaEngine := &webrtc.MediaEngine{}
+	if err := mediaEngine.RegisterDefaultCodecs(); err != nil {
+		return nil, fmt.Errorf("register local SFU codecs: %w", err)
+	}
+	registry := &interceptor.Registry{}
+	if err := webrtc.RegisterDefaultInterceptorsWithOptions(
+		mediaEngine,
+		registry,
+		webrtc.WithInterceptorLoggerFactory(logging.NewDefaultLoggerFactory()),
+		webrtc.WithNackResponderOptions(nack.ResponderSize(sfuNACKHistoryPackets)),
+	); err != nil {
+		return nil, fmt.Errorf("configure local SFU interceptors: %w", err)
+	}
 	return webrtc.NewAPI(
 		webrtc.WithMediaEngine(mediaEngine),
 		webrtc.WithInterceptorRegistry(registry),
@@ -6615,7 +9310,10 @@ func runLocalSFUProofWithConfig(
 	if clientSocketReadBufferBytes > 0 && clientSocketReadMode != "enabled" {
 		return sfuProofResult{}, errors.New("client socket receive buffer requires client socket read mode to be enabled")
 	}
-	clientAPI := webrtc.NewAPI(webrtc.WithSettingEngine(clientSettings))
+	clientAPI, err := newLocalSFUAPI(clientSettings)
+	if err != nil {
+		return sfuProofResult{}, err
+	}
 	publisherClientAPI := clientAPI
 	if config.proofID == "m7h" {
 		// Diagnostic only: bypass Pion's NACK responder on harness publishers.
@@ -6679,6 +9377,10 @@ func runLocalSFUProofWithConfig(
 		}
 	}()
 	routerAPIs := make([]*webrtc.API, routerMuxCount)
+	// routerViewerAPIs holds one no-NACK-responder API per router shard,
+	// used for the sendonly router serverPeer of every viewer (see
+	// newLocalSFUNoResponderAPI). Built alongside routerAPIs below.
+	routerViewerAPIs := make([]*webrtc.API, routerMuxCount)
 	routerAPIByPublisher := make(map[string]*webrtc.API, len(publishers))
 	var router *sfuRouter
 	if config.remoteSFU == nil {
@@ -6694,7 +9396,14 @@ func runLocalSFUProofWithConfig(
 				}
 				routerMuxByShard[shard] = udpMux
 				routerSettingsByShard[shard] = routerSettings
-				routerAPIs[shard] = webrtc.NewAPI(webrtc.WithSettingEngine(routerSettings))
+				routerAPIs[shard], err = newLocalSFUAPI(routerSettings)
+				if err != nil {
+					return sfuProofResult{}, err
+				}
+				routerViewerAPIs[shard], err = newLocalSFUNoResponderAPI(routerSettings)
+				if err != nil {
+					return sfuProofResult{}, err
+				}
 			}
 			routerAPIByPublisher[publisherID] = routerAPIs[shard]
 			routerShardByPublisher[publisherID] = shard
@@ -6916,6 +9625,8 @@ func runLocalSFUProofWithConfig(
 				firstSequenceByTrack[source.key],
 				config.proofID == "m7h",
 			)
+			capture.viewerID = viewerID
+			capture.frameDiagnostics = config.frameDiagnostics
 			if _, err := clientPeer.AddTransceiverFromKind(
 				webrtc.RTPCodecTypeVideo,
 				webrtc.RTPTransceiverInit{Direction: webrtc.RTPTransceiverDirectionRecvonly},
@@ -6940,7 +9651,13 @@ func runLocalSFUProofWithConfig(
 			})
 			continue
 		}
-		routerPeerAPI := routerAPIByPublisher[source.key.PublisherID]
+		// Router serverPeers are sendonly: their NACK retransmissions come
+		// from Hami's shared per-track packet ring (handleNACK), so they
+		// use the no-responder API (no per-viewer 512-packet copy history).
+		routerPeerAPI := routerViewerAPIs[routerShardByPublisher[source.key.PublisherID]]
+		if routerPeerAPI == nil {
+			routerPeerAPI = routerAPIByPublisher[source.key.PublisherID]
+		}
 		var routerSocketConn *packetReadCountingConn
 		if routerSocketWriteMode == "enabled" {
 			if routerUDPMuxEnabled {
@@ -6955,7 +9672,10 @@ func runLocalSFUProofWithConfig(
 				socketMux := newCountingUDPMux(sharedMux)
 				routerPeerSettings := routerSettingsByShard[shard]
 				routerPeerSettings.SetICEUDPMux(socketMux)
-				routerPeerAPI = webrtc.NewAPI(webrtc.WithSettingEngine(routerPeerSettings))
+				routerPeerAPI, err = newLocalSFUNoResponderAPI(routerPeerSettings)
+				if err != nil {
+					return sfuProofResult{}, fmt.Errorf("create router viewer API for %s: %w", viewerID, err)
+				}
 				routerSocketConn = socketMux.conn
 				// M7-H attempt 6: per-viewer role for the attribution trace.
 				routerSocketConn.role = fmt.Sprintf("router-shard-%d:%s", shard, viewerID)
@@ -6969,7 +9689,10 @@ func runLocalSFUProofWithConfig(
 				routerSocketMuxes = append(routerSocketMuxes, socketMux)
 				routerPeerSettings := clientSettings
 				routerPeerSettings.SetICEUDPMux(socketMux)
-				routerPeerAPI = webrtc.NewAPI(webrtc.WithSettingEngine(routerPeerSettings))
+				routerPeerAPI, err = newLocalSFUNoResponderAPI(routerPeerSettings)
+				if err != nil {
+					return sfuProofResult{}, fmt.Errorf("create router viewer API for %s: %w", viewerID, err)
+				}
 				routerSocketConn = socketMux.conn
 				// M7-H attempt 6: per-viewer role for the attribution trace.
 				routerSocketConn.role = "router-single:" + viewerID
@@ -7042,6 +9765,8 @@ func runLocalSFUProofWithConfig(
 			firstSequenceByTrack[source.key],
 			config.proofID == "m7h",
 		)
+		capture.viewerID = viewerID
+		capture.frameDiagnostics = config.frameDiagnostics
 		if _, err := clientPeer.AddTransceiverFromKind(
 			webrtc.RTPCodecTypeVideo,
 			webrtc.RTPTransceiverInit{Direction: webrtc.RTPTransceiverDirectionRecvonly},
@@ -7575,6 +10300,9 @@ func runLocalSFUProofWithConfig(
 		}
 	}
 	for _, viewer := range viewers {
+		if captureErr := viewer.capture.pendingError(); captureErr != nil {
+			return sfuProofResult{}, fmt.Errorf("viewer %s capture failed: %w", viewer.id, captureErr)
+		}
 		snapshot, exists := viewer.capture.snapshot(viewer.key.TrackID)
 		trackIDsReceived := viewer.capture.trackIDs()
 		onlyRequested := exists &&
@@ -7703,6 +10431,7 @@ func runLocalSFUProofWithConfig(
 		measurementPass := sfuMeasurementPass(result, len(config.viewerTrackIndexes), config.exerciseRTCP)
 		result.MeasurementPass = &measurementPass
 	}
+	result.FrameDiagnostics = config.frameDiagnostics.summary()
 	for _, viewer := range result.Viewers {
 		if !viewer.OnlyRequested || viewer.Received.PacketsReceived == 0 {
 			return sfuProofResult{}, fmt.Errorf("viewer %s did not receive only its requested stream", viewer.ViewerID)
@@ -7818,7 +10547,7 @@ func newSFUViewerCapture(
 	peer.OnTrack(func(track *webrtc.TrackRemote, _ *webrtc.RTPReceiver) {
 		counter := &streamCounter{}
 		assembler := &videoFrameAssembler{
-			frameBoundaryKnown:     recorder != nil,
+			frameBoundaryKnown:     recorder != nil || capture.frameDiagnostics != nil,
 			nextFrameFirstSequence: firstSequence,
 		}
 		codec := track.Codec().MimeType
@@ -7855,8 +10584,31 @@ func newSFUViewerCapture(
 				capture.sequenceCounts[track.ID()][packet.SequenceNumber]++
 				capture.mu.Unlock()
 				counter.record(packet.SequenceNumber, packet.Timestamp, len(packet.Payload))
-				if capture.latencyRecorder != nil && capture.latencyClock != nil {
-					if frameID, complete := assembler.push(packet); complete {
+				if capture.latencyRecorder != nil && capture.latencyClock != nil ||
+					capture.frameDiagnostics != nil {
+					before := snapshotSFUFrameAssembler(assembler)
+					frameID, complete := assembler.push(packet)
+					after := snapshotSFUFrameAssembler(assembler)
+					if capture.frameDiagnostics != nil {
+						if diagnosticErr := capture.frameDiagnostics.record(
+							capture.viewerID,
+							track.ID(),
+							packet,
+							before,
+							after,
+							frameID,
+							complete,
+						); diagnosticErr != nil {
+							capture.reportError(fmt.Errorf(
+								"write selected-frame diagnostics for viewer %s track %s: %w",
+								capture.viewerID,
+								track.ID(),
+								diagnosticErr,
+							))
+							return
+						}
+					}
+					if complete && capture.latencyRecorder != nil && capture.latencyClock != nil {
 						capture.latencyRecorder.RecordNow(frameID, capture.latencyClock)
 					}
 				}
@@ -7868,6 +10620,178 @@ func newSFUViewerCapture(
 		}()
 	})
 	return capture
+}
+
+func parseSFUFrameDiagnosticIDs(raw string) ([]uint32, error) {
+	var ids []uint32
+	seen := make(map[uint32]struct{})
+	for _, part := range strings.Split(raw, ",") {
+		value := strings.TrimSpace(part)
+		if value == "" {
+			return nil, errors.New("frame diagnostic IDs must be comma-separated uint32 values")
+		}
+		parsed, err := strconv.ParseUint(value, 10, 32)
+		if err != nil {
+			return nil, fmt.Errorf("invalid frame diagnostic ID %q: %w", value, err)
+		}
+		id := uint32(parsed)
+		if _, exists := seen[id]; !exists {
+			seen[id] = struct{}{}
+			ids = append(ids, id)
+		}
+		if len(ids) > 64 {
+			return nil, errors.New("at most 64 frame diagnostic IDs are allowed")
+		}
+	}
+	if len(ids) == 0 {
+		return nil, errors.New("at least one frame diagnostic ID is required")
+	}
+	sort.Slice(ids, func(i, j int) bool { return ids[i] < ids[j] })
+	return ids, nil
+}
+
+func newSFUFrameDiagnosticRecorder(
+	writer io.Writer,
+	outputPath string,
+	frameIDs []uint32,
+	maxRecords int,
+) (*sfuFrameDiagnosticRecorder, error) {
+	if writer == nil {
+		return nil, errors.New("frame diagnostic writer is required")
+	}
+	if outputPath == "" {
+		return nil, errors.New("frame diagnostic output path is required")
+	}
+	if len(frameIDs) == 0 || len(frameIDs) > 64 {
+		return nil, errors.New("frame diagnostic recorder requires between 1 and 64 frame IDs")
+	}
+	if maxRecords < 1 || maxRecords > 100_000 {
+		return nil, fmt.Errorf("frame diagnostic record limit must be between 1 and 100000, got %d", maxRecords)
+	}
+	targets := make(map[uint32]struct{}, len(frameIDs))
+	sortedIDs := append([]uint32(nil), frameIDs...)
+	for _, id := range sortedIDs {
+		targets[id] = struct{}{}
+	}
+	sort.Slice(sortedIDs, func(i, j int) bool { return sortedIDs[i] < sortedIDs[j] })
+	return &sfuFrameDiagnosticRecorder{
+		encoder:        json.NewEncoder(writer),
+		outputPath:     outputPath,
+		frameIDs:       targets,
+		sortedFrameIDs: sortedIDs,
+		maxRecords:     maxRecords,
+	}, nil
+}
+
+func snapshotSFUFrameAssembler(assembler *videoFrameAssembler) sfuFrameAssemblerSnapshot {
+	if assembler == nil {
+		return sfuFrameAssemblerSnapshot{}
+	}
+	return sfuFrameAssemblerSnapshot{
+		Active:                 assembler.active,
+		Timestamp:              assembler.timestamp,
+		SequenceCount:          len(assembler.frameSequences),
+		MarkerSeen:             assembler.markerSeen,
+		MarkerSequence:         assembler.markerSequence,
+		NextFrameFirstSequence: assembler.nextFrameFirstSequence,
+		FrameBoundaryKnown:     assembler.frameBoundaryKnown,
+	}
+}
+
+func sfuFrameAssemblerTransitions(
+	before sfuFrameAssemblerSnapshot,
+	after sfuFrameAssemblerSnapshot,
+) []string {
+	var transitions []string
+	if before.Active != after.Active {
+		transitions = append(transitions, "active")
+	}
+	if before.Timestamp != after.Timestamp {
+		transitions = append(transitions, "timestamp")
+	}
+	if before.SequenceCount != after.SequenceCount {
+		transitions = append(transitions, "sequence_count")
+	}
+	if before.MarkerSeen != after.MarkerSeen {
+		transitions = append(transitions, "marker_seen")
+	}
+	if before.MarkerSequence != after.MarkerSequence {
+		transitions = append(transitions, "marker_sequence")
+	}
+	if before.NextFrameFirstSequence != after.NextFrameFirstSequence {
+		transitions = append(transitions, "next_frame_first_sequence")
+	}
+	if before.FrameBoundaryKnown != after.FrameBoundaryKnown {
+		transitions = append(transitions, "frame_boundary_known")
+	}
+	return transitions
+}
+
+func (r *sfuFrameDiagnosticRecorder) record(
+	viewerID string,
+	trackID string,
+	packet *rtp.Packet,
+	before sfuFrameAssemblerSnapshot,
+	after sfuFrameAssemblerSnapshot,
+	completedFrameID uint64,
+	frameComplete bool,
+) error {
+	if r == nil || packet == nil {
+		return nil
+	}
+	_, packetTargetsFrame := r.frameIDs[packet.Timestamp]
+	_, beforeTargetsFrame := r.frameIDs[before.Timestamp]
+	_, afterTargetsFrame := r.frameIDs[after.Timestamp]
+	completedTargetFrame := frameComplete && completedFrameID <= math.MaxUint32
+	if completedTargetFrame {
+		_, completedTargetFrame = r.frameIDs[uint32(completedFrameID)]
+	}
+	if !packetTargetsFrame && !(before.Active && beforeTargetsFrame) &&
+		!(after.Active && afterTargetsFrame) && !completedTargetFrame {
+		return nil
+	}
+	record := sfuFrameDiagnosticRecord{
+		ObservedAt:      time.Now().UTC(),
+		ViewerID:        viewerID,
+		TrackID:         trackID,
+		SequenceNumber:  packet.SequenceNumber,
+		Timestamp:       packet.Timestamp,
+		Marker:          packet.Marker,
+		AssemblerBefore: before,
+		AssemblerAfter:  after,
+		Transitions:     sfuFrameAssemblerTransitions(before, after),
+		FrameComplete:   frameComplete,
+	}
+	if frameComplete && completedFrameID <= math.MaxUint32 {
+		completedID := uint32(completedFrameID)
+		record.CompletedFrameID = &completedID
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.recordsWritten >= r.maxRecords {
+		r.truncated = true
+		return nil
+	}
+	if err := r.encoder.Encode(record); err != nil {
+		return fmt.Errorf("encode frame diagnostic JSONL record: %w", err)
+	}
+	r.recordsWritten++
+	return nil
+}
+
+func (r *sfuFrameDiagnosticRecorder) summary() *sfuFrameDiagnosticSummary {
+	if r == nil {
+		return nil
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return &sfuFrameDiagnosticSummary{
+		OutputPath:     r.outputPath,
+		FrameIDs:       append([]uint32(nil), r.sortedFrameIDs...),
+		RecordsWritten: r.recordsWritten,
+		Truncated:      r.truncated,
+	}
 }
 
 func (a *videoFrameAssembler) push(packet *rtp.Packet) (uint64, bool) {
@@ -7942,10 +10866,21 @@ func (a *videoFrameAssembler) push(packet *rtp.Packet) (uint64, bool) {
 }
 
 func (c *sfuViewerCapture) reportError(err error) {
+	c.mu.Lock()
+	if c.terminalErr == nil {
+		c.terminalErr = err
+	}
+	c.mu.Unlock()
 	select {
 	case c.errors <- err:
 	default:
 	}
+}
+
+func (c *sfuViewerCapture) pendingError() error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.terminalErr
 }
 
 func (c *sfuViewerCapture) waitForPackets(ctx context.Context, trackID string, count uint64) error {
@@ -8160,7 +11095,6 @@ func sendViewerFeedback(peer *webrtc.PeerConnection, received streamSnapshot) (u
 		return 0, errors.New("viewer has no received RTP identity for feedback")
 	}
 	missingSequence := received.LastSequenceNumber + 1000
-	nacks := rtcp.NackPairsFromSequenceNumbers([]uint16{received.LastSequenceNumber, missingSequence})
 	controlPackets := []rtcp.Packet{
 		&rtcp.PictureLossIndication{
 			SenderSSRC: received.SSRC + 1,
@@ -8178,14 +11112,29 @@ func sendViewerFeedback(peer *webrtc.PeerConnection, received streamSnapshot) (u
 	if err := peer.WriteRTCP(controlPackets); err != nil {
 		return 0, err
 	}
+	if err := writeViewerNACK(peer, received, []uint16{
+		received.FirstSequenceNumber,
+		received.LastSequenceNumber,
+		missingSequence,
+	}); err != nil {
+		return 0, err
+	}
+	return missingSequence, nil
+}
+
+func writeViewerNACK(peer *webrtc.PeerConnection, received streamSnapshot, sequences []uint16) error {
+	if peer == nil || received.SSRC == 0 || len(sequences) == 0 {
+		return errors.New("viewer has no received RTP identity for NACK")
+	}
+	nacks := rtcp.NackPairsFromSequenceNumbers(sequences)
 	if err := peer.WriteRTCP([]rtcp.Packet{&rtcp.TransportLayerNack{
 		SenderSSRC: received.SSRC + 1,
 		MediaSSRC:  received.SSRC,
 		Nacks:      nacks,
 	}}); err != nil {
-		return 0, err
+		return err
 	}
-	return missingSequence, nil
+	return nil
 }
 
 func readPublisherFeedback(

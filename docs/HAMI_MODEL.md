@@ -20,40 +20,90 @@ new tokenizer described below.
 
 The pilot is experimental and not capable enough to claim as a useful Nepali
 assistant. Do not treat its identity prompts, fluency, or factual answers as
-reliable.
+reliable. The pilot is NOT what answers chat — the serving model is the MLX
+adapter pinned under 'How it is served' below.
 
-## How it is served
+## How it is served — ONE identity line (pinned 21 Nov 2026)
 
-- `scripts/hami-model-server.py` — small torch server, 127.0.0.1:11437.
-  Loads `checkpoint.pt` + `tokenizer.json` from the dir in `scripts/hami-model.txt`.
-  `GET /status` reports the ACTUAL loaded model (name, checkpoint sha256, params,
-  steps, holdout perplexity). `POST /api/chat` generates greedily.
-  If the model files are missing it refuses to start — callers then report
-  "Hami is unavailable", never fall back.
-- `scripts/hami-model-server.sh` — launcher (Mac venv python with torch + tokenizers).
-- `scripts/com.hami.model-server.plist` — launchd, RunAtLoad + KeepAlive.
-- The intended shared route is backend `app/api/hami_chat.py` →
-  `scripts/hami_model_gateway.py` (`/api/hami-llm/chat`) → model server.
+Chat is answered by exactly one serving path:
+
+  backend `app/api/hami_chat.py`
+  → `scripts/hami_model_gateway.py` (127.0.0.1:11435, `X-Hami-Key` auth,
+    one generation at a time)
+  → MLX server (127.0.0.1:11436)
+  → base `mlx-community/Qwen3-4B-4bit`
+    + adapter `qwen3-4b-nepali-sft-clean-5000`
+      adapter sha256
+      `a309e2290dd5cf098564fdb2557b3a3626dca9013063b52a2b345ea844001385`
+      (verified by re-hashing `adapters.safetensors`, 21 Nov 2026; the same
+      sha is recorded as the cycle-1 baseline adapter sha in
+      `hami-nepali-sft/upgrade-history.jsonl`)
+      recipe `sft-clean-retrain-config.yaml`
+      (LoRA rank 8, scale 20, 16 layers, 2,500 iters, lr 1e-05,
+      `mask_prompt: true`, seed 23)
+
+The gateway forwards the full message list — its own Hami system prompt,
+the chat history, and the latest user message — to the MLX server, which
+applies the adapter. The gateway answers identity questions itself with a
+hard-coded line (by design: the model does not self-identify; probe T5).
+If the MLX server is down (it is stopped while a training cycle runs), the
+gateway returns `upstream_unavailable` and chat reports "Hami is
+unavailable". Never any other model, never a silent fallback.
+
+The torch pilot below is NOT in this path. It is a separate experiment
+server; nothing in chat calls it. Do not cite the pilot as the serving
+model, and do not cite this MLX path as the from-scratch model: the
+from-scratch pilot takes over only when it beats the adapter on the same
+eval (see the replacement note in the repo memory).
+
+- `scripts/hami-model-server.py` — the pilot experiment server, small torch
+  server, 127.0.0.1:11437. Loads `checkpoint.pt` + `tokenizer.json` from the
+  dir in `scripts/hami-model.txt`. `GET /status` reports the ACTUAL loaded
+  model (name, checkpoint sha256, params, steps, holdout perplexity).
+  `POST /api/chat` generates greedily. If the model files are missing it
+  refuses to start — callers then report "Hami is unavailable", never fall
+  back. Experiment-only: not in the chat path above.
+- `scripts/hami-model-server.sh` — pilot launcher (Mac venv python with torch + tokenizers).
+- `scripts/com.hami.model-server.plist` — pilot launchd, RunAtLoad + KeepAlive.
 - This path is not yet verified end-to-end for every app, embedded widget, or
   public deployment. Do not claim that all Hami projects currently use it.
 
 ## Local status
 
-- The model server at `127.0.0.1:11437` returned HTTP 200 with `loaded=true`.
-- Loaded checkpoint SHA-256:
+- Serving path, observed live 21 Nov 2026 ~02:10 +0545: the gateway is up on
+  `127.0.0.1:11435` (PID 8449, since 20 Nov 13:36 +0545). The MLX server on
+  `127.0.0.1:11436` was DOWN at that moment because cycle-2 training was
+  running (`mlx_lm lora`, PID 52394, since 21 Nov 00:45 +0545) and the
+  upgrade loop stops the server while training; chat therefore reports
+  "Hami is unavailable" until the cycle restores it. That is by design, not
+  an outage of the gateway.
+- The serving adapter is `qwen3-4b-nepali-sft-clean-5000`, sha256
+  `a309e2290dd5cf098564fdb2557b3a3626dca9013063b52a2b345ea844001385`
+  (see the pinned identity line above). No `active-adapter.json` exists, so
+  no promotion through `continuous_upgrade.py` has ever been recorded; the
+  clean adapter is the fallback default in that script. Two v2 candidates
+  exist on disk (`...-v2-20261120T182626Z-fa54f17ee9`,
+  `...-v2-20261120T184939Z-e1a55a10dc`) and neither has been promoted.
+- The pilot server at `127.0.0.1:11437` returned HTTP 200 with `loaded=true`
+  (PID 81384, since 20 Nov 19:00 +0545) — but it is the experiment pilot,
+  not the chat path. Its loaded checkpoint SHA-256:
   `40970731ffe1f0cc6e0221c69b37ac7ae9059120b9b58b3486d2abcfa4b1c50f`.
-- It reports 3,000 training steps and holdout perplexity `1302.5124`; this
-  result does not pass a quality gate.
-- This served checkpoint remains unchanged. It is separate from all experimental
-  checkpoints; none has been promoted or loaded into the server.
+- The pilot reports 3,000 training steps and holdout perplexity `1302.5124`;
+  this result does not pass a quality gate.
+- This pilot checkpoint remains unchanged. It is separate from all experimental
+  checkpoints; none has been promoted or loaded into the pilot server.
 - ForgeOS now defaults both `AI_PROVIDER` and `COGNITIVE_PROVIDER` to
   `hami-model`, with mock fallback disabled. This selects the guarded local
   gateway path; it does not prove that the local gateway, tunnel, or public
   projects are currently reachable.
-- The backend chat route forwards conversation context to the gateway, but the
-  gateway currently sends only the latest user message to the model server.
-  The raw-text pilot is not instruction-tuned, so system prompts and history do
-  not condition its response.
+- The backend chat route forwards the full conversation (system prompt +
+  history + latest message) to the gateway, and the gateway forwards the
+  full message list to the MLX server. The earlier claim that the gateway
+  sends only the latest user message was wrong; the gateway code builds one
+  message list from all supplied turns.
+- The raw-text pilot is not instruction-tuned, so system prompts and history do
+  not condition its response. (That applies to the pilot only, not to the
+  MLX adapter path, which is instruction-tuned.)
 
 ## Isolated training experiments
 
@@ -151,10 +201,60 @@ source). This confirms a Nepali-heavy raw-text corpus, but very little
 Hami-authored material; these figures alone do not identify why generation
 collapses.
 
+## Source-grounded QA benchmark (evaluation only)
+
+Added `evaluate-nepali-qa.py` to run a local JSON QA dataset against a selected
+checkpoint. It strict-loads the model, builds a Nepali context/question prompt,
+greedily generates up to 32 tokens, and reports normalized exact match and
+whitespace-token F1 without printing or saving dataset examples.
+
+The evaluation-only benchmark was `Yunika/Nepali-QA`, pinned to revision
+`2c1c3376886d35f89e4908da441e55655044a3ee`. Its card describes 266
+human-curated QA pairs under CC BY-SA 4.0, derived from Belebele/FLORES-200,
+and cites [the 2025 Nepali extractive QA
+paper](https://doi.org/10.3126/kjse.v9i1.78368). See the
+[pinned dataset card](https://huggingface.co/datasets/Yunika/Nepali-QA/tree/2c1c3376886d35f89e4908da441e55655044a3ee).
+FLORES-200's [dataset card](https://huggingface.co/datasets/facebook/flores)
+restricts its data and derivatives to evaluation, forbids training use, and
+restricts redistribution; accordingly, this benchmark was used only for local
+inference, never training, and its temporary downloaded file was removed. It
+is not included in this repository or any training split.
+
+All 266 records were valid across 101 distinct contexts. No normalized context
+matched or appeared as a substring in the expanded training records; this
+checks exact overlap only, not paraphrase or semantic contamination. No context
+needed truncation to fit the 512-token model window. On this extractive QA task,
+the 12,000-step candidate scored exact match `0.0000` and token F1 `0.0103`;
+the currently served 3,000-step checkpoint scored exact match `0.0000` and
+token F1 `0.0085`; they returned non-empty answers for 258 and 265 records,
+respectively. The small F1 difference is not useful QA performance:
+neither checkpoint answers these questions reliably, and this benchmark does
+not cover broader Nepal-specific conversational quality.
+
 The separate `hami-nepali-sft` workspace contains Qwen-targeted adapters and
 instruction datasets, but the inspected records have no source, citation, or
 license metadata. They were not used to train these Hami-owned checkpoints;
 their provenance must be established before considering them.
+
+Additional public SFT candidates reviewed at pinned revisions were also not
+admitted to training:
+
+- [Nepali Finance Instruction Dataset](https://huggingface.co/datasets/sabin1234/Nepali_SCRAP_Finance_Instruction_Dataset/tree/3f25c337ed20e5fd6c6f4684e56441b35ac25239)
+  has 23,855 rows but a mixed, dataset-level `other` license, 2,257 duplicate
+  rows, 51 rows without a license field, 8,442 rows naming Gemini as answer
+  generator, and no generator recorded for many other rows.
+- [Nepali instruction Alpaca dataset](https://huggingface.co/datasets/chhatramani/nepali_instruction_dataset_alpaca/tree/f60bad7d4ec7fe64b4651ebdbab76920514e6dc7)
+  declares CC BY 4.0 for 28,910 rows, but its card does not provide source or
+  answer-generation provenance.
+- [Nepali legal SFT dataset](https://huggingface.co/datasets/Somtharu181coder/Legal_domain_ocr_extracted_Nepali_sft_dataset/tree/8b2b3d8cab384e641c47bb7d5f2317bb2157120d)
+  declares CC BY 4.0 and traces 31 rows to one Law Commission order, but labels
+  the answers synthetic and warns about OCR uncertainty. It is not a broad
+  Nepali instruction corpus.
+
+No new instruction data was added to training. A candidate for the next SFT
+stage must have verifiable per-record source and license information, plus
+answer-generation provenance; licensed human/source text is preferable to
+answers generated by an unidentified external model.
 
 Do not treat any pilot output—identity, fluency, or factual answers—as reliable.
 No training candidate has passed the quality gate, and the served checkpoint

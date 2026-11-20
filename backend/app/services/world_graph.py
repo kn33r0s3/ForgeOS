@@ -238,6 +238,53 @@ def _schema_for_content_asset() -> dict[str, Any]:
     }
 
 
+def _schema_for_gate() -> dict[str, Any]:
+    return {
+        "type": "object",
+        "properties": {
+            "gate_key": {"type": "string", "minLength": 1, "maxLength": 120},
+            "required_evidence": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "evidence_key": {"type": "string", "minLength": 1, "maxLength": 120},
+                        "description": {"type": "string", "minLength": 1, "maxLength": 500},
+                    },
+                    "required": ["evidence_key", "description"],
+                    "additionalProperties": False,
+                },
+            },
+        },
+        "required": ["gate_key", "required_evidence"],
+        "additionalProperties": False,
+    }
+
+
+def _schema_for_capacity_gate_result() -> dict[str, Any]:
+    return {
+        "type": "object",
+        "properties": {
+            "gate_key": {"type": "string", "minLength": 1, "maxLength": 120},
+            "evidence_key": {"type": "string", "minLength": 1, "maxLength": 120},
+            "data_scope": {"type": "string", "enum": ["TEST"]},
+            "environment": {"type": "string", "enum": ["local"]},
+            "run_id": {"type": "string", "minLength": 1, "maxLength": 200},
+            "revision": {"type": "string", "pattern": "^[0-9a-f]{7,40}$"},
+            "command": {"type": "string", "minLength": 1, "maxLength": 2000},
+            "result": {"type": "string", "enum": ["passed", "failed"]},
+            "artifact_ref": {"type": "string", "minLength": 1, "maxLength": 2000},
+            "artifact_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        },
+        "required": [
+            "gate_key", "evidence_key", "data_scope", "environment", "run_id",
+            "revision", "command", "result", "artifact_ref", "artifact_sha256",
+        ],
+        "additionalProperties": False,
+    }
+
+
 def seed_core_types(db: Session) -> int:
     """Install the stable substrate vocabulary as registry rows, idempotently."""
     canonical_schema = json.dumps(_schema_for_canonical_ref(), sort_keys=True, separators=(",", ":"))
@@ -246,6 +293,12 @@ def seed_core_types(db: Session) -> int:
     diagnosis_schema = json.dumps(_schema_for_constraint_diagnosis(), sort_keys=True, separators=(",", ":"))
     horizon_schema = json.dumps(_schema_for_horizon_domain(), sort_keys=True, separators=(",", ":"))
     content_schema = json.dumps(_schema_for_content_asset(), sort_keys=True, separators=(",", ":"))
+    gate_schema = json.dumps(_schema_for_gate(), sort_keys=True, separators=(",", ":"))
+    gate_result_schema = json.dumps(
+        _schema_for_capacity_gate_result(),
+        sort_keys=True,
+        separators=(",", ":"),
+    )
     open_schema = '{"type":"object"}'
     types = {
         "entity_type": {
@@ -260,14 +313,16 @@ def seed_core_types(db: Session) -> int:
             "probe", "assumption",
             "orientation", "constraint_diagnosis",
             "horizon_domain", "content_asset",
+            "gate",
         },
         "relation_type": {
             "derived_from", "supports", "possible_match", "co_occurs_with", "informs", "informed_by",
             "offered_by", "owned_by", "part_of", "enables", "observed_with",
-            "signals", "tracks", "responds_to",
+            "signals", "tracks", "responds_to", "depends_on", "feeds", "blocks",
         },
         "event_type": {
             "entity_created", "relation_created", "signal_ingested", "state_changed",
+            "gate_evaluated", "capacity_gate_result",
             "capability_test_passed", "capability_test_failed", "type_status_changed",
             "entity_identity_changed", "entity_merged", "entity_archived",
             "entity_source_refreshed", "action_attempt_started", "action_attempt_status_changed",
@@ -343,6 +398,10 @@ def seed_core_types(db: Session) -> int:
                     schema_json = horizon_schema
                 elif category == "entity_type" and name == "content_asset":
                     schema_json = content_schema
+                elif category == "entity_type" and name == "gate":
+                    schema_json = gate_schema
+                elif category == "event_type" and name == "capacity_gate_result":
+                    schema_json = gate_result_schema
                 elif category == "entity_type" and name in {
                     "signal", "pattern", "belief", "claim", "research_question", "opportunity",
                     "provider", "service_listing", "domain_record", "outcome", "customer",

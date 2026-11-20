@@ -1,4 +1,308 @@
-# Active handoff — 2026-11-19 18:23 +0545 — M7-H cost experiments reconciled
+# Active handoff — 2026-11-21 01:52 +0545 — M7-H cache retention instrumented
+
+## Current operation
+
+- Resume from the existing 3,000-pair M7-H failure: the SFU reached
+  15.06 GB HeapAlloc and 120,631 goroutines, with 2,588 publishers stale
+  over 500 ms; final p99 was not measured. Earlier goroutine profiles showed
+  UDP write-lock waits, but causality remains unproven.
+- The existing client profile request logs `get-conn`, `got-conn`,
+  `wrote-request`, and first response byte; the server already logged handler
+  entry before authorization. The handler now logs authorization completion
+  and profile-write start/completion duration. This is diagnostic
+  instrumentation, not a stall fix.
+- Source ownership now explains a plausible portion of the `TrackRemote.ReadRTP`
+  heap attribution: the existing per-track 512-packet NACK cache retains each
+  owned packet; subscriber queue copies share payload bytes; the separate Pion
+  NACK responder is configured for 512 packets. The loopback metrics endpoint
+  now exposes active source-cache packet count and payload bytes; these gauges
+  exclude queue and Pion retention and do not apportion total heap.
+- Lowering receive MTU does not reduce cache entries and could truncate larger
+  packets; no protected cache setting changed. `cd services/hami-media && go
+  test ./...`, `cd services/hami-media && go vet ./...`, `npm test` (168 script
+  + 295 TypeScript tests), `npm run gates` (GREEN), and scoped diff check
+  passed.
+- At 01:52, pressure was NORMAL (1) with 802.69 MiB free swap, below the
+  2,048 MiB floor. Do not run M7-H or scale load until the floor and the
+  existing Go-heap abort budget are satisfied. The local `com.hami.loop`
+  process was observed running, but no media proof is attributed to it.
+
+## Next resumable operation
+
+After free swap reaches the recorded floor, repeat one bounded M7-H diagnostic
+on the same build, correlate client/server phase timestamps, and collect the
+cache gauges with the heap profile. Only then choose a controlled
+UDP-write/NACK intervention; keep root cause and 5,000-viewer capacity
+**NOT MEASURABLE** until evidence supports them.
+
+# Historical handoff — 2026-11-21 01:34 +0545 — 10×100 profile reconciled; 5,000-viewer rung held
+
+## Current operation
+
+- The existing `sfu-single` proof completed 10 publishers × 100 viewers for
+  76 s. The TEST JSON reports `measurement_pass=true`, 3,740 sent frames
+  (374 per publisher), zero pending frames/queue drops/shedding/write
+  errors, and verified cleanup. Viewers received 69,200 RTP packets
+  (52,376,646 bytes); 100 PLI and 100 FIR forwards were observed, but no
+  NACK retransmissions occurred in this run.
+- The 75-sample resource guard stayed at pressure level 1; Swapouts delta
+  was 0 and Pageouts delta was 589. Peak combined HeapAlloc was
+  267,302,840 bytes and peak RSS was 319,696 KiB.
+- Post-GC `inuse_space` was 86.28 MiB, with 30.54 MiB at Pion's NACK packet
+  factory. The historical same-shape profile was 92.72 MiB total and
+  36.05 MiB at that site. The ~6.9% total / ~15.3% site reduction is
+  directional evidence across separate runs, not a controlled A/B or a
+  capacity result.
+- Focused Go tests passed for SFU routing, process cascade, and the
+  20-publisher × 250-viewer configuration contract. That contract is not a
+  5,000-viewer runtime result; maximum capacity remains **NOT MEASURABLE**.
+- At 01:34, pressure was NORMAL (1) but free swap was 1,674.88 MiB, below the
+  established 2,048 MiB floor. No scale rung, commit, deployment, external
+  service, spend, or production action occurred. No production owner action
+  was removed by this evidence-only increment.
+
+## Next resumable operation
+
+Keep capacity runs stopped until free swap is at least 2,048 MiB. Repeat
+Stage A then continue at the next previously cleared rung; do not infer
+20×5,000 capacity from the 10×100 profile or 20×250 configuration test.
+Independent compute/network and explicit production authorization remain
+separate requirements.
+
+# Historical handoff — 2026-11-21 00:34 +0545 — NACK heap site identified
+
+## Current operation
+
+- The existing local `sfu-single` harness completed 10 publishers × 100 viewers for 76 s with `measurement_pass=true`; all 77 pressure samples were NORMAL. Full V1 status remains UNKNOWN; report and missing-measurement details are in `~/workspace/hami-reports/live-video-rung-01-v1.md`.
+- A post-GC profile found 36.05 MiB in Pion's NACK packet factory; local responder history is now 512 instead of 1024 with packet copies intact and RTCP regression green, but the comparable run hit pressure level 2 before setup so savings remain UNKNOWN.
+- The audio rung request stopped at Stage A: free swap was 1,444.69 MiB at
+  23:51:26, below the 2,048 MiB minimum. No build, socket-limit change,
+  pprof baseline, or rung was started.
+- Local `main` is `249f7c73`, three commits ahead of `origin/main`; the three
+  commit summaries are all Hami media/SFU work. The worktree has pre-existing
+  staged and unstaged changes; no commit was made.
+- Go 1.27.4 and FFmpeg 9.0.2 with libopus encode/decode are installed. The
+  previous 2×2 smoke is not a pass (`every_listener_pass=false`; 856.69 MiB
+  free swap during the run). The audio room contract exists, is untracked,
+  and was not edited in this run. `~/workspace/hami-reports/` is absent.
+- Added opt-in bounded RTP packet and assembler-transition JSONL to the
+  existing `sfu-single` capture path, with selected timestamps, record cap,
+  output summary, and writer errors surfaced. Documented its flags in
+  `services/hami-media/INTEGRATION.md`.
+- Added deterministic capacity-gate evaluation to the existing Forge cycle:
+  five idempotent gate entities, `depends_on` relations, local TEST result
+  events, artifact integrity checks, state events, and safe PROPOSED research
+  actions. No action is started; the Go runner does not yet emit gate-result
+  events, so no live capacity gate has been promoted. CNN/other learned
+  inference remains deferred for lack of independent labeled runs.
+- Focused Go diagnostics + RTCP regression tests and `go vet ./...` passed.
+  Backend cycle/substrate tests passed (70). `npm test` passed (168 script +
+  295 TypeScript tests); `npm run gates` reported GREEN.
+- No 20×75 diagnostic, load, audio 10×100, or capacity rung was run.
+- Preserve `main` and unrelated staged/dirty changes. No commit, push,
+  deployment, external service, or spend occurred. The 5,000-viewer maximum
+  remains **NOT MEASURABLE**; owner interventions per real transaction remain
+  **NOT MEASURABLE**.
+
+## Next resumable operation
+
+Do not begin the video ladder until free swap is at least 2,048 MiB and all
+five Stage A assertions pass. The report directory must be available before
+writing its preflight report. Keep video and audio evidence separate, and
+preserve the existing frame and RTCP gates.
+
+# Active handoff — 2026-11-20 23:00 +0545 — two-process local SFU cascade verified
+
+## Current operation
+
+- `services/hami-media/main.go` runs `sfu-cascade` across two separate local
+  M7-H SFU processes using the existing `remoteSFU` and `sfuRouter` seams.
+  The verified 1-second run had distinct worker PIDs 68840 and 68841, 12
+  publisher frames, 22 relay packets, 18 viewer packets, one NACK forwarded,
+  two NACK retransmissions with a duplicate observed at the viewer, PLI/FIR
+  at the original publisher, and verified cleanup. The process run exited 0.
+- Cleanup unregisters remote SFU state while clients are alive, closes client
+  peers, gracefully closes both SFU processes, and then cancels their process
+  context. The workers use a separate lifecycle context so a proof error does
+  not kill them before cleanup.
+- Focused RTCP/cascade tests passed three repetitions and `go vet ./...`
+  passed. The in-process cascade helper did not consistently expose duplicate
+  packets to its viewer despite counting router retransmit writes; its test
+  now checks router RTCP/replay counters. The strict viewer-retransmission
+  gate remains in the process-separated runner and
+  `TestLocalSFURoutesAuthorizedStreamsAndRTCP`.
+- This is local `TEST` correctness evidence, not capacity evidence. Current
+  free swap is 1,512.69 MiB (<2,048 MiB floor); no 20×50 or larger scale run
+  was started. Preserve unrelated dirty files; no commit, push, deployment,
+  external service, or spend.
+
+## Next resumable operation
+
+Investigate the existing `remoteSFU` signaling seam for an authorized,
+independently resourced second worker. Retain track authorization/isolation,
+viewer-observed NACK retransmission, PLI/FIR delivery to the correct original
+source, and cleanup. The owner must authorize/provision the independent
+resource and network path. Do not start a capacity rung until swap free is at
+least 2,048 MiB and the scale-specific resource budget is reviewed.
+
+# Active handoff — 2026-11-20 22:31 +0545 — 5,000-viewer architecture bounded
+
+## Current operation
+
+- The new request is a single-room 20-streamer/5,000-viewer goal plus many
+  rooms. This is not a proven capacity result and “uncountable” is not a
+  finite-hardware service guarantee.
+- Existing Pion track routing is the canonical implementation. Historical
+  same-Mac process sharding raised CPU/viewer-minute by 26.95% (2×500) and
+  47.62% (4×250); it did not test independent machines. The 20×50 SFU heap
+  peak was 4.12 GiB; linear 5× projection is ~20.6 GiB HeapAlloc only, not RSS
+  or a 5,000-viewer measurement.
+- Fresh IETF RFC 7667 review: peer mesh uses unicast flows per peer and does
+  not erase egress; multicast has distinct feedback, signaling, and security
+  requirements. Basic egress arithmetic is 2.5 Gbit/s at 5,000×500 kbit/s
+  (one stream/viewer), 5 Gbit/s at 1 Mbit/s, before overhead. The
+  20×250 direct-publisher option would require 125–250 Mbit/s outbound per
+  streamer at those bitrates.
+- Decision: investigate multi-SFU track replication on the existing Pion
+  route; keep publishers as sources, not 250-way relay servers. Add bounded
+  room/worker admission based on measured resources. Simulcast/SVC and
+  opt-in peer relay remain unverified future options, not current claims.
+- Host at 22:31: swap free is 1,424.69 MiB (<2 GiB safety floor). No 5,000
+  viewer or other scale run started. The previous audio 10×100 rung also
+  remains blocked. No external service, spend, contact, deployment, commit,
+  or push occurred; unrelated worktree changes are preserved.
+
+## Next resumable operation
+
+Use the existing `remoteSFU` integration seam to prototype two independently
+addressable workers for one publisher and a small authorized viewer subset.
+Gate on track isolation, NACK/PLI/FIR/retransmission, and cleanup before any
+scale rung. A same-Mac run can prove correctness, not horizontal capacity;
+capacity needs independent resources and at least 2,048 MiB free swap before
+local scale tests. Keep TEST separate from REAL evidence.
+
+# Historical active handoff — 2026-11-20 21:16 +0545 — safe Pion payload-share patch designed
+
+## Current operation
+
+- `main` remains at `249f7c733c6868d023178aa898add8f9759e7395`; preserve all
+  unrelated staged/dirty files. No commit, push, or deployment.
+- Freshly checked interceptor v0.1.51 (latest release) and upstream `main`
+  (`0353a584d11ccb4ca5f9e4e59d78c87b0830ed11`): no factory-injection option.
+  WebRTC v4.2.26 does expose default-interceptor responder options.
+- Root ownership issue: `TrackLocalStaticRTP.WriteRTP` uses a pooled packet
+  struct and resets it after the interceptor call. Pion `PacketFactoryNoOp`
+  retains its header pointer, so it is unsafe despite the earlier selective
+  focused-test pass.
+- Designed (not implemented): a Pion `ResponderOption` that clones headers,
+  shares only immutable non-RTX payloads, and falls back to the existing copy
+  factory whenever RTX metadata is present. Use `RetainablePacket`'s existing
+  refs; gate only router APIs behind a default-off flag.
+- No versioned dependency source can be patched via Hami `main.go` alone:
+  the responder's factory is private and its factory interface lives in
+  Pion's `internal` package. A local fork/replacement needs new source files
+  and the repository's commit-description rationale; this order still forbids
+  commit/push, so no fork, call-site edit, Go build, focused SFU test, or load
+  run was made this phase.
+- `npm test` passed (168 script and 295 TypeScript tests); `npm run gates`
+  reported GREEN. The pre-existing generated timestamp change in
+  `docs/GATES.md` was preserved.
+- Prior phase's four 20x50 runs and verdicts are recorded above this entry's
+  predecessor and under `/tmp/hami-sfu20x50-*.json`. No rung above 20x50 is
+  cleared. Host swap/free memory has not recovered to the 2 GiB gate.
+- Next: after the versioned fork/description constraint is resolved, implement
+  the option, test header isolation/payload sharing/RTX fallback, run the
+  existing NACK/PLI/FIR/retransmission integration gate, then a fresh
+  counters-on 20x50 control/treatment. No real transaction occurred;
+  owner interventions per real transaction remain **NOT MEASURABLE**.
+
+# Historical handoff — 2026-11-20 20:57 +0545 — Pion per-subscriber copy remains
+
+## Current operation
+
+- `main` remains at `249f7c733c6868d023178aa898add8f9759e7395`; preserve the
+  unrelated staged/dirty worktree. No commit, push, or deployment.
+- The existing Hami packet-ring seam was traced through git history. The
+  checked Pion interceptor release is v0.1.51; neither it nor current upstream
+  `master` exposes packet-factory injection. The 3,000-peer profile places
+  ~3.82 GiB at Pion's NACK `PacketFactoryCopy` population on each subscriber's
+  RTP write path, not in Hami's source ring.
+- A one-second Hami ring-retention candidate passed the focused cache and
+  NACK/PLI/FIR/retransmission tests, but two matched 20x50 control/treatment
+  pairs showed only 0.95% lower mean peak HeapAlloc and 0.09% lower mean peak
+  HeapInuse, below run-to-run spread. Candidate and test are reverted; do not
+  represent this as a scale optimization.
+- Four local 20x50 runs passed: 1,000 viewers, 1,000 NACK retransmissions,
+  PLI/FIR delivered, zero queue drops/write errors; both socket counters were
+  enabled. Per-run and comparison verdicts are in `/tmp/hami-sfu20x50-*-verdict.json`
+  and `/tmp/hami-sfu20x50-comparison.json`.
+- No higher rung is cleared. After the runs swap remained 6,660.56/8,192 MiB
+  used and physical free pages were ~590 MiB after cooldown. Stop SFU load
+  work above 20x50 until host headroom recovers.
+- Next: assess an opt-in/default-off Pion patch only if it preserves stable
+  headers, RTX rewriting, NACK retransmission, and PLI/FIR delivery; run the
+  focused gate before any further 20x50 A/B. No protected setting, Cloud,
+  Docker, external service, commit, or push was used.
+- `cd services/hami-media && GOMAXPROCS=1 GOTOOLCHAIN=local GOPROXY=off go test -count=1 ./...`
+  passed. `npm test` passed (168 script tests and 295 TypeScript tests);
+  `npm run gates` reported GREEN. No real transaction occurred, so the owner
+  intervention metric remains **NOT MEASURABLE**.
+
+# Historical handoff — 2026-11-20 20:04 +0545 — zero-copy fanout pre-A/B blocker
+
+## State at that checkpoint
+
+- `main` remains at `249f7c733c6868d023178aa898add8f9759e7395`. Preserve the
+  unrelated staged/dirty worktree; no commit, push, or deployment.
+- The zero-copy fanout seam is `services/hami-media/main.go`: Hami already
+  shares source payloads through its per-track packet ring and subscriber
+  queues, while Pion `PacketFactoryCopy` remains the dominant per-viewer
+  retained allocation.
+- Three attempted Pion responder changes (remove responder, filter all local
+  streams, and `nack.DisableCopy()` with a cloned header) failed
+  `TestLocalSFURoutesAuthorizedStreamsAndRTCP`: router feedback counters were
+  zero and no NACK retransmission reached the viewer. A custom registry with
+  Pion's default copy responder passed. All trial changes were removed.
+- Do not run the 20x50 load A/B until a safe packet ownership path passes the
+  feedback/retransmission regression. The pinned control also had both socket
+  counters disabled; a matched measurement needs a counters-on control and
+  treatment. 20x100 and higher remain blocked by host swap.
+- Next: find a supported Pion shared-payload packet-factory seam that preserves
+  header lifetime, RTX, and RTCP delivery; rerun the focused test before any
+  load.
+
+# Active handoff — 2026-11-20 19:18 +0545 — A–D reconciled; high-scale work blocked
+
+## Current operation
+
+- `main` is at `249f7c733c6868d023178aa898add8f9759e7395`, three commits ahead
+  of `origin/main`. The worktree contains unrelated staged changes; preserve
+  them. No commit, push, or deployment.
+- The four requested tracks were reconciled using existing evidence, not
+  concurrent high-load runs. Session A's 3,000-peer CPU profiles do not locate
+  a p99 cause; p99 remains **NOT MEASURABLE**. Session B's 250-publisher,
+  180-second heap run has stable retained profiles (~725–746 MB), a
+  GC-sawtooth HeapAlloc peak of 1.53 GB, and flat 9,567 goroutines; 3,000-peer
+  profiles retain 9.66 GB in Pion packet-copy/read and ICE buffer sites.
+  Memory-only causality for the ~121s death is plausible, not proven.
+- Session C's 20x75 subscriber files identify two pending frame IDs on
+  stream-0007 and stream-0002; exact outstanding viewers and the missing
+  packet/assembly telemetry are recorded at the top of
+  `docs/CAPABILITY_QUEUE.md`. Cause remains **UNKNOWN**. 20x100 is not cleared.
+- Session D's Darwin/arm64, Linux/amd64, and Windows/amd64 cross-builds
+  previously passed; Windows runtime remains unverified.
+- At 19:18, swap used 6,940.56/8,192 MiB with only 1,251.44 MiB free.
+  The local safety order requires at least 2 GiB free before another scale
+  rung. Do not start 20x100, 3,000-peer profiling, or 5,000+ viewers yet.
+- The first HLS rung is a synthetic local FFmpeg/loopback smoke only. It is
+  documented in `services/hami-media/INTEGRATION.md`; webcam/Pion ingest and
+  browser playback remain unbuilt/unverified.
+- Next: keep analysis and independent low-risk work parallel, but serialize
+  load runs. Recheck swap; only after the threshold clears, run the explicitly
+  queued 20x100 rung with a measured heap budget and existing guard. Do not
+  infer p99, capacity, or crash causality from profiles alone.
+
+## Historical handoff — 2026-11-19 18:23 +0545 — M7-H cost experiments reconciled
 
 ## Current operation
 

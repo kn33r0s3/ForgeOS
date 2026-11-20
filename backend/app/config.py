@@ -92,7 +92,10 @@ class Settings(BaseSettings):
     AI_FALLBACK_TO_MOCK: bool = os.getenv("AI_FALLBACK_TO_MOCK", "false").lower() in ("1", "true", "yes")
 
     # hami-model on the owner's Mac is reached through the guarded gateway
-    # at 127.0.0.1:11435; its model server is private on 127.0.0.1:11437.
+    # at 127.0.0.1:11435; its model server is the MLX server, private on
+    # 127.0.0.1:11436 (base mlx-community/Qwen3-4B-4bit + the clean adapter;
+    # see docs/HAMI_MODEL.md for the pinned identity line). 11437 is the
+    # separate torch pilot experiment server, not in the chat path.
     HAMI_MODEL_NAME: str = os.getenv("HAMI_MODEL_NAME", "hami-model")
     # The guarded gateway is the ONLY caller of the model server. The
     # backend (Vercel) reaches it through the tunnel; local code reaches

@@ -1,3 +1,5 @@
+import hashlib
+import json
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
@@ -22,6 +24,86 @@ def _cycle_headers(monkeypatch, secret="test-cron-secret"):
         "Authorization": f"Bearer {secret}",
         "X-API-Key": "test-owner-key",
     }
+
+
+def test_capacity_gate_tick_is_idempotent_and_stages_only_a_proposal(db, tmp_path):
+    from app import models
+    from app.services import forge_loop, world_graph
+
+    world_graph.seed_core_types(db)
+    first = forge_loop.run_capacity_gate_tick(db)
+    assert first["gates_created"] == 5
+    assert first["relations_created"] == 5
+    assert first["actions_proposed"] == 0
+    assert set(first["gate_states"].values()) == {"UNKNOWN"}
+
+    baseline = db.query(models.SubstrateEntity).filter_by(
+        identity_key="source:gate:forge_gate_definition:sfu-1000-baseline",
+    ).one()
+
+    def record_result(run_id, result, source="sfu-single"):
+        artifact = {
+            "gate_key": "sfu-1000-baseline",
+            "evidence_key": "20x50_pass",
+            "data_scope": "TEST",
+            "environment": "local",
+            "run_id": run_id,
+            "revision": "abcdef1234567",
+            "command": "go test ./...",
+            "result": result,
+        }
+        artifact_path = tmp_path / f"hami-capacity-gate-result-{run_id}.json"
+        artifact_bytes = json.dumps(artifact, sort_keys=True).encode()
+        artifact_path.write_bytes(artifact_bytes)
+        payload = {
+            **artifact,
+            "artifact_ref": str(artifact_path),
+            "artifact_sha256": hashlib.sha256(artifact_bytes).hexdigest(),
+        }
+        return world_graph.create_event(
+            db,
+            event_type="capacity_gate_result",
+            source=source,
+            entity_id=baseline.id,
+            payload=payload,
+            idempotency_key=f"test-capacity-gate-result:{run_id}",
+        )
+
+    record_result("untrusted-run", "passed", source="owner_note")
+    db.commit()
+    unverified = forge_loop.run_capacity_gate_tick(db)
+    assert unverified["gate_states"]["sfu-1000-baseline"] == "UNKNOWN"
+    assert unverified["unverified_result_events"] == 1
+    assert unverified["actions_proposed"] == 0
+
+    record_result("test-run-20x50", "passed")
+    db.commit()
+
+    second = forge_loop.run_capacity_gate_tick(db)
+    assert second["gate_states"]["sfu-1000-baseline"] == "PROVEN"
+    assert second["actions_proposed"] == 2
+    staged = db.query(models.Action).filter_by(action_type="research").all()
+    assert len(staged) == 2
+    assert all(action.status == "PROPOSED" for action in staged)
+    assert all(action.started_at is None for action in staged)
+    assert all(
+        json.loads(action.parameters_json)["data_scope"] == "TEST"
+        for action in staged
+    )
+
+    third = forge_loop.run_capacity_gate_tick(db)
+    assert third["gates_created"] == 0
+    assert third["relations_created"] == 0
+    assert third["actions_proposed"] == 0
+    assert db.query(models.Action).filter_by(action_type="research").count() == 2
+
+    record_result("test-run-20x50-failed", "failed")
+    db.commit()
+    contradicted = forge_loop.run_capacity_gate_tick(db)
+    assert contradicted["gate_states"]["sfu-1000-baseline"] == "BLOCKED"
+    assert contradicted["gate_states"]["sfu-1500-frame-integrity"] == "BLOCKED"
+    assert contradicted["actions_proposed"] == 0
+    assert db.query(models.Action).filter_by(action_type="research").count() == 2
 
 
 @pytest.fixture(autouse=True)

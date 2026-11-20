@@ -375,6 +375,46 @@ func TestLocalSFURoutesAuthorizedStreamsAndRTCP(t *testing.T) {
 	}
 }
 
+func TestLocalSFUCascadeRoutesRTCPAcrossWorkers(t *testing.T) {
+	fixture, err := base64.StdEncoding.DecodeString(testH264AccessUnit)
+	if err != nil {
+		t.Fatal(err)
+	}
+	frames, err := readH264Frames(bytes.NewReader(fixture))
+	if err != nil {
+		t.Fatalf("read embedded H.264 test frame: %v", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	result, err := runLocalSFUCascadeProof(ctx, frames, 1500*time.Millisecond)
+	if err != nil {
+		t.Fatalf("run local two-worker SFU cascade proof: %v", err)
+	}
+	if result.EvidenceType != "TEST" || !result.LocalOnly {
+		t.Fatalf("cascade result did not identify a local TEST: %+v", result)
+	}
+	if result.Workers != 2 || result.Publishers != 1 || result.Viewers != 1 {
+		t.Fatalf("unexpected cascade topology: %+v", result)
+	}
+	if result.RelayPacketsForwarded == 0 || result.ViewerPacketsReceived == 0 {
+		t.Fatalf("cascade did not deliver media through both workers: %+v", result)
+	}
+	if !reflect.DeepEqual(result.RelayTrackIDs, []string{result.TrackID}) ||
+		!reflect.DeepEqual(result.ViewerTrackIDs, []string{result.TrackID}) {
+		t.Fatalf("cascade leaked or changed track identity: %+v", result)
+	}
+	if result.NACKReceived == 0 || result.NACKForwarded == 0 ||
+		result.NACKRetransmitted == 0 ||
+		!result.PLIReachedPublisher ||
+		!result.FIRReachedPublisher || result.PLIForwarded == 0 || result.FIRForwarded == 0 {
+		t.Fatalf("cascade RTCP/retransmission gate incomplete: %+v", result)
+	}
+	if !result.CleanupVerified {
+		t.Fatalf("cascade left router state after cleanup: %+v", result)
+	}
+}
+
 const webrtcConnected = "connected"
 
 func TestVideoFrameAssemblerRequiresCompleteContiguousFrame(t *testing.T) {
@@ -502,6 +542,75 @@ func TestVideoFrameAssemblerRequiresCompleteContiguousFrame(t *testing.T) {
 	}}); !complete || frameID != 90 {
 		t.Fatalf("frame after late retransmission = (%d, %v), want (90, true)",
 			frameID, complete)
+	}
+}
+
+func TestParseSFUFrameDiagnosticIDsDeduplicatesAndSorts(t *testing.T) {
+	ids, err := parseSFUFrameDiagnosticIDs(" 20,10,20 ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(ids, []uint32{10, 20}) {
+		t.Fatalf("unexpected frame IDs: %v", ids)
+	}
+	for _, invalid := range []string{"", "1,", "-1", "4294967296"} {
+		if _, err := parseSFUFrameDiagnosticIDs(invalid); err == nil {
+			t.Errorf("expected %q to be rejected", invalid)
+		}
+	}
+}
+
+func TestSFUFrameDiagnosticRecorderFiltersAndBoundsJSONL(t *testing.T) {
+	var output bytes.Buffer
+	recorder, err := newSFUFrameDiagnosticRecorder(&output, "selected.jsonl", []uint32{20}, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	packet := &rtp.Packet{
+		Header: rtp.Header{SequenceNumber: 10, Timestamp: 20, Marker: true},
+	}
+	assembler := &videoFrameAssembler{
+		frameBoundaryKnown:     true,
+		nextFrameFirstSequence: 10,
+	}
+	before := snapshotSFUFrameAssembler(assembler)
+	frameID, complete := assembler.push(packet)
+	after := snapshotSFUFrameAssembler(assembler)
+	if !complete || frameID != 20 {
+		t.Fatalf("expected complete frame 20, got frame=%d complete=%t", frameID, complete)
+	}
+	if err := recorder.record("viewer-1", "track-1", packet, before, after, frameID, complete); err != nil {
+		t.Fatal(err)
+	}
+	unrelated := &rtp.Packet{Header: rtp.Header{SequenceNumber: 11, Timestamp: 21}}
+	if err := recorder.record("viewer-1", "track-1", unrelated, after, after, 0, false); err != nil {
+		t.Fatal(err)
+	}
+	if err := recorder.record("viewer-1", "track-1", packet, before, after, frameID, complete); err != nil {
+		t.Fatal(err)
+	}
+	outputText := output.String()
+
+	var record sfuFrameDiagnosticRecord
+	if err := json.NewDecoder(&output).Decode(&record); err != nil {
+		t.Fatal(err)
+	}
+	if record.ViewerID != "viewer-1" || record.TrackID != "track-1" ||
+		record.SequenceNumber != 10 || record.Timestamp != 20 || !record.Marker ||
+		!record.FrameComplete || record.CompletedFrameID == nil || *record.CompletedFrameID != 20 {
+		t.Fatalf("unexpected diagnostic record: %+v", record)
+	}
+	if !reflect.DeepEqual(record.Transitions, []string{
+		"timestamp", "marker_seen", "marker_sequence", "next_frame_first_sequence",
+	}) {
+		t.Fatalf("unexpected assembler transitions: %v", record.Transitions)
+	}
+	if summary := recorder.summary(); summary == nil || summary.RecordsWritten != 1 || !summary.Truncated {
+		t.Fatalf("unexpected diagnostic summary: %+v", summary)
+	}
+	if strings.Count(outputText, "\n") != 1 {
+		t.Fatalf("diagnostic output exceeded its record cap: %q", outputText)
 	}
 }
 
@@ -1128,8 +1237,13 @@ func TestPrometheusMetricsExposeForwardingAndResourceSignals(t *testing.T) {
 	}
 	subscription.nackQueue <- queuedNACK{feedback: &rtcp.TransportLayerNack{}}
 	key := sfuTrackKey{PublisherID: "publisher", TrackID: "track"}
+	source := &sfuPublishedTrack{packetCache: make(map[uint16]*rtp.Packet)}
+	source.rememberPacket(&rtp.Packet{
+		Header:  rtp.Header{SequenceNumber: 42},
+		Payload: []byte{1, 2, 3},
+	})
 	router := &sfuRouter{
-		tracks: map[sfuTrackKey]*sfuPublishedTrack{key: {}},
+		tracks: map[sfuTrackKey]*sfuPublishedTrack{key: source},
 		viewers: map[string]*sfuViewer{
 			"viewer": {subscriptions: map[sfuTrackKey]*sfuSubscription{key: subscription}},
 		},
@@ -1150,6 +1264,8 @@ func TestPrometheusMetricsExposeForwardingAndResourceSignals(t *testing.T) {
 	}
 	for _, metric := range []string{
 		"hami_sfu_rtp_forward_seconds_sum",
+		"hami_sfu_nack_cache_packets 1",
+		"hami_sfu_nack_cache_payload_bytes 3",
 		"hami_sfu_rtp_forward_errors_total 2",
 		"hami_sfu_rtp_queue_dropped_total 4",
 		"hami_sfu_rtp_intentional_shed_total 6",
@@ -1165,6 +1281,36 @@ func TestPrometheusMetricsExposeForwardingAndResourceSignals(t *testing.T) {
 		if !strings.Contains(output.String(), metric) {
 			t.Errorf("Prometheus output missing %q", metric)
 		}
+	}
+}
+
+func TestPublishedTrackPacketCacheAccountingHandlesReplacementAndEviction(t *testing.T) {
+	track := &sfuPublishedTrack{packetCache: make(map[uint16]*rtp.Packet)}
+	remember := func(sequence uint16, payloadSize int) {
+		track.rememberPacket(&rtp.Packet{
+			Header:  rtp.Header{SequenceNumber: sequence},
+			Payload: make([]byte, payloadSize),
+		})
+	}
+
+	remember(0, 3)
+	remember(0, 2)
+	for sequence := 1; sequence < sfuNACKHistoryPackets; sequence++ {
+		remember(uint16(sequence), 1)
+	}
+	remember(sfuNACKHistoryPackets, 4)
+
+	if got, want := track.packetCachePackets.Load(), int64(sfuNACKHistoryPackets); got != want {
+		t.Errorf("cached packet count = %d, want %d", got, want)
+	}
+	if got, want := track.packetCachePayloadBytes.Load(), int64(sfuNACKHistoryPackets+3); got != want {
+		t.Errorf("cached payload bytes = %d, want %d", got, want)
+	}
+	if _, exists := track.packetCache[0]; exists {
+		t.Error("oldest packet remains after cache eviction")
+	}
+	if _, exists := track.packetCache[sfuNACKHistoryPackets]; !exists {
+		t.Error("newest packet is missing after cache eviction")
 	}
 }
 
@@ -1196,6 +1342,19 @@ func TestMetricsEndpointIsLoopbackOnlyAndServesPrometheus(t *testing.T) {
 	if response.StatusCode != http.StatusOK ||
 		!strings.Contains(string(body), "hami_sfu_nack_queue_depth 0") {
 		t.Fatalf("metrics response status=%d body=%q", response.StatusCode, body)
+	}
+
+	profileResponse, err := http.Get("http://" + server.Addr + "/debug/pprof/heap?gc=1")
+	if err != nil {
+		t.Fatalf("capture local heap profile: %v", err)
+	}
+	defer profileResponse.Body.Close()
+	profile, err := io.ReadAll(profileResponse.Body)
+	if err != nil {
+		t.Fatalf("read local heap profile: %v", err)
+	}
+	if profileResponse.StatusCode != http.StatusOK || len(profile) == 0 {
+		t.Fatalf("heap profile response status=%d bytes=%d", profileResponse.StatusCode, len(profile))
 	}
 }
 

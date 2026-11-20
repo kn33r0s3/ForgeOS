@@ -35,6 +35,9 @@ Ties every engine together into one runnable cycle:
     9.5 Substrate adapters             -> refresh additive projections from
                                           source-of-truth tables (entities,
                                           relations, events, capabilities)
+    9.6 Capacity gates                 -> evaluate the local SFU TEST chain
+                                          from recorded evidence and stage
+                                          internal proposals only
     10. Money Engine                   -> classify monetization models and
                                           flag opportunities needing
                                           revenue validation (v1.2).
@@ -68,7 +71,7 @@ Ties every engine together into one runnable cycle:
 
 A fatal failure in stages 1-14 marks the whole CycleRun FAILED honestly
 and re-raises; several stages capture their own errors independently
-(opportunity_claim_questions, substrate_adapters, decision_proposal,
+(opportunity_claim_questions, substrate_adapters, capacity_gate_tick, decision_proposal,
 lessons_memory, orchestration, action_proposal, revenue_miner) so one
 bad stage doesn't poison the rest of the run.
 
@@ -88,8 +91,15 @@ tokenizer). Keeping the sync call at the orchestration level avoids
 that entirely.
 """
 
+import hashlib
+import json
+from pathlib import Path
+import tempfile
+from typing import Optional
+
 from sqlalchemy.orm import Session
 
+from app import models
 from app.config import settings
 from app.services import (
     pattern_engine,
@@ -106,7 +116,415 @@ from app.services import (
     scenario_engine,
 )
 from app.services.observer_engine import ObserverEngine
-from typing import Optional
+
+
+_CAPACITY_GATE_DEFINITIONS = (
+    {
+        "gate_key": "sfu-1000-baseline",
+        "display_name": "SFU 1,000-viewer local baseline",
+        "required_evidence": [{
+            "evidence_key": "20x50_pass",
+            "description": "A full local 20-publisher by 50-viewer measurement gate passes.",
+        }],
+    },
+    {
+        "gate_key": "sfu-1500-frame-integrity",
+        "display_name": "SFU 1,500-viewer frame integrity",
+        "required_evidence": [{
+            "evidence_key": "20x75_frame_integrity_pass",
+            "description": "Every selected RTP timestamp reconciles at every viewer.",
+        }],
+    },
+    {
+        "gate_key": "sfu-1500-cause",
+        "display_name": "SFU 1,500-viewer frame cause",
+        "required_evidence": [{
+            "evidence_key": "frame_cause_localized",
+            "description": "The packet and assembler evidence accounts for each missing frame.",
+        }],
+    },
+    {
+        "gate_key": "sfu-safe-copy-treatment",
+        "display_name": "SFU safe packet-copy treatment",
+        "required_evidence": [{
+            "evidence_key": "nack_regression_passed",
+            "description": "NACK, PLI, FIR, retransmission, and viewer delivery all pass.",
+        }],
+    },
+    {
+        "gate_key": "sfu-1500-repeat",
+        "display_name": "SFU 1,500-viewer repeat",
+        "required_evidence": [
+            {
+                "evidence_key": "20x75_repeat_pass",
+                "description": "A matched 20-by-75 repeat passes the full per-viewer gate.",
+            },
+            {
+                "evidence_key": "host_headroom_verified",
+                "description": "Host headroom is above the recorded safety floor before the run.",
+            },
+        ],
+    },
+)
+_CAPACITY_GATE_DEPENDENCIES = (
+    ("sfu-1500-frame-integrity", "sfu-1000-baseline"),
+    ("sfu-1500-cause", "sfu-1500-frame-integrity"),
+    ("sfu-safe-copy-treatment", "sfu-1000-baseline"),
+    ("sfu-1500-repeat", "sfu-1500-cause"),
+    ("sfu-1500-repeat", "sfu-safe-copy-treatment"),
+)
+_CAPACITY_GATE_ACTION_OBJECTIVES = {
+    "sfu-1500-frame-integrity": (
+        "Add bounded RTP/frame-assembler diagnostics for the known timestamps; "
+        "do not start the 20x75 run until free swap is at least 2048 MiB."
+    ),
+    "sfu-1500-cause": (
+        "Use retained RTP sequence and assembler evidence to localize each missing frame; "
+        "do not start a scale run."
+    ),
+    "sfu-safe-copy-treatment": (
+        "Assess a Pion packet-copy treatment behind the existing NACK/PLI/FIR and "
+        "viewer-retransmission regression; do not start a scale run."
+    ),
+    "sfu-1500-repeat": (
+        "Verify host headroom and prepare a matched 20x75 repeat only; require at least "
+        "2048 MiB free swap and an owner-started run."
+    ),
+}
+
+
+def _local_gate_results(
+    db: Session,
+    gate: models.SubstrateEntity,
+) -> tuple[str, list[int], int]:
+    required = json.loads(gate.attributes)["required_evidence"]
+    required_keys = {item["evidence_key"] for item in required}
+    matching: dict[str, list[models.WorldEvent]] = {key: [] for key in required_keys}
+    rejected_events = 0
+    for row in (
+        db.query(models.WorldEvent)
+        .filter_by(entity_id=gate.id, event_type="capacity_gate_result")
+        .order_by(models.WorldEvent.id.asc())
+        .all()
+    ):
+        try:
+            payload = json.loads(row.payload or "{}")
+        except (TypeError, json.JSONDecodeError):
+            rejected_events += 1
+            continue
+        if not isinstance(payload, dict):
+            rejected_events += 1
+            continue
+        evidence_key = payload.get("evidence_key")
+        if (
+            not isinstance(evidence_key, str)
+            or evidence_key not in matching
+            or payload.get("gate_key") != json.loads(gate.attributes)["gate_key"]
+            or row.source != "sfu-single"
+        ):
+            rejected_events += 1
+            continue
+        artifact_ref = payload.get("artifact_ref")
+        artifact_digest = payload.get("artifact_sha256")
+        revision = payload.get("revision")
+        if (
+            payload.get("data_scope") != "TEST"
+            or payload.get("environment") != "local"
+            or not isinstance(payload.get("run_id"), str)
+            or not payload["run_id"].strip()
+            or not isinstance(payload.get("command"), str)
+            or not payload["command"].strip()
+            or payload.get("result") not in {"passed", "failed"}
+            or not isinstance(revision, str)
+            or not 7 <= len(revision) <= 40
+            or any(character not in "0123456789abcdef" for character in revision)
+            or not isinstance(artifact_digest, str)
+            or len(artifact_digest) != 64
+            or any(character not in "0123456789abcdef" for character in artifact_digest)
+            or not isinstance(artifact_ref, str)
+            or not Path(artifact_ref).is_absolute()
+        ):
+            rejected_events += 1
+            continue
+        try:
+            artifact_path = Path(artifact_ref).resolve(strict=True)
+            artifact_root = Path(tempfile.gettempdir()).resolve()
+            artifact_path.relative_to(artifact_root)
+            if (
+                not artifact_path.name.startswith("hami-capacity-gate-result-")
+                or artifact_path.suffix != ".json"
+                or not artifact_path.is_file()
+                or artifact_path.stat().st_size > 64 * 1024 * 1024
+            ):
+                rejected_events += 1
+                continue
+            artifact_bytes = artifact_path.read_bytes()
+            if len(artifact_bytes) > 64 * 1024 * 1024:
+                rejected_events += 1
+                continue
+            artifact = json.loads(artifact_bytes.decode("utf-8"))
+            actual_digest = hashlib.sha256(artifact_bytes).hexdigest()
+        except (
+            OSError,
+            RuntimeError,
+            ValueError,
+            UnicodeDecodeError,
+            json.JSONDecodeError,
+        ):
+            rejected_events += 1
+            continue
+        if (
+            actual_digest != artifact_digest
+            or not isinstance(artifact, dict)
+            or any(
+                artifact.get(field) != payload.get(field)
+                for field in (
+                    "gate_key", "evidence_key", "data_scope", "environment",
+                    "run_id", "revision", "command", "result",
+                )
+            )
+        ):
+            rejected_events += 1
+            continue
+        matching[evidence_key].append(row)
+
+    result_event_ids = sorted(row.id for rows in matching.values() for row in rows)
+    if any(json.loads(row.payload).get("result") == "failed" for rows in matching.values() for row in rows):
+        return "BLOCKED", result_event_ids, rejected_events
+    passed_keys = {
+        key for key, rows in matching.items()
+        if any(
+            json.loads(row.payload).get("result") == "passed"
+            for row in rows
+        )
+    }
+    if len(passed_keys) == len(required_keys):
+        return "PROVEN", result_event_ids, rejected_events
+    if result_event_ids:
+        return "IN_PROGRESS", result_event_ids, rejected_events
+    return "UNKNOWN", result_event_ids, rejected_events
+
+
+def run_capacity_gate_tick(db: Session) -> dict:
+    """Re-evaluate the existing SFU gate chain from local TEST evidence only."""
+    from app import models
+    from app.services import action_engine, world_graph
+
+    world_graph.seed_core_types(db)
+    gates: dict[str, models.SubstrateEntity] = {}
+    created_gates = 0
+    for definition in _CAPACITY_GATE_DEFINITIONS:
+        gate_key = definition["gate_key"]
+        identity_key = f"source:gate:forge_gate_definition:{gate_key}"
+        if db.query(models.SubstrateEntity.id).filter_by(identity_key=identity_key).first() is None:
+            created_gates += 1
+        gates[gate_key] = world_graph.create_entity(
+            db,
+            entity_type="gate",
+            display_name=definition["display_name"],
+            attributes={
+                "gate_key": gate_key,
+                "required_evidence": definition["required_evidence"],
+            },
+            created_by="forge_gate_tick",
+            identity={
+                "source_system": "forge_gate_definition",
+                "source_id": gate_key,
+                "provenance": {
+                    "definition": "forge_loop.capacity_gate_definitions",
+                    "gate_key": gate_key,
+                },
+            },
+        )
+
+    created_relations = 0
+    for dependent_key, prerequisite_key in _CAPACITY_GATE_DEPENDENCIES:
+        idempotency_key = f"capacity-gate-dependency:{dependent_key}:{prerequisite_key}"
+        if db.query(models.WorldRelation.id).filter_by(idempotency_key=idempotency_key).first() is None:
+            created_relations += 1
+        world_graph.create_relation(
+            db,
+            from_entity_id=gates[dependent_key].id,
+            to_entity_id=gates[prerequisite_key].id,
+            relation_type="depends_on",
+            attributes={"source": "capacity_gate_definition"},
+            created_by="forge_gate_tick",
+            idempotency_key=idempotency_key,
+        )
+
+    gate_ids = {gate.id for gate in gates.values()}
+    gate_key_by_id = {gate.id: gate_key for gate_key, gate in gates.items()}
+    dependencies_by_key: dict[str, list[str]] = {
+        gate_key: [] for gate_key in gates
+    }
+    for relation in (
+        db.query(models.WorldRelation)
+        .filter(
+            models.WorldRelation.relation_type == "depends_on",
+            models.WorldRelation.from_entity_id.in_(gate_ids),
+            models.WorldRelation.to_entity_id.in_(gate_ids),
+        )
+        .order_by(models.WorldRelation.id.asc())
+        .all()
+    ):
+        dependent_key = gate_key_by_id[relation.from_entity_id]
+        prerequisite_key = gate_key_by_id[relation.to_entity_id]
+        dependencies_by_key[dependent_key].append(prerequisite_key)
+
+    evidence_states: dict[str, tuple[str, list[int], int]] = {
+        gate_key: _local_gate_results(db, gate)
+        for gate_key, gate in gates.items()
+    }
+    states: dict[str, str] = {}
+    transition_event_ids: dict[str, int | None] = {}
+    events_created = 0
+    for definition in _CAPACITY_GATE_DEFINITIONS:
+        gate_key = definition["gate_key"]
+        gate = gates[gate_key]
+        evidence_state, result_event_ids, rejected_events = evidence_states[gate_key]
+        dependencies = {
+            prerequisite_key: states.get(prerequisite_key, "UNKNOWN")
+            for prerequisite_key in dependencies_by_key[gate_key]
+        }
+        if "BLOCKED" in dependencies.values():
+            state = "BLOCKED"
+        elif evidence_state == "PROVEN" and any(state != "PROVEN" for state in dependencies.values()):
+            state = "IN_PROGRESS"
+        else:
+            state = evidence_state
+        states[gate_key] = state
+
+        prior_event = (
+            db.query(models.WorldEvent)
+            .filter_by(entity_id=gate.id, event_type="gate_evaluated")
+            .order_by(models.WorldEvent.id.desc())
+            .first()
+        )
+        prior_payload = json.loads(prior_event.payload) if prior_event else {}
+        prior_state = prior_payload.get("state", "UNKNOWN")
+        state_changed = prior_state != state
+        dependency_signature = ",".join(
+            f"{key}={value}" for key, value in sorted(dependencies.items())
+        )
+        event_key = (
+            f"capacity-gate-evaluation:{gate_key}:{prior_state}->{state}:"
+            f"{','.join(str(event_id) for event_id in result_event_ids)}:"
+            f"rejected={rejected_events}:{dependency_signature}"
+        )
+        if db.query(models.WorldEvent.id).filter_by(idempotency_key=event_key).first() is None:
+            events_created += 1
+        evaluation_event = world_graph.create_event(
+            db,
+            event_type="gate_evaluated",
+            source="forge_gate_tick",
+            entity_id=gate.id,
+            payload={
+                "gate_key": gate_key,
+                "previous_state": prior_state,
+                "state": state,
+                "state_changed": state_changed,
+                "result_event_ids": result_event_ids,
+                "rejected_result_events": rejected_events,
+                "dependency_states": dependencies,
+                "data_scope": "TEST",
+            },
+            idempotency_key=event_key,
+        )
+        if state == "PROVEN":
+            if state_changed:
+                transition_event_ids[gate_key] = evaluation_event.id
+            else:
+                transition_event_ids[gate_key] = _latest_proven_gate_transition_id(
+                    db,
+                    gate.id,
+                )
+        else:
+            transition_event_ids[gate_key] = None
+
+    actions_proposed = 0
+    for dependent_key, prerequisite_keys in dependencies_by_key.items():
+        dependent_state = states[dependent_key]
+        if (
+            not prerequisite_keys
+            or dependent_state not in {"UNKNOWN", "IN_PROGRESS"}
+            or any(states[key] != "PROVEN" for key in prerequisite_keys)
+        ):
+            continue
+        prerequisite_event_ids = {
+            key: transition_event_ids[key]
+            for key in prerequisite_keys
+        }
+        if any(event_id is None for event_id in prerequisite_event_ids.values()):
+            continue
+        if _existing_gate_transition_action(
+            db,
+            gates[dependent_key].id,
+            prerequisite_event_ids,
+        ):
+            continue
+        action_engine.propose_action(
+            db,
+            action_type="research",
+            objective=_CAPACITY_GATE_ACTION_OBJECTIVES[dependent_key],
+            parameters={
+                "data_scope": "TEST",
+                "gate_key": dependent_key,
+                "gate_entity_id": gates[dependent_key].id,
+                "trigger_event_ids": prerequisite_event_ids,
+                "trigger_gate_keys": prerequisite_keys,
+                "execution_boundary": "proposal_only",
+                "requires_owner_to_start": True,
+            },
+            estimated_cost=0.0,
+            risk_score=0.0,
+        )
+        actions_proposed += 1
+
+    return {
+        "gates_created": created_gates,
+        "relations_created": created_relations,
+        "gate_evaluations_created": events_created,
+        "gate_states": states,
+        "unverified_result_events": sum(item[2] for item in evidence_states.values()),
+        "actions_proposed": actions_proposed,
+        "executed": False,
+    }
+
+
+def _latest_proven_gate_transition_id(db: Session, gate_entity_id: int) -> int | None:
+    from app import models
+
+    events = (
+        db.query(models.WorldEvent)
+        .filter_by(entity_id=gate_entity_id, event_type="gate_evaluated")
+        .order_by(models.WorldEvent.id.desc())
+        .all()
+    )
+    for event in events:
+        payload = json.loads(event.payload)
+        if payload.get("state") == "PROVEN" and payload.get("state_changed") is True:
+            return event.id
+    return None
+
+
+def _existing_gate_transition_action(
+    db: Session,
+    gate_entity_id: int,
+    trigger_event_ids: dict[str, int | None],
+) -> bool:
+    actions = db.query(models.Action).filter_by(action_type="research").all()
+    for action in actions:
+        try:
+            parameters = json.loads(action.parameters_json or "{}")
+        except json.JSONDecodeError:
+            continue
+        if (
+            isinstance(parameters, dict)
+            and parameters.get("gate_entity_id") == gate_entity_id
+            and parameters.get("trigger_event_ids") == trigger_event_ids
+        ):
+            return True
+    return False
 
 
 def run_cycle(db: Session, data_scope: str = "REAL") -> dict:
@@ -398,6 +816,24 @@ def _run_cycle_impl(db: Session, data_scope: str = "REAL") -> dict:
         except Exception:
             pass
 
+    gate_tick_summary = {
+        "gates_created": 0,
+        "relations_created": 0,
+        "gate_evaluations_created": 0,
+        "gate_states": {},
+        "actions_proposed": 0,
+        "executed": False,
+    }
+    try:
+        gate_tick_summary = run_capacity_gate_tick(db)
+        db.commit()
+    except Exception as exc:
+        stage_errors["capacity_gate_tick"] = str(exc)
+        try:
+            db.rollback()
+        except Exception:
+            pass
+
     # 10. Money Engine: classify monetization models, flag opportunities
     #    needing revenue validation. Identification only — see
     #    money_engine.run_money_cycle()'s docstring for the boundary.
@@ -589,6 +1025,7 @@ def _run_cycle_impl(db: Session, data_scope: str = "REAL") -> dict:
         "substrate_research_question_relations_unresolved": substrate_summary["research_question_relations_unresolved"],
         "substrate_research_task_events_projected": substrate_summary["research_task_events_projected"],
         "substrate_research_task_events_unresolved": substrate_summary["research_task_events_unresolved"],
+        "capacity_gate_tick": gate_tick_summary,
         "beliefs_updated": beliefs_updated,
         "predictions_created": predictions_created,
         "predictions_resolved": len(resolved_predictions),

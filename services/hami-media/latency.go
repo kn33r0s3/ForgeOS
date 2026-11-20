@@ -11,10 +11,10 @@
 // carried in every record and in the summary so it can never be misread.
 //
 // Metric: L = T_event - T_capture, same machine, monotonic clock.
-// Frame identity is the RTP timestamp (one video frame = one RTP
-// timestamp; fragments of a frame share it; audio uses the sample
-// timestamp). The publisher stamps each frame at capture; the
-// subscriber matches the event to the same identity.
+// Video frame identity is its RTP timestamp (fragments of a frame share it).
+// Audio measurements use AudioFrameClock keyed by the audio RTP timestamp.
+// The publisher stamps each frame at capture; the subscriber matches the
+// event to the same identity.
 //
 // Acceptance (Task 017 metric plan): p95 <= 100 ms (primary), p99 <=
 // 150 ms (guardrail), >= 300 frames per subscriber, >= 60 s, EVERY
@@ -46,10 +46,7 @@ const (
 	ModeReceive = "receive"
 )
 
-// FrameClock records capture instants keyed by frame identity.
-// One clock per publisher, shared with its subscribers (same process,
-// same monotonic clock domain).
-type FrameClock struct {
+type captureClockState struct {
 	mu                 sync.Mutex
 	captures           map[uint64]time.Time
 	remainingConsumers map[uint64]int
@@ -57,18 +54,39 @@ type FrameClock struct {
 	capturesStarted    bool
 }
 
-// NewFrameClock returns an empty clock.
-func NewFrameClock() *FrameClock {
-	return &FrameClock{
+func newCaptureClockState() captureClockState {
+	return captureClockState{
 		captures:           make(map[uint64]time.Time),
 		remainingConsumers: make(map[uint64]int),
 		expectedConsumers:  1,
 	}
 }
 
+// FrameClock records capture instants for video frames. One clock per
+// publisher, shared with its subscribers (same process, same monotonic clock).
+type FrameClock struct {
+	captureClockState
+}
+
+// AudioFrameClock records capture instants for audio frames. It is a distinct
+// type so audio measurements cannot accidentally use the video clock.
+type AudioFrameClock struct {
+	captureClockState
+}
+
+// NewFrameClock returns an empty video frame clock.
+func NewFrameClock() *FrameClock {
+	return &FrameClock{captureClockState: newCaptureClockState()}
+}
+
+// NewAudioFrameClock returns an empty audio frame clock.
+func NewAudioFrameClock() *AudioFrameClock {
+	return &AudioFrameClock{captureClockState: newCaptureClockState()}
+}
+
 // SetExpectedConsumers configures how many subscriber recorders share each
 // capture. It must be called before the first frame is captured.
-func (c *FrameClock) SetExpectedConsumers(consumers int) error {
+func (c *captureClockState) SetExpectedConsumers(consumers int) error {
 	if consumers < 1 {
 		return fmt.Errorf("expected consumers must be positive")
 	}
@@ -83,7 +101,7 @@ func (c *FrameClock) SetExpectedConsumers(consumers int) error {
 
 // Capture records the capture instant for a frame. t must come from the
 // same machine's monotonic clock as the render/receive instant.
-func (c *FrameClock) Capture(frameID uint64, t time.Time) {
+func (c *captureClockState) Capture(frameID uint64, t time.Time) {
 	c.mu.Lock()
 	c.captures[frameID] = t
 	c.remainingConsumers[frameID] = c.expectedConsumers
@@ -92,12 +110,12 @@ func (c *FrameClock) Capture(frameID uint64, t time.Time) {
 }
 
 // CaptureNow stamps a frame with the current time.
-func (c *FrameClock) CaptureNow(frameID uint64) {
+func (c *captureClockState) CaptureNow(frameID uint64) {
 	c.Capture(frameID, time.Now())
 }
 
 // Lookup returns the capture instant for a frame, if it was recorded.
-func (c *FrameClock) Lookup(frameID uint64) (time.Time, bool) {
+func (c *captureClockState) Lookup(frameID uint64) (time.Time, bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	t, ok := c.captures[frameID]
@@ -105,7 +123,7 @@ func (c *FrameClock) Lookup(frameID uint64) (time.Time, bool) {
 }
 
 // Forget explicitly drops a frame's capture record.
-func (c *FrameClock) Forget(frameID uint64) {
+func (c *captureClockState) Forget(frameID uint64) {
 	c.mu.Lock()
 	delete(c.captures, frameID)
 	delete(c.remainingConsumers, frameID)
@@ -113,7 +131,7 @@ func (c *FrameClock) Forget(frameID uint64) {
 }
 
 // consume releases a capture after all expected subscribers match it.
-func (c *FrameClock) consume(frameID uint64) {
+func (c *captureClockState) consume(frameID uint64) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	remaining := c.remainingConsumers[frameID]
@@ -127,7 +145,7 @@ func (c *FrameClock) consume(frameID uint64) {
 
 // Pending returns how many captures still await one or more subscriber
 // matches. A nonzero value is a frame-delivery loss signal for the proof.
-func (c *FrameClock) Pending() int {
+func (c *captureClockState) Pending() int {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return len(c.captures)
@@ -173,6 +191,18 @@ func (r *LatencyRecorder) Mode() string {
 // Record matches an event (render or receive) to its capture instant and
 // stores the latency. Returns false when the frame was never stamped.
 func (r *LatencyRecorder) Record(frameID uint64, clock *FrameClock, tEvent time.Time) bool {
+	return r.record(frameID, clock, tEvent)
+}
+
+// RecordAudio matches a rendered audio frame to an audio capture instant.
+func (r *LatencyRecorder) RecordAudio(frameID uint64, clock *AudioFrameClock, tEvent time.Time) bool {
+	return r.record(frameID, clock, tEvent)
+}
+
+func (r *LatencyRecorder) record(frameID uint64, clock interface {
+	Lookup(uint64) (time.Time, bool)
+	consume(uint64)
+}, tEvent time.Time) bool {
 	cap, ok := clock.Lookup(frameID)
 	if !ok {
 		r.mu.Lock()
@@ -198,6 +228,11 @@ func (r *LatencyRecorder) Record(frameID uint64, clock *FrameClock, tEvent time.
 // RecordNow is Record with tEvent = time.Now().
 func (r *LatencyRecorder) RecordNow(frameID uint64, clock *FrameClock) bool {
 	return r.Record(frameID, clock, time.Now())
+}
+
+// RecordAudioNow is RecordAudio with tEvent = time.Now().
+func (r *LatencyRecorder) RecordAudioNow(frameID uint64, clock *AudioFrameClock) bool {
+	return r.RecordAudio(frameID, clock, time.Now())
 }
 
 // Summary is the per-subscriber proof result.

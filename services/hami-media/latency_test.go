@@ -93,6 +93,34 @@ func TestFrameClockSharedSubscribers(t *testing.T) {
 	}
 }
 
+func TestAudioFrameClockSharedSubscribers(t *testing.T) {
+	c := NewAudioFrameClock()
+	if err := c.SetExpectedConsumers(2); err != nil {
+		t.Fatal(err)
+	}
+	capturedAt := time.Now()
+	c.Capture(27, capturedAt)
+
+	first := NewLatencyRecorder(ModeRender)
+	if !first.RecordAudio(27, c, capturedAt.Add(12*time.Millisecond)) {
+		t.Fatal("first audio renderer should match the frame")
+	}
+	if _, ok := c.Lookup(27); !ok || c.Pending() != 1 {
+		t.Fatal("audio capture should remain until the second renderer matches")
+	}
+
+	second := NewLatencyRecorder(ModeRender)
+	if !second.RecordAudioNow(27, c) {
+		t.Fatal("second audio renderer should match the frame")
+	}
+	if _, ok := c.Lookup(27); ok || c.Pending() != 0 {
+		t.Fatal("audio capture should be released after all renderers match")
+	}
+	if first.Mode() != ModeRender || first.Summary().Frames != 1 {
+		t.Fatal("audio latency recorder did not retain the rendered sample")
+	}
+}
+
 func TestRecorderModeFallback(t *testing.T) {
 	if r := NewLatencyRecorder(ModeRender); r.Mode() != ModeRender {
 		t.Fatalf("mode = %q, want %q", r.Mode(), ModeRender)
