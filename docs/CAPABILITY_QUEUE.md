@@ -50,6 +50,18 @@
   `/tmp/hami-m7h-cost-3000.stderr`,
   `/tmp/hami-m7h-cost-3000-{harness,sfu}-after-media.pprof`, and
   `/tmp/hami-m7h-cost-3000-cpu-{harness,sfu}-streaming-30s.pprof`.
+- **Cheaply killed no-copy hypothesis:** Pion's `nack.DisableCopy()` looks
+  like a way to remove the 3.82 GB per-viewer `PacketFactoryCopy` cost, but
+  pinned WebRTC v4.2.26's `TrackLocalStaticRTP.WriteRTP` obtains a pooled
+  `rtp.Packet` and resets/reuses it as soon as the interceptor writer returns
+  (`track_local_static.go`, `resetPacketPoolAllocation` and `WriteRTP`).
+  Interceptor v0.1.51's `PacketFactoryNoOp` retains the header pointer, so a
+  responder configured with `DisableCopy()` would keep a mutable/recycled
+  header and could corrupt later NACK retransmissions. It is not a loss-free
+  optimization and was not adopted. The public responder option does not
+  accept a custom header-clone/payload-share factory; the next safe dependency
+  is an explicit Pion option for that ownership model plus NACK regression
+  evidence.
 - **Safety stop and unresolved p99:** after the profiles were captured, the
   diagnostic was stopped because macOS reported 10.07 GB of 11.26 GB swap in
   use (1.19 GB free) while the SFU heap continued growing. The JSON result is
