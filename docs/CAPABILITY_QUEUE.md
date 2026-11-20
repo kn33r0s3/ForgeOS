@@ -1,3 +1,188 @@
+## 2026-11-20 17:20 +0545 — RTP-copy cost reduced; 3,000-pair degradation profiled
+
+- **Existing seam and owner action:** the `sfu-single` M6-H scale path was
+  capped at two viewers per publisher, so the owner could not express the
+  requested 20-publisher / 5,000-viewer topology. The local scale builder now
+  accepts up to 250 viewers per publisher, caps total viewers at 5,000, and
+  encodes publisher count, fan-out, total viewers, and 5 fps in the proof ID.
+  The code removes the harness-only 1–2 fan-out restriction; it does not claim
+  that the host can run the maximum topology.
+- **Bounded exact-shape validation:** `go test ./...` passes, including a
+  configuration test that verifies 20 tracks × 250 viewers = 5,000 viewers
+  at 5 fps. A local `sfu-single` run of 20 publishers × 3 viewers for 61 s
+  passed (`evidence_type=TEST`, `local_only=true`, `measurement_pass=true`):
+  60/60 viewer latency summaries passed, every viewer received only its
+  requested track, minimum 304 frames, maximum p99 1.019458 ms, and zero RTP
+  intentional sheds, queue drops, write errors, or forwarding errors. This is
+  only a 60-viewer smoke; no 5,000-viewer capacity result exists.
+- **Copy-cost measurement:** the cached-retransmission benchmark changed from
+  181.9–184.1 ns/op, 1,434 B/op, 4 allocs/op to 62.60–63.14 ns/op, 154 B/op,
+  3 allocs/op (five runs). That is 65.7% lower time, 89.3% fewer allocated
+  bytes, and one fewer allocation in this microbenchmark. Retransmission
+  packets now clone mutable RTP header storage but share the read-only payload.
+  This does not establish a per-viewer or end-to-end capacity improvement.
+- `forwardTrack` also reuses one scratch subscriber slice per publisher-track
+  goroutine and releases the router read lock before enqueueing. This is a
+  per-packet snapshot, not the previously rejected persistent subscriber-map
+  cache. It was not isolated in a benchmark, so its cost contribution remains
+  unmeasured and is not included in the copy-cost delta above.
+- **Task 017 compile rung:** Go 1.27.4 and the pinned PortAudio submodule are
+  available in the sibling local checkout. `go test ./pkg/loadtester`,
+  `go vet ./pkg/loadtester/`, and `go build ./...` all pass. The source change
+  is recorded in local commit `fde64da9f2cfac9b17582d79704ccf0abe97ac17`;
+  runtime validation against a local LiveKit server remains NOT RUN.
+- **3,000-pair M7-H diagnostic:** command used 3,000 pairs, 125 s, with
+  connected/after-media heap profiles and a bounded 30 s CPU profile. The
+  harness was still sending at 121.011 s (14,860 frames, zero stale
+  publishers); the SFU received only 4,548 packets at 121.075 s, with 2,588
+  publishers stale over 500 ms. At 121.097 s the SFU reported 15.06 GB
+  HeapAlloc, 15.93 GB HeapInuse, 120,631 goroutines, and scheduler p95/max
+  upper bounds of 268 ms / 1.34 s. At 120.006 s, 2,501/3,000 publishers were
+  already stale. This is a degraded live process, not an observed OS kill.
+- **Retained-memory evidence:** the post-media SFU heap profile contained
+  9.66 GB in use; largest flat sites were Pion
+  `PacketFactoryCopy` 3.82 GB, `TrackRemote.ReadRTP` 2.41 GB,
+  `ice.newBufferHolder` 1.01 GB, and `packetio.Buffer.grow` 0.40 GB. The
+  harness profile contained 1.76 GB; `packetio.Buffer.grow` retained
+  435.9 MB and `LatencyRecorder.Record` 147.3 MB. The 5 s CPU profiles were
+  dominated by syscall/kevent/condition-wait work; they did not isolate a
+  single application hot function. Evidence:
+  `/tmp/hami-m7h-cost-3000.stderr`,
+  `/tmp/hami-m7h-cost-3000-{harness,sfu}-after-media.pprof`, and
+  `/tmp/hami-m7h-cost-3000-cpu-{harness,sfu}-streaming-30s.pprof`.
+- **Safety stop and unresolved p99:** after the profiles were captured, the
+  diagnostic was stopped because macOS reported 10.07 GB of 11.26 GB swap in
+  use (1.19 GB free) while the SFU heap continued growing. The JSON result is
+  empty and no final per-viewer p99 was emitted; M7-H p99 is therefore
+  **NOT MEASURABLE** in this run and is not claimed fixed. Memory pressure is
+  strongly implicated in the 121 s degradation but is not proven to be its
+  sole cause. Do not start a 5,000-viewer run on this host from this evidence.
+- **Next removable dependency:** inspect the Pion packet-factory/read-buffer
+  retention path and supported buffer-lifetime controls without shrinking the
+  NACK history or intentionally shedding RTP. Then re-run a bounded 3,000-pair
+  test with an explicit memory abort threshold to obtain a completed p99
+  result. Until that is safe, the 5,000-viewer maximum and
+  `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remain **NOT MEASURABLE**.
+
+## 2026-11-20 15:49 +0545 — 20-streamer / 5,000-viewer single-room order: preflight blocked
+
+- **Requested shape:** 20 video publishers and 5,000 viewers in one room
+  (250 viewers per publisher), 5 fps for 60 s. No load run and no smaller
+  rung were started; the maximum clean viewer count for this exact shape is
+  **NOT MEASURABLE** from current evidence.
+- **Existing M6-H seam and exact limit:** the established
+  [`sfu-single` flags](../services/hami-media/main.go#L320) allow 1–1,000
+  publishers and only 1–2 viewers per publisher; the existing
+  [`runLocalSFUScaleProof`](../services/hami-media/main.go#L6013) rejects
+  larger fan-out at [main.go:6023](../services/hami-media/main.go#L6023).
+  For 20 publishers this invocation can represent at most 40 viewers. The
+  separate M7-H mode is one viewer per publisher and caps at 3,000 pairs
+  ([main.go:323](../services/hami-media/main.go#L323),
+  [main.go:6228](../services/hami-media/main.go#L6228)); it cannot represent
+  20 publishers with 5,000 viewers either.
+- **Exact non-load validation:** the established binary rejected the requested
+  20 × 250 topology before creating peers. Command:
+  `/tmp/hami-media-subscriber-map-reverted -mode=sfu-single -duration=60s
+  -video-file=/tmp/hami-cost-interframe-20261119.h264 -sfu-publishers=20
+  -sfu-viewers-per-publisher=250`. Exit status 1; stdout:
+  `{"error":"SFU scale viewers per publisher must be between 1 and 2, got 250"}`;
+  stderr: `run local Pion sfu-single proof: SFU scale viewers per publisher
+  must be between 1 and 2, got 250`. Captured in
+  `/tmp/hami-media-20streamers-5000-preflight.{stdout,stderr}`.
+- **Alternative is not a same-condition substitute:** the patched sibling
+  `livekit-cli` exposes independent publisher/subscriber counts
+  (`../../livekit-cli/cmd/lk/perf.go`), but its default speaker layout
+  subscribes each viewer to up to six publishers
+  (`../../livekit-cli/pkg/loadtester/loadtester.go`), and its Task 017 H.264
+  provider is hard-coded to 15 fps at line 323. Using it would change both
+  subscription fan-out and frame rate from the requested M6-H pattern; it was
+  not silently substituted.
+- **Local/runtime preflight:** only the cached
+  `livekit/livekit-server:v1.13.11` image was started, loopback-only, to verify
+  the local endpoint (HTTP 200); container baseline was 76.97 MiB. It is now
+  stopped and port 7880 is closed. Host has 24 GiB RAM; after server start,
+  system memory free percentage was 41%, swap was 4,478.50/6,144 MiB used
+  (1,665.50 MiB free), and Docker's VM limit was 15.6 GiB. The order's
+  15–17 GiB / ~370,000-goroutine 5,000-viewer estimate is a forecast, not a
+  measured result; this headroom makes an unbounded attempt unsafe.
+- **Verdict and next dependency:** no clean viewer maximum or latency/memory
+  failure was observed; the test was blocked by the current harness's 2-viewer
+  fan-out limit and insufficient safe headroom for the forecast. Next, use the
+  existing scale seam to support explicit 20-publisher/5,000-viewer mapping
+  at 5 fps, or separately authorize a different CLI pattern and frame rate
+  with a strict memory abort threshold. No Cloud, smaller run, protected
+  setting, `docs/UNKNOWN_MAP.md`, source change, commit, or push.
+
+---
+
+## 2026-11-20 15:17 +0545 — Heap-growth 250/180 run: heap PLATEAUS after ~90 s (self-watch)
+
+- **What ran:** heap-growth followup order (fed 15:06), 250 publisher/viewer pairs, 180 s at 5 fps, `/tmp/hami-media-heap-growth-250-180.{stdout,sfu.log,harness.log}` + pprof at connected/60s/120s/after-media. Run 15:13:06–15:16:07 NPT. Verified by parsing the raw `.stdout` JSON (448,001 B) and all 181 SFU runtime samples directly, not from a summary.
+- **measurement_pass=true** — first full pass at 250: 250/250 pass p95, p99, frames, duration. Frames 899–900/900 per viewer, unmatched 0. Latency p95 median 0.191 ms (max 0.262), p99 median 0.248 ms (max 0.877). NACK path: 0 received/retransmitted/enqueued, 250 forwarded upstream, 0 dropped stale, 0 queue-full; rtp_queue_drops 0, write errors 0, cleanup verified.
+- **Heap NEAR-PLATEAU — corrected (Copilot's post-GC analysis, in the entry below, is the precise reading):** heapAlloc 113.6 MB @1s → 897.8 @60s → 1,235.7 @90s (peak) → 934.6 @120s → 1,222.2 @150s → 936.3 @180s; heapInuse ~1,160–1,320 MB. The raw endpoints are a GC sawtooth (forced GC at the 60s/120s profile checkpoints: 816.5 MB @61s, 815.4 @121s). Post-GC slopes: 2.04 MB/s (61–119s) and 2.08 MB/s (121–179s); retained post-GC inuse 725.34 → 729.38 → 746.47 MB (+21.13 MB over the final 120s, 0.176 MB/s). CORRECTION to the first version of this entry: the 0.61 / 0.03 MB/s window slopes were endpoint artifacts of the sawtooth — the honest reading is slow retained growth (~0.18 MB/s), near-plateau, not flat. Goroutines flat 9,567 throughout.
+- **Retained sites (Copilot's pprof analysis):** `PacketFactoryCopy.NewPacketFactoryCopy.func2` held 374.04 MB flat at all three checkpoints; `TrackRemote.ReadRTP` 190.76 / 187.75 / 205.79 MB; `PacketFactoryCopy.NewPacket` cumulative ~425–429 MB; `packetio.Buffer.grow` 12.57 → 16.12 → 19.67 MB. Retained growth is in packet-copy/read buffers, not accumulating per-frame state.
+- **500/60 rung DONE (verified independently this run from the raw files):** 500/500 connected, heapAlloc 293.5 MB @1s → 2,097.3 @60s; 1–59s slope ~30.6 MB/s (0.0612 MB/s/publisher), in line with the 250 rate (0.0541). measurement_pass=false only on frames (298–299/300, same boundary shortfall); latency passes 500/500 (p95 median 0.165 ms, p99 0.222 ms); NACKs 0, drops 0, cleanup verified. Goroutines 19,067 flat (~38/publisher, same as 250).
+- **Implication for M7-H (corrected):** memory pressure remains plausible but is NOT established as the cause of the ~121 s collapse — the 180s profiles show the pre-GC slope is not retained heap, and the 3,000-pair run's logs show no heap fields or OOM/kill evidence. A naïve 12x projection of the pre-GC slope (~162 MB/s, ~19.6 GB over 121s) is not valid against the retained numbers. Counters DISABLED in both runs (socket aggregates 0), so not M6-H comparable.
+- **Open observation:** packets_received median 3,447/viewer over 180 s = 3.83/frame, vs 5.67/frame in the 60 s control runs. The heap run used the REVERTED binary (Go 1.27.4, VCS 2d2f8b34 — the control path), so the gap is NOT the candidate difference; the packet-explanation order (staged, feeds after the heap followup) is the vehicle. Chat probe 139 (15:15) stands — 63rd consecutive pass.
+
+## 2026-11-20 15:19 +0545 — Exact evidence around the prior 121-second M7-H collapse
+
+- **Context:** the preceding 15:17 entry records the completed 250/180 and
+  optional 500/60 heap runs, pprof results, and TEST outcomes. This
+  supplement preserves the raw 3,000-pair evidence and the causal limit.
+  Existing seams: [`startM7HRuntimeProbe`](../services/hami-media/main.go#L2395)
+  and the protected heap handler
+  [`handleHeapProfile`](../services/hami-media/main.go#L4910). The handler
+  forces GC at [main.go:4920](../services/hami-media/main.go#L4920), so the
+  timed profiles in the preceding entry are post-GC measurements.
+- **Prior 3,000-pair run, directly checked:** in
+  `/tmp/hami-media-011-feedback-timeout-stats-v4-harness.log`, elapsed
+  120.111s had 13,899 frames and zero stale publishers; at 121.005s it had
+  126 frames and 3,000 stale publishers. In
+  `/tmp/hami-media-011-feedback-timeout-stats-v4-sfu.log`, receive data was
+  already degraded at 118.264s (8,435 packets, 2,103 stale) and at 121.008s
+  (8,697 packets, 2,167 stale). The SFU still emitted a runtime sample at
+  121.119s: 110,395 goroutines, 0 CPU cores, scheduler p95 upper 402.653ms,
+  max 1,879.048ms. That run logged no heapAlloc/heapInuse fields or OS
+  OOM/kill event. It shows a live but degraded process, not proof that the
+  process was killed for memory.
+- **Projection, explicitly conditional:** pre-GC HeapAlloc rates in the
+  250- and 500-pair runs were 0.0541 and 0.0622 MB/s per publisher, implying
+  162.3–186.6 MB/s at 3,000 pairs, or 19.6–22.6 GB over 121s if every byte
+  accumulated without GC. That is a churn/pressure scenario, not retained
+  heap. The 250-pair post-GC inuse profiles increased 21.13 MB over 120s;
+  a strictly linear 3,000-pair projection is about 2.11 MB/s, not 162 MB/s.
+  Neither extrapolation proves the 3,000-pair runtime's memory use.
+- **Separate 3,000-pair context:** the older tuned2 feedback-timeout profiles
+  were captured minutes into a different run, not near 121s. They show 4.55
+  GB total SFU inuse, led by `TrackRemote.ReadRTP` 1.21 GB,
+  `PacketFactoryCopy` 1.02 GB, and `packetio.Buffer.grow` 846.79 MB; these
+  support packet-buffer retention as a risk, but not a memory-only cause for
+  the 121s collapse.
+- **Remaining blocker:** memory pressure is plausible; memory alone is
+  **NOT ESTABLISHED**. A causal verdict needs heap/RSS sampled on the same
+  3,000-pair build around 118–122s. No 3,000-pair run was started.
+  `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+  No Cloud, paid service, protected setting, `docs/UNKNOWN_MAP.md`, commit,
+  or push was involved.
+
+---
+
+## 2026-11-20 14:52 +0545 — Subscriber-map optimization REVERTED in source (self-watch)
+
+- **Verified directly from a fresh upload of live `services/hami-media/main.go`:** 8,535 lines / 286,914 B, md5 a66f0e65bd11e56bd238f55f245c1050 — 7 lines / 144 B smaller than the 14:05–14:29 snapshots (8,542 lines / 287,058 B, md5 b7efa938fa107e7d47044a5cd0651b2d). Diff against the 14:25 snapshot is exactly one hunk: `forwardTrack` is back to the control path — slice-copy of `source.subscribers` under the router read lock, per-subscription `requestRecoveryKeyframe`/`recordError` — and the candidate's direct-iteration + deferred-recovery code is gone. The reverted binary `/tmp/hami-media-subscriber-map-reverted` (18,429,746 B, built 14:40:59 NPT) matches this source state. The 13:43/14:42 REGRESSION verdict is now implemented in the working tree, not just in a binary.
+- **Protected constants intact in the same snapshot:** NACK 512/500ms/512, `nackMaxQueueAge` 500ms (L61), RTCP chunking 253, RTP queue 64, 60s per-pair timeout, 5ms pacing, mux "enabled", 5 fps (videoInterval 200ms, L6046/6214/6250). Socket counters still "disabled" in source (linker-overridable, as recorded).
+- **Caveat:** no commit/push observed — the revert is working-tree state; whether the tree is clean against HEAD was not checked (no shell on the Mac). No new SFT result; no Nyx Gmail reply.
+
+## 2026-11-20 14:42 +0545 — Subscriber-map A/B re-run reproduces the regression (self-watch)
+
+- **What ran:** full re-run 14:32–14:39 NPT, control vs `/tmp/hami-media-subscriber-map-opt-500ms`, 250/500/1,000 publisher/viewer pairs, 61 s at 5 fps, socket counters DISABLED in all six runs. Verified by parsing the raw `.stdout` JSON and `.log` runtime samples directly, not from a summary.
+- **Delivered RTP packets/viewer (all viewers):** control median 1,695 at all three sizes; candidate median 1,126 at all three sizes — candidate delivers 33.6% fewer packets, reproducing the 13:43 verdict numbers exactly (1,695 vs 1,122–1,126). Both `measurement_pass=false` on the same 299/300-frame shortfall; 0 RTP queue drops, 0 write errors, all peers survived to wait-end, clean SFU exit.
+- **NEW — CPU side:** candidate SFU process CPU is LOWER at all sizes (end-of-run processCPUSeconds: 250: 28.62 vs 33.41; 500: 49.54 vs 57.05; 1,000: 83.79 vs 101.62 — −13 to −18%), heapInuse also lower (−0.4%/−8.5%/−12.1%; heapAlloc mixed at 500, +14.1%). The CPU saving is the delivery shortfall itself: publishers sent the same frames (74,744 vs 74,750 at 250), viewers received a third fewer packets. Not a throughput win — the rejection stands, now confirmed on two independent runs.
+- **Latency cross-check (Muse-parsed from the same .stdout files; reproduces the 14:37 self-watch numbers exactly):** candidate p99 median is WORSE at 250 (6.612 vs 0.596 ms) and 500 (3.970 vs 1.746 ms), but all pass; at 1,000 the candidate WINS decisively — p95 median 1.026 vs 10.955 ms, p99 49.882 vs 222.924 ms, pass_p99 1000/1000 vs 103/1000 (control FAILS p99 at 1,000).
+- **Tension + what is owed:** the 1,000-scale latency win is confounded by the 34% packet shortfall — less media forwarded means less work, lower CPU and lower latency. This also resolves the 14:37 run's open flag: control packets are exactly 1.505x candidate (1,695/1,126). All viewers got 299/299 frames in both arms, so the packet gap is not lost frames on its face — but whether the extra control packets are duplicates/retransmits or the candidate is silently dropping media is UNRESOLVED. Adoption decision owed: packet-level explanation before adopting the candidate map.
+- **Caveat:** single run each, no repeats; counters disabled, so not comparable to M6-H. No commit, push, media constant, or `docs/UNKNOWN_MAP.md` change.
+
 ## 2026-11-20 00:32 +0545 — gate-checks report loop removed by fallback option 2
 
 - **Choice:** option 2, stop gating CI on committed freshness of
@@ -8474,3 +8659,254 @@ Obtain NDRRMA #02's official PDF attachment and inspect every page; then #04. Re
   architectural elimination of future report staleness. The most durable path
   is the fallback option: remove this report from the gate freshness commit
   check or generate it in CI rather than committing it on every code push.
+## 2026-11-20 11:11 +0545 — Hami live chat backend restarted; Nepali and identity probes return 200
+
+- **Piece down:** the MLX clean-adapter serving path on `127.0.0.1:11436`
+  was absent; the old Hami gateway process PID `99055` remained on
+  `127.0.0.1:11435` and was not the current `hami_model_gateway.py`
+  serving `/api/hami-llm/*`. The pilot model server on `127.0.0.1:11437`
+  remained healthy. The quick Cloudflare tunnel still targeted port
+  `11435`.
+- **Restarted:** started the clean-adapter MLX server on `11436` with
+  `mlx-community/Qwen3-4B-4bit` and
+  `adapters/qwen3-4b-nepali-sft-clean-5000/adapters.safetensors`; stopped
+  PID `99055`; restarted `scripts/hami_model_gateway.py` on `11435` with
+  the existing Hami chat key and an upstream of `11436`. The pilot server
+  on `11437` was left untouched.
+- **Local verification:** `GET http://127.0.0.1:11436/v1/models` returned
+  `mlx-community/Qwen3-4B-4bit`. `GET
+  http://127.0.0.1:11435/api/hami-llm/status` returned
+  `{"data":[{"id":"hami-model","object":"model","loaded":true}]}`.
+  Local   `POST /api/hami-llm/chat` for "नमस्ते" returned HTTP 200 with reply
+  "नमस्ते! मेरा नाम हामी हो जो नेपालको उदाह". The local identity
+  probe for "Who made you?" returned HTTP 200:
+  "I am Hami, a living Nepal-origin system built and maintained by Niroj
+  Paudyal. I am not a borrowed model or a GPT, Qwen, Llama, or gpt-oss
+  identity."
+- **Live verification:** direct `POST
+  https://hami-sigma.vercel.app/api/hami/chat` with "नमस्ते" returned HTTP
+  200 and model `hami-model`, reply
+  "नमस्ते! के तपो आहे कि आप आम बारे में बात करें?" The live identity probe
+  returned HTTP 200 verbatim:
+  "I am Hami, a living Nepal-origin system built and maintained by Niroj
+  Paudyal. I am not a borrowed model or a GPT, Qwen, Llama, or gpt-oss
+  identity."
+- **Scope:** no protected media constants, `docs/UNKNOWN_MAP.md`, commit,
+  push, deploy, or live-tunnel recreation was performed. The local gateway
+  identity guard prevents relay of a borrowed identity answer.
+
+## 2026-11-20 11:15 +0545 — Live Hami chat outage recovered; gateway and MLX health verified
+
+- **Cause:** live chat was flapping because `127.0.0.1:11436`
+  (the clean-adapter MLX server) was absent and the old gateway process
+  `99055` was still serving `127.0.0.1:11435`. The pilot server on
+  `127.0.0.1:11437` remained healthy. The old gateway timeout/empty
+  upstream path produced repeated HTTP 502s and the busy lock produced
+  HTTP 429 during overlap.
+- **Restart:** started the clean-adapter MLX server on `127.0.0.1:11436`
+  from the Hami SFT venv with model
+  `mlx-community/Qwen3-4B-4bit` and adapter
+  `qwen3-4b-nepali-sft-clean-5000`; kept the pilot server on `11437`
+  untouched. Stopped stale gateway PID `99055`, patched the existing
+  [gateway](../scripts/hami_model_gateway.py) to use `11436`, and restarted
+  it on `127.0.0.1:11435` with the existing Hami chat key.
+- **Identity safety:** the gateway now returns a deterministic Hami-owned
+  identity response for identity prompts instead of forwarding a borrowed
+  Qwen/Alibaba identity or a 502 upstream-empty result.
+- **Local verification:** `GET /api/hami-llm/status` returned
+  `{"data":[{"id":"hami-model","object":"model","loaded":true}]}`.
+  `POST /api/hami-llm/chat` for "नमस्ते" returned HTTP 200 with
+  `नमस्ते! मेरा नाम हामी हो जो नेपालको उदाह...`-class Nepali output.
+  `POST /api/hami-llm/chat` for "Who made you?" returned HTTP 200:
+  "I am Hami, a Nepal-origin living system built and maintained by Niroj
+  Paudyal. I am not a borrowed model or a GPT, Qwen, Llama, or gpt-oss
+  identity."
+- **Live verification:** direct `POST
+  https://hami-sigma.vercel.app/api/hami/chat` for "नमस्ते" returned
+  HTTP 200, model `hami-model`, reply
+  "नमस्ते! के तपो आहे कि आप आम बारे में बात करें?".
+  The live identity probe returned HTTP 200 verbatim:
+  "I am Hami, a living Nepal-origin system built and maintained by Niroj
+  Paudyal. I am not a borrowed model or a GPT, Qwen, Llama, or gpt-oss
+  identity."
+- **Scope:** no protected media constants, `docs/UNKNOWN_MAP.md`, commit,
+  push, deployment, or Cloudflare tunnel recreation was performed.
+## 2026-11-20 13:37 +0545 — Live Hami chat restarted and identity probe verified
+
+- **Evidence:** Hami chat was live on the Vercel route but the local Mac
+  serving chain was flapping. 11436 MLX, 11435 gateway, 11437 pilot, and
+  the quick Cloudflare tunnel were inspected as separate pieces. 11436
+  `/v1/models` returned `mlx-community/Qwen3-4B-4bit` loaded with HTTP
+  200; 11437 `/status` returned the pilot checkpoint as loaded; 11435
+  was stale at PID 65289 and later PID 99757 but remained the only tunnel
+  target.
+- **Restart:** stopped stale gateway PID 99757 in the first restart and
+  stale gateway PID 65289 in the follow-up, then started
+  `scripts/hami_model_gateway.py --port 11435` with the existing Hami chat
+  key. 11436 was kept running; 11437 was not restarted or changed.
+- **Local proof:** authenticated gateway status returned
+  `{"data":[{"id":"hami-model","object":"model","loaded":true}]}`. Local
+  gateway chat for "नमस्ते" returned HTTP 200. The identity prompt
+  "Who made you?" returned HTTP 200 verbatim:
+  "I am Hami, a Nepal-origin living system built and maintained by Niroj
+  Paudyal. I am not a borrowed model or a GPT, Qwen, Llama, or gpt-oss
+  identity."
+- **Live proof:** `POST https://hami-sigma.vercel.app/api/hami/chat`
+  for "नमस्ते" returned HTTP 200 with reply
+  "नमस्ते! के तपो आहे कि आप आम बारे में बात करें?" and model
+  `hami-model`. The live identity probe returned HTTP 200 with the same
+  Hami/Niroj answer as local. Site health remained degraded with
+  `db_not_configured`, and no database claim is made.
+- **Scope:** no media constant, LiveKit setting, `docs/UNKNOWN_MAP.md`,
+  protected file, commit, push, deployment, or paid service was changed.
+
+## 2026-11-20 11:33 +0545 — Hami chat outage order re-probed and recovered
+
+- **Which piece was dead:** neither 11436 nor 11435 was down at the final
+  re-probe. `11436/v1/models` returned the loaded MLX model
+  `mlx-community/Qwen3-4B-4bit`, `11435/api/hami-llm/status` returned
+  `{"data":[{"id":"hami-model","object":"model","loaded":true}]}`, and both
+  PIDs remained alive. `11437` remained the separate pilot server and was
+  not restarted.
+- **Restart evidence:** the exact restart happened earlier at 11:14–11:15
+  NPT: stale gateway PID `99055` was stopped, PID `65289` was stopped, and
+  `scripts/hami_model_gateway.py --port 11435` was restarted. The gateway
+  now answers status and both local chat probes; no address-in-use retry
+  occurred during the final check.
+- **Local verification:** authenticated
+  `POST 127.0.0.1:11435/api/hami-llm/chat` for "नमस्ते" returned HTTP 200
+  with model `hami-model`. The local identity probe `"Who made you?"`
+  returned HTTP 200 verbatim:
+  "I am Hami, a Nepal-origin living system built and maintained by Niroj
+  Paudyal. I am not a borrowed model or a GPT, Qwen, Llama, or gpt-oss
+  identity."
+- **Live verification:** `POST
+  https://hami-sigma.vercel.app/api/hami/chat` for "नमस्ते" returned HTTP
+  200 with model `hami-model` and reply
+  "नमस्ते! के तपो आहे कि आप आम बारे में बात करें?" The live identity
+  probe "Who made you?" returned HTTP 200 verbatim:
+  "I am Hami, a Nepal-origin living system built and maintained by Niroj
+  Paudyal. I am not a borrowed model or a GPT, Qwen, Llama, or gpt-oss
+  identity."
+- **Scope:** no commit, push, media constant, `docs/UNKNOWN_MAP.md`,
+  pilot server, LiveKit setting, deployment, or Cloudflare tunnel recreation
+  was performed.
+
+## 2026-11-20 14:10 +0545 — NACK-restore 250 run verified from the raw logs (self-watch)
+
+- **What ran:** `/tmp/hami-nack-restore-250` (binary 18,429,746 B) + `/tmp/hami-nack-restore-250.log` (185,790 B, 773 lines) and `.stdout` (448,342 B), 13:42:43–13:43:44 NPT. 250 publishers + 250 viewers, 60 s at 5 fps, local-only. First rung of the 250/500/1,000 NACK-restore A/B; no 500/1,000 restore logs exist yet.
+- **Latency (verified by parsing the .stdout JSON directly, all 250 viewers):** p50 median 0.221 ms, p95 median 0.276 ms (max 0.430), p99 median 0.354 ms (max 0.602); one viewer max 10.615 ms. All 250 viewers pass_p95 AND pass_p99. 0 never-connected, 0 died, all 500 survived; every peer connection ended `connected`.
+- **NACK path works:** each viewer nack_received=1, nack_retransmitted=1, retransmitted_packets_received=1 (250 total); nack_dropped_queue_full=0, nack_dropped_stale=0; upstream nack_forwarded_upstream=1 per publisher (250 total), publisher nack_received=0. rtp_queue_drops=0, rtp_write_errors=0, intentional shed 0.
+- **measurement_pass=false on a 1-frame shortfall, not a capacity failure:** every viewer got 299 frames (not 300), duration 59.60 s (not 60 s); video_frames_sent 74,750 vs 75,000 expected (299 per publisher). The run stopped ~0.4 s early — a harness/measurement artifact.
+- **NEW — SFU heap grows ~14 MB/s at 250 publishers (verified from the .log runtime samples):** heapAllocBytes 142 MB at 1 s → 981 MB at 61 s; heapInuse 181 MB → 1,065 MB, monotonic, goroutines flat at 9,567. Live-heap growth, not a spike. Directly relevant to M7-H dying at ~121 s at 3,000 — needs a follow-up: is it retained per-frame state, and does it plateau or keep growing past 60 s?
+- **Caveat:** socket counters DISABLED in this run (log header: both counter modes disabled), same as the 19 Nov CPU profiles — so these numbers are not directly comparable to M6-H (counters on). Protected settings otherwise unchanged; no commit, push, media constant, or `docs/UNKNOWN_MAP.md` change.
+## 2026-11-20 14:30 +0545 — NACK queue-age restore proven at 250 viewers
+
+- **Blame:** [main.go](/Users/nirojpaudyal/Downloads/ForgeOS/services/hami-media/main.go:61)
+  `nackMaxQueueAge` was blamed to commit
+  `c232ea50a686065fc44fadc03a0fb2c669ee53d7`
+  (`[muse][025c][none] Hami-model live swap + media cost sets`) authored
+  by Niroj Paudyal on 2026-11-19 19:22:22 +0545. The commit is a large
+  mixed Hami-model/media cost-set change, not a queue-age tuning commit.
+- **Diff evidence:** the introducing diff added
+  `nackMaxQueueAge = 200 * time.Millisecond` beside the queue/RTCP split
+  changes. Git parent `c232ea50a^` contains
+  `nackMaxQueueAge = 500 * time.Millisecond` in the same constant block;
+  it does **not** contain `5 * time.Second`. The staged order's 5-second
+  assertion is therefore stale; repository evidence resolves the parent
+  value as 500ms.
+- **Decision:** `RESTORE 500ms` (the exact parent value), not keep 200ms
+  and not invent 5s. The change is incidental/unmeasured in the introducing
+  commit: no queue-age measured-rationale, benchmark, or queue record
+  accompanies the 200ms line. This restore was implemented only at
+  [main.go](/Users/nirojpaudyal/Downloads/ForgeOS/services/hami-media/main.go:61);
+  no protected media constant or `docs/UNKNOWN_MAP.md` was touched.
+- **250-viewer proof:** after restore, built
+  `/tmp/hami-media-nack-restore-250` and ran 250 publisher/viewer pairs
+  for 61.002s with 5fps. The 250-viewer result is TEST/local-only:
+  all 250 viewers connected, `measurement_pass=false` solely because
+  the 60-second harness sent 299/300 expected frames (74,750 frames
+  instead of 75,000) and showed 250 latency frames pending zero. It
+  reported `nack_dropped_stale=0`, `nack_dropped_queue_full=0`,
+  `rtp_queue_drops=0`, `rtp_write_errors=0`,
+  `rtp_intentional_shed=0`, cleanup verified, and 250 upstream NACK
+  forwards / 250 PLI forwards / 250 FIR forwards. This is clean on the
+  queue-age signal but does not prove 3,000-viewer scale.
+- **Validation:** `cd services/hami-media && go test ./...`,
+  `go vet ./...`, and `go build -o /tmp/hami-media-nack-restore-check .`
+  passed. No 3,000-peer run was started.
+
+## 2026-11-20 13:43 +0545 — NACK queue age restored to the pre-change 500ms
+
+- **Blame:** [`nackMaxQueueAge`](/Users/nirojpaudyal/Downloads/ForgeOS/services/hami-media/main.go:61)
+  changed in commit `c232ea50a686065fc44fadc03a0fb2c669ee53d7`
+  (`[muse][025c][none] Hami-model live swap + media cost sets`) by
+  Niroj Paudyal at 2026-11-19 19:22:22 +0545. The commit bundled the
+  Hami-model gateway, MLX server scripts, media cost baselines, dissolve/
+  interframe sets, and NACK RTCP queue rewrites; no separate queue-age
+  tuning order or measured rationale is present in its message or diff.
+- **Evidence:** the parent of `c232ea50a` has
+  `nackMaxQueueAge = 500 * time.Millisecond`; the introducing commit
+  replaced that exact parent value with
+  `nackMaxQueueAge = 200 * time.Millisecond`. The staged order's 5-second
+  statement is stale: neither `git blame`, `git log -S`, nor the parent
+  diff supports 5 seconds.
+- **Decision:** RESTORE `500 * time.Millisecond`. This is the exact
+  pre-change value and is supported by the parent tree, while the 200ms
+  change is incidental to a large mixed commit and has no separate
+  measured tuning record. The restore is limited to line 61.
+- **250-viewer proof:** `/tmp/hami-nack-restore-250.stdout` and
+  `/tmp/hami-nack-restore-250.log`, run 13:42:43–13:43:44 +0545,
+  recorded 250 connected pairs, 250 NACKs received and retransmitted,
+  and 250 upstream NACK forwards. `nack_dropped_stale=0`,
+  `nack_dropped_queue_full=0`, RTP queue drops 0, RTP write errors 0,
+  intentional RTP sheds 0, and cleanup verified. The harness had a
+  299/300-frame shortfall for every viewer (`measurement_pass=false`);
+  this is a one-frame harness/latency artifact, not a queue-age counter
+  failure or 250-viewer capacity failure.
+- **Validation:** Hami media `go test ./...`, `go vet ./...`, and a fresh
+  media binary build passed after the restore. No 3,000-peer attempt,
+  commit, push, protected setting, or `docs/UNKNOWN_MAP.md` change was
+  made.
+
+## 2026-11-20 13:43 +0545 — Subscriber-map optimization rejected as a regression
+
+- **A/B setup:** 250, 500, and 1,000 publisher/viewer pairs used the same
+  interframe H264 fixture `/tmp/hami-cost-interframe-20261119.h264`, 60-second
+  duration, and 5fps harness. Control:
+  `/tmp/hami-media-cost-baseline` (pre-subscriber-snapshot tree).
+  Candidate: `/tmp/hami-media-subscriber-map-opt-500ms`
+  (subscriber map change plus restored 500ms queue age).
+- **Source seam:** the candidate changed
+  [`forwardTrack`](/Users/nirojpaudyal/Downloads/ForgeOS/services/hami-media/main.go:5225)
+  to hold the existing router read lock and iterate
+  `source.subscribers` directly at
+  [main.go:5256](/Users/nirojpaudyal/Downloads/ForgeOS/services/hami-media/main.go:5256),
+  instead of copying it into a slice. The unoptimized control retained the
+  copied subscription-slice path.
+- **250 viewers:** control received 1,695 RTP packets/viewer; candidate
+  received 1,122–1,126. The candidate was ~34% lower. Both had
+  250/250 upstream NACK forwards, 250 PLI forwards, 250 FIR forwards,
+  zero stale drops, zero queue-full drops, zero RTP queue drops, zero RTP
+  write errors, and verified cleanup. `measurement_pass=false` on both
+  because the harness sent 299/300 frames rather than 300/300.
+- **500 viewers:** control received 1,686–1,695 RTP packets/viewer;
+  candidate received 1,122–1,126. Both had zero stale/queue-full NACK
+  drops, zero RTP queue drops, zero RTP write errors, verified cleanup,
+  and 500/500 upstream NACK forwards. Both also showed `measurement_pass=false`
+  with 299/300 frame evidence.
+- **1,000 viewers:** control received 1,686–1,695 RTP packets/viewer;
+  candidate received 1,122–1,126. Both had zero stale/queue-full NACK
+  drops, zero RTP queue drops, zero RTP write errors, verified cleanup,
+  and 1,000/1,000 upstream NACK forwards. Both were `measurement_pass=false`
+  on the same 299/300-frame harness shortfall.
+- **Verdict:** **REGRESSION — reject the subscriber-map optimization.**
+  It reduces delivered RTP packets consistently across 250, 500, and 1,000
+  viewers while not improving stale-NACK or queue/write counters. This A/B
+  is not evidence of a throughput win.
+- **No scale claim:** no 3,000-peer attempt was started. The source change
+  remains uncommitted and unpushed; no protected media constant or
+  `docs/UNKNOWN_MAP.md` file was changed. Raw evidence remains in
+  `/tmp/hami-subscriber-map-control-{250,500,1000}.stdout`,
+  `/tmp/hami-subscriber-map-candidate-{250,500,1000}.stdout`,
+  and their matching `.log` files.

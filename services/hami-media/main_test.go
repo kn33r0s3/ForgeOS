@@ -749,10 +749,17 @@ func TestMeasurementPassAllowsIntentionalRTPSheddingButRejectsWriteErrors(t *tes
 	}
 }
 
-func TestCachedPacketsReturnIndependentCopies(t *testing.T) {
+func TestCachedPacketsSharePayloadAndCopyMutableHeader(t *testing.T) {
 	stored := &rtp.Packet{
-		Header:  rtp.Header{SequenceNumber: 42},
+		Header: rtp.Header{
+			SSRC:           11,
+			SequenceNumber: 42,
+			CSRC:           []uint32{22},
+		},
 		Payload: []byte{1, 2, 3},
+	}
+	if err := stored.Header.SetExtension(1, []byte{4, 5}); err != nil {
+		t.Fatalf("set stored header extension: %v", err)
 	}
 	track := &sfuPublishedTrack{
 		packetCache: map[uint16]*rtp.Packet{42: stored},
@@ -764,11 +771,77 @@ func TestCachedPacketsReturnIndependentCopies(t *testing.T) {
 			packets, missing)
 	}
 	if packets[0] == stored {
-		t.Fatal("cached packet was returned without cloning")
+		t.Fatal("cached packet header was not copied")
 	}
-	packets[0].Payload[0] = 9
-	if stored.Payload[0] != 1 {
-		t.Fatal("modifying a returned packet changed the cached packet")
+	if &packets[0].Payload[0] != &stored.Payload[0] {
+		t.Fatal("cached retransmission payload was copied")
+	}
+	if &packets[0].Header.CSRC[0] == &stored.Header.CSRC[0] {
+		t.Fatal("cached retransmission shares mutable CSRC storage")
+	}
+	packets[0].Header.SSRC = 33
+	packets[0].Header.CSRC[0] = 44
+	if err := packets[0].Header.SetExtension(1, []byte{6, 7}); err != nil {
+		t.Fatalf("set returned header extension: %v", err)
+	}
+	if stored.Header.SSRC != 11 || stored.Header.CSRC[0] != 22 ||
+		!bytes.Equal(stored.Header.GetExtension(1), []byte{4, 5}) {
+		t.Fatal("mutating a returned header changed the cached packet")
+	}
+	if !bytes.Equal(packets[0].Payload, []byte{1, 2, 3}) {
+		t.Fatalf("cached payload changed: %v", packets[0].Payload)
+	}
+}
+
+func TestBuildSFUScaleProofConfigSupportsTwentyByTwoHundredFifty(t *testing.T) {
+	config, err := buildSFUScaleProofConfig(20, 250)
+	if err != nil {
+		t.Fatalf("build 20-publisher/250-viewer config: %v", err)
+	}
+	if got, want := config.proofID, "m6h-scale-p20-vpp250-v5000-fps5"; got != want {
+		t.Fatalf("proof ID = %q, want %q", got, want)
+	}
+	if len(config.tracks) != 20 || len(config.viewerTrackIndexes) != 5000 {
+		t.Fatalf("scale config has %d publishers and %d viewers, want 20 and 5000",
+			len(config.tracks), len(config.viewerTrackIndexes))
+	}
+	if config.videoInterval != 200*time.Millisecond {
+		t.Fatalf("video interval = %s, want 200ms (5 fps)", config.videoInterval)
+	}
+	viewersPerTrack := make([]int, len(config.tracks))
+	for _, trackIndex := range config.viewerTrackIndexes {
+		viewersPerTrack[trackIndex]++
+	}
+	for index, viewers := range viewersPerTrack {
+		if viewers != 250 {
+			t.Fatalf("track %d has %d viewers, want 250", index, viewers)
+		}
+	}
+}
+
+func TestBuildSFUScaleProofConfigEnforcesTotalViewerLimit(t *testing.T) {
+	if _, err := buildSFUScaleProofConfig(21, 250); err == nil {
+		t.Fatal("scale config accepted more than 5000 total viewers")
+	}
+}
+
+func BenchmarkCachedPackets(b *testing.B) {
+	track := &sfuPublishedTrack{
+		packetCache: map[uint16]*rtp.Packet{
+			42: {
+				Header:  rtp.Header{SequenceNumber: 42},
+				Payload: make([]byte, 1200),
+			},
+		},
+	}
+	sequences := []uint16{42}
+	b.ReportAllocs()
+	b.SetBytes(int64(len(track.packetCache[42].Payload)))
+	for i := 0; i < b.N; i++ {
+		packets, missing := track.cachedPackets(sequences)
+		if len(packets) != 1 || len(missing) != 0 {
+			b.Fatal("cached packet lookup returned an unexpected result")
+		}
 	}
 }
 

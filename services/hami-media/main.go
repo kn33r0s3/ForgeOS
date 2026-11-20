@@ -40,11 +40,13 @@ import (
 )
 
 const (
-	audioFrameDuration    = 20 * time.Millisecond
-	videoFrameDuration    = 3 * audioFrameDuration
-	audioSampleRate       = 8000
-	audioSamplesFrame     = audioSampleRate / 50
-	sfuNACKHistoryPackets = 512
+	audioFrameDuration             = 20 * time.Millisecond
+	videoFrameDuration             = 3 * audioFrameDuration
+	audioSampleRate                = 8000
+	audioSamplesFrame              = audioSampleRate / 50
+	sfuNACKHistoryPackets          = 512
+	sfuScaleMaxViewersPerPublisher = 250
+	sfuScaleMaxViewers             = 5000
 	// NACK aggregation (M6-H attempt 8): a viewer NACKs the same lost
 	// sequences on every RTCP interval, and retransmitting each one again
 	// drowns the router (16.7M retransmits for 306k NACKs in attempt 7)
@@ -58,7 +60,7 @@ const (
 	// Pion's NACK marshaler requires len(Nacks)+2 <= MaxUint8.
 	maxNACKPairsPerRTCPPacket  = math.MaxUint8 - 2
 	nackQueueSize              = 512
-	nackMaxQueueAge            = 200 * time.Millisecond
+	nackMaxQueueAge            = 500 * time.Millisecond
 	sfuRTPQueueSize            = 64
 	peerPairNegotiationTimeout = 60 * time.Second
 	peerNegotiationConcurrency = 32
@@ -318,7 +320,11 @@ func main() {
 	videoPath := flag.String("video-file", "", "local Annex-B H.264 source file")
 	duration := flag.Duration("duration", 3*time.Second, "local media send duration")
 	sfuPublishers := flag.Int("sfu-publishers", 1, "publisher count for sfu-single mode (1-1000)")
-	sfuViewersPerPublisher := flag.Int("sfu-viewers-per-publisher", 1, "viewer count per publisher for sfu-single mode (1-2)")
+	sfuViewersPerPublisher := flag.Int(
+		"sfu-viewers-per-publisher",
+		1,
+		"viewer count per publisher for sfu-single mode (1-250; total viewers capped at 5000)",
+	)
 	m7hSFUToken := flag.String("m7h-sfu-token", "", "private token for the local M7-H router process")
 	m7hPairs := flag.Int("m7h-viewers", 3000, "M7-H publisher/viewer pair count (1-3000; one viewer per publisher)")
 	flag.Parse()
@@ -5223,6 +5229,7 @@ func (r *sfuRouter) writePrometheusMetrics(w io.Writer) error {
 }
 
 func (r *sfuRouter) forwardTrack(source *sfuPublishedTrack) {
+	subscriptions := make([]*sfuSubscription, 0)
 	for {
 		packet, _, err := source.remote.ReadRTP()
 		if err != nil {
@@ -5251,32 +5258,30 @@ func (r *sfuRouter) forwardTrack(source *sfuPublishedTrack) {
 			r.mu.RUnlock()
 			return
 		}
-		var recoverySubscription *sfuSubscription
-		var firstForwardError error
+		if cap(subscriptions) < len(source.subscribers) {
+			subscriptions = make([]*sfuSubscription, 0, len(source.subscribers))
+		} else {
+			subscriptions = subscriptions[:0]
+		}
 		for _, subscription := range source.subscribers {
+			subscriptions = append(subscriptions, subscription)
+		}
+		r.mu.RUnlock()
+
+		for _, subscription := range subscriptions {
 			dropped, err := subscription.enqueueRTP(packet)
 			if dropped {
 				r.rtpQueueDropped.Add(1)
 				r.recordRTPIntentionalShed(subscription)
-				if recoverySubscription == nil {
-					recoverySubscription = subscription
-				}
+				r.requestRecoveryKeyframe(subscription)
 			}
 			if err != nil && subscription.isActive() {
 				r.rtpDropped.Add(1)
-				if firstForwardError == nil {
-					firstForwardError = fmt.Errorf("forward track %s to viewer %s: %w",
-						source.key.TrackID, subscription.viewerID, err)
-				}
+				r.recordError(fmt.Errorf("forward track %s to viewer %s: %w",
+					source.key.TrackID, subscription.viewerID, err))
 			}
 		}
-		r.mu.RUnlock()
-		if recoverySubscription != nil {
-			r.requestRecoveryKeyframe(recoverySubscription)
-		}
-		if firstForwardError != nil {
-			r.recordError(firstForwardError)
-		}
+		clear(subscriptions)
 	}
 }
 
@@ -5323,9 +5328,17 @@ func (t *sfuPublishedTrack) cachedPackets(sequences []uint16) ([]*rtp.Packet, []
 	}
 	t.packetMu.Unlock()
 	for index, packet := range packets {
-		packets[index] = packet.Clone()
+		packets[index] = copyRTPPacketWithSharedPayload(packet)
 	}
 	return packets, missing
+}
+
+// Pion copies the packet struct before mutating the per-binding RTP header.
+func copyRTPPacketWithSharedPayload(packet *rtp.Packet) *rtp.Packet {
+	packetCopy := *packet
+	packetCopy.Header = packet.Header.Clone()
+	packetCopy.Raw = nil
+	return &packetCopy
 }
 
 func (t *sfuPublishedTrack) latestSequence() uint16 {
@@ -5360,12 +5373,10 @@ func (s *sfuSubscription) enqueueRTP(packet *rtp.Packet) (bool, error) {
 		return false, errors.New("RTP queue is not initialized")
 	}
 
-	// Each read has its own payload buffer; retain it read-only and copy only
-	// the header, which Pion's per-track writer may mutate.
-	packetCopy := *packet
-	packetCopy.Header = packet.Header.Clone()
-	packetCopy.Raw = nil
-	queued := queuedRTP{packet: &packetCopy, enqueuedAt: time.Now()}
+	queued := queuedRTP{
+		packet:     copyRTPPacketWithSharedPayload(packet),
+		enqueuedAt: time.Now(),
+	}
 	select {
 	case s.rtpQueue <- queued:
 		s.rtpQueueEnqueued.Add(1)
@@ -6024,17 +6035,37 @@ func runLocalSFUScaleProof(
 	publisherCount int,
 	viewersPerPublisher int,
 ) (sfuProofResult, error) {
-	if publisherCount < 1 || publisherCount > 3000 {
-		return sfuProofResult{}, fmt.Errorf("SFU scale publisher count must be between 1 and 3000, got %d", publisherCount)
-	}
-	if viewersPerPublisher < 1 || viewersPerPublisher > 2 {
-		return sfuProofResult{}, fmt.Errorf("SFU scale viewers per publisher must be between 1 and 2, got %d", viewersPerPublisher)
+	config, err := buildSFUScaleProofConfig(publisherCount, viewersPerPublisher)
+	if err != nil {
+		return sfuProofResult{}, err
 	}
 	if duration < MinDuration {
 		return sfuProofResult{}, fmt.Errorf("SFU scale duration must be at least %s", MinDuration)
 	}
+	return runLocalSFUProofWithConfig(ctx, videoFrames, duration, config)
+}
+
+func buildSFUScaleProofConfig(publisherCount int, viewersPerPublisher int) (sfuProofConfig, error) {
+	if publisherCount < 1 || publisherCount > 3000 {
+		return sfuProofConfig{}, fmt.Errorf("SFU scale publisher count must be between 1 and 3000, got %d", publisherCount)
+	}
+	if viewersPerPublisher < 1 || viewersPerPublisher > sfuScaleMaxViewersPerPublisher {
+		return sfuProofConfig{}, fmt.Errorf(
+			"SFU scale viewers per publisher must be between 1 and %d, got %d",
+			sfuScaleMaxViewersPerPublisher,
+			viewersPerPublisher,
+		)
+	}
+	totalViewers := publisherCount * viewersPerPublisher
+	if totalViewers > sfuScaleMaxViewers {
+		return sfuProofConfig{}, fmt.Errorf(
+			"SFU scale total viewer count must not exceed %d, got %d",
+			sfuScaleMaxViewers,
+			totalViewers,
+		)
+	}
 	tracks := make([]sfuTrackSpec, publisherCount)
-	viewerTrackIndexes := make([]int, 0, publisherCount*viewersPerPublisher)
+	viewerTrackIndexes := make([]int, 0, totalViewers)
 	for publisherIndex := range tracks {
 		tracks[publisherIndex] = sfuTrackSpec{
 			publisherID: fmt.Sprintf("hami-m6h-scale-publisher-%04d", publisherIndex+1),
@@ -6044,15 +6075,15 @@ func runLocalSFUScaleProof(
 			viewerTrackIndexes = append(viewerTrackIndexes, publisherIndex)
 		}
 	}
-	return runLocalSFUProofWithConfig(ctx, videoFrames, duration, sfuProofConfig{
-		proofID:            fmt.Sprintf("m6h-scale-p%d-v%d", publisherCount, publisherCount*viewersPerPublisher),
+	return sfuProofConfig{
+		proofID:            fmt.Sprintf("m6h-scale-p%d-vpp%d-v%d-fps5", publisherCount, viewersPerPublisher, totalViewers),
 		tracks:             tracks,
 		viewerTrackIndexes: viewerTrackIndexes,
 		measureLatency:     true,
 		exerciseRTCP:       true,
 		videoInterval:      200 * time.Millisecond,
 		logRTPPath:         true,
-	})
+	}, nil
 }
 
 func runLocalM1HProof(
