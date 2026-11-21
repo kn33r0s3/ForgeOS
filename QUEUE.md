@@ -27,6 +27,13 @@
    Do not claim M7-H acceptance or 5,000-viewer capacity from profiles or
    configuration tests.
 
+## Parallel Hami-wide discovery — 2026-11-21 — D93 service-state reconciliation (does not displace M7-H)
+
+1. Recover the unread Chumnubri Rural Municipality flood-response PDF (official notice listed 11 Oct 21:47) and the unread NDRRMA #02/#04 PDFs if their official attachment links become accessible.
+2. Reconcile the 14 Oct electricity reports without forcing counts: OnlineKhabar 971 micro-hydro households / ~4,000 Dharche households / 50 Arughat; INSEC ~1,300 total with 995 micro-hydro and ~300 in four Dharche settlements; Rising Nepal's minister/NEA report says all areas except Dharche restored. Obtain dated source definitions, system scope and observation times before resolving.
+3. Find dated official NEA/Arughat and Sirdibas-Uhiya restoration records, plus Gorkha Road Project or municipal status for Khorlabesi–Tatopani and Salleri–Jagat. Distinguish grid vs micro-hydro, motorable road vs foot/mule trail, and partial segment reopening vs full corridor.
+4. Keep all sources NOT CLEARED for automated collection/provider transmission until exact robots, terms, purpose and fields are reviewed. Preserve source-declared cutoff through the existing provenance seam only when source editing is authorized; do not add models, tables, collectors, primitives or a second ledger. D93 remains UNKNOWN.
+
 ## Historical queue — 2026-11-21 00:04 +0545 — clear swap before V1
 
 1. Live-video V1 is **BLOCKED**: swap free is 1,236.50 MiB, below the
