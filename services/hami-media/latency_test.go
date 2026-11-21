@@ -77,7 +77,7 @@ func TestFrameClockSharedSubscribers(t *testing.T) {
 	if !first.Record(17, c, capturedAt.Add(10*time.Millisecond)) {
 		t.Fatal("first subscriber should match the frame")
 	}
-	if _, ok := c.Lookup(17); !ok || c.Pending() != 1 {
+	if _, ok := c.Lookup(17); !ok || c.Pending() != 1 || c.PendingDeliveries() != 1 {
 		t.Fatal("capture should remain until the second subscriber matches")
 	}
 
@@ -85,7 +85,7 @@ func TestFrameClockSharedSubscribers(t *testing.T) {
 	if !second.Record(17, c, capturedAt.Add(20*time.Millisecond)) {
 		t.Fatal("second subscriber should match the shared frame")
 	}
-	if _, ok := c.Lookup(17); ok || c.Pending() != 0 {
+	if _, ok := c.Lookup(17); ok || c.Pending() != 0 || c.PendingDeliveries() != 0 {
 		t.Fatal("capture should be released after all subscribers match")
 	}
 	if err := c.SetExpectedConsumers(1); err == nil {

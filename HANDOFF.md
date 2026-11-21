@@ -2,6 +2,7 @@
 
 ## Current operation
 
+- 20:56 continuation: dissolve scoring, the NACK-age flag, feedback-delay config, host preflight/watchdog, and viewer-scaled heap cap are implemented and validated; pressure 2/free swap 1,266.88 MiB keeps all load runs stopped, and the router package extraction remains.
 - Resume from the existing 3,000-pair M7-H failure: the SFU reached
   15.06 GB HeapAlloc and 120,631 goroutines, with 2,588 publishers stale
   over 500 ms; final p99 was not measured. Earlier goroutine profiles showed

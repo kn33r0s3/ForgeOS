@@ -151,6 +151,16 @@ func (c *captureClockState) Pending() int {
 	return len(c.captures)
 }
 
+func (c *captureClockState) PendingDeliveries() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	pending := 0
+	for _, remaining := range c.remainingConsumers {
+		pending += remaining
+	}
+	return pending
+}
+
 // Sample is one matched frame: capture instant, event instant, latency.
 type Sample struct {
 	FrameID uint64        `json:"frame_id"`

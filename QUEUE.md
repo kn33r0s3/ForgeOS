@@ -1,5 +1,6 @@
 ## Current queue — 2026-11-21 01:52 +0545 — quantify M7-H packet retention
 
+- 20:56 continuation: dissolve scoring, configurable NACK age, feedback settle config, host preflight/watchdog, and viewer-scaled heap cap passed Go/npm/gate checks; current pressure 2 and 1,266.88 MiB free swap hold the ladder, and `sfuRouter` package extraction is still pending.
 1. Start from the reproduced 3,000-pair M7-H failure: 15.06 GB HeapAlloc,
    120,631 goroutines, 2,588 publishers stale over 500 ms, and no final p99.
    UDP write-lock contention is implicated by profiles, not proven causal.

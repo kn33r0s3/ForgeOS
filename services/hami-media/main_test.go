@@ -908,6 +908,123 @@ func TestMeasurementPassAllowsIntentionalRTPSheddingButRejectsWriteErrors(t *tes
 	}
 }
 
+func TestSFUDissolveScoringUsesSyntheticDeliveredLatencyAndConfiguredLimits(t *testing.T) {
+	clock := NewFrameClock()
+	recorder := NewLatencyRecorder(ModeReceive)
+	start := time.Unix(1, 0)
+	for frameID := uint64(1); frameID <= 100; frameID++ {
+		capturedAt := start.Add(time.Duration(frameID) * 200 * time.Millisecond)
+		clock.Capture(frameID, capturedAt)
+		if !recorder.Record(frameID, clock, capturedAt.Add(120*time.Millisecond)) {
+			t.Fatalf("record synthetic frame %d", frameID)
+		}
+	}
+	summary := recorder.Summary()
+	if summary.P99 != 120*time.Millisecond || summary.Pass {
+		t.Fatalf("synthetic latency summary = p99 %s, pass %t; want 120ms and strict failure",
+			summary.P99, summary.Pass)
+	}
+
+	result := sfuProofResult{
+		PublisherState:                 peerConnectionConnected,
+		UnauthorizedSubscriptionDenied: true,
+		CleanupVerified:                true,
+		LatencyPendingDeliveries:       1,
+		Viewers: []sfuViewerResult{{
+			Latency:        &summary,
+			OnlyRequested:  true,
+			PeerConnection: peerConnectionConnected,
+			FeedbackForwarded: sfuFeedbackCounts{
+				NACKReceived:      1,
+				NACKRetransmitted: 1,
+				NACKForwarded:     1,
+				PLIForwarded:      1,
+				FIRForwarded:      1,
+			},
+		}},
+	}
+	applySFUDissolveMetrics(&result)
+	if result.DissolvedFraction > 0.01 {
+		t.Fatalf("dissolved fraction = %g, want at most 1%%", result.DissolvedFraction)
+	}
+	if !sfuDissolveMeasurementPass(result, 1, true, 150*time.Millisecond, 0.01) {
+		t.Fatal("dissolve scoring rejected synthetic p99=120ms and loss below 1%")
+	}
+	if sfuDissolveMeasurementPass(result, 1, true, 100*time.Millisecond, 0.01) {
+		t.Fatal("dissolve scoring accepted p99 above the configured limit")
+	}
+
+	result.LatencyPendingDeliveries = 2
+	applySFUDissolveMetrics(&result)
+	if sfuDissolveMeasurementPass(result, 1, true, 150*time.Millisecond, 0.01) {
+		t.Fatal("dissolve scoring accepted a dissolved fraction above 1%")
+	}
+}
+
+func TestSFUDissolveMetricsCountQueueDropsOnce(t *testing.T) {
+	result := sfuProofResult{
+		LatencyPendingDeliveries: 1,
+		RTPQueueDrops:            2,
+		RTPIntentionalShed:       5,
+		RTPQueueDropShed:         2,
+		Viewers:                  []sfuViewerResult{{Latency: &Summary{Frames: 99, Unmatched: 1}}},
+	}
+	applySFUDissolveMetrics(&result)
+	if result.DeliveredFrames != 99 ||
+		result.DissolvedUnmatched != 2 ||
+		result.DissolvedShedPackets != 3 ||
+		result.DissolvedQueueDropPackets != 2 ||
+		result.DissolvedCount != 7 {
+		t.Fatalf("dissolve components delivered=%d unmatched=%d shed=%d queue=%d total=%d",
+			result.DeliveredFrames, result.DissolvedUnmatched, result.DissolvedShedPackets,
+			result.DissolvedQueueDropPackets, result.DissolvedCount)
+	}
+	if want := float64(7) / 106; result.DissolvedFraction != want {
+		t.Fatalf("dissolved fraction = %.8f, want %.8f", result.DissolvedFraction, want)
+	}
+}
+
+func TestSFUHostPreflightParsesCountersAndEnforcesStops(t *testing.T) {
+	vmStat := "Pages free: 10.\nPageouts: 1234.\nSwapouts: 5.\n"
+	if got, err := parseVMStatCounter(vmStat, "Pageouts"); err != nil || got != 1234 {
+		t.Fatalf("Pageouts = %d, err=%v; want 1234", got, err)
+	}
+	if got, err := parseVMStatCounter(vmStat, "Swapouts"); err != nil || got != 5 {
+		t.Fatalf("Swapouts = %d, err=%v; want 5", got, err)
+	}
+	dfOutput := "Filesystem 1024-blocks Used Available Capacity iused ifree %iused Mounted on\n/dev/disk3s1 100000 50000 50000 50% 1 2 1% /\n"
+	if got, err := parseDFAvailableBytes(dfOutput); err != nil || got != 50_000*1024 {
+		t.Fatalf("available disk = %d, err=%v; want %d", got, err, 50_000*1024)
+	}
+
+	safe := sfuHostSnapshot{
+		PressureLevel: sfuHostNormalPressureLevel,
+		SwapFreeMiB:   sfuHostMinFreeSwapMiB,
+		FreeDiskBytes: sfuHostMinFreeDiskBytes,
+	}
+	if failures := sfuHostPreflightFailures(safe); len(failures) != 0 {
+		t.Fatalf("safe host sample failed preflight: %v", failures)
+	}
+	safe.PressureLevel++
+	safe.SwapFreeMiB--
+	safe.FreeDiskBytes--
+	if failures := sfuHostPreflightFailures(safe); len(failures) != 3 {
+		t.Fatalf("unsafe host sample failures = %v, want pressure/swap/disk", failures)
+	}
+}
+
+func TestDefaultSFUHeapBudgetUsesViewerEstimateWithSmallRunFloor(t *testing.T) {
+	if got, want := defaultSFUHeapBudget(20, 50), uint64(1_000_000_000); got != want {
+		t.Fatalf("20x50 heap budget = %d, want %d", got, want)
+	}
+	if got, want := defaultSFUHeapBudget(1, 1), uint64(256<<20); got != want {
+		t.Fatalf("1x1 heap budget = %d, want minimum %d", got, want)
+	}
+	if got := defaultSFUHeapBudget(0, 1); got != 0 {
+		t.Fatalf("invalid shape heap budget = %d, want 0", got)
+	}
+}
+
 func TestCachedPacketsSharePayloadAndCopyMutableHeader(t *testing.T) {
 	stored := &rtp.Packet{
 		Header: rtp.Header{
@@ -952,35 +1069,76 @@ func TestCachedPacketsSharePayloadAndCopyMutableHeader(t *testing.T) {
 	}
 }
 
-func TestBuildSFUScaleProofConfigSupportsTwentyByTwoHundredFifty(t *testing.T) {
-	config, err := buildSFUScaleProofConfig(20, 250)
+func TestBuildSFUScaleProofConfigSupportsTwentyByFiveHundred(t *testing.T) {
+	config, err := buildSFUScaleProofConfig(20, 500)
 	if err != nil {
-		t.Fatalf("build 20-publisher/250-viewer config: %v", err)
+		t.Fatalf("build 20-publisher/500-viewer config: %v", err)
 	}
-	if got, want := config.proofID, "m6h-scale-p20-vpp250-v5000-fps5"; got != want {
+	if got, want := config.proofID, "m6h-scale-p20-vpp500-v10000-fps5"; got != want {
 		t.Fatalf("proof ID = %q, want %q", got, want)
 	}
-	if len(config.tracks) != 20 || len(config.viewerTrackIndexes) != 5000 {
-		t.Fatalf("scale config has %d publishers and %d viewers, want 20 and 5000",
+	if len(config.tracks) != 20 || len(config.viewerTrackIndexes) != 10000 {
+		t.Fatalf("scale config has %d publishers and %d viewers, want 20 and 10000",
 			len(config.tracks), len(config.viewerTrackIndexes))
 	}
 	if config.videoInterval != 200*time.Millisecond {
 		t.Fatalf("video interval = %s, want 200ms (5 fps)", config.videoInterval)
+	}
+	if config.feedbackSettleDelay != 60*time.Second {
+		t.Fatalf("feedback settle delay = %s, want 60s for scale proofs", config.feedbackSettleDelay)
+	}
+	if config.scoringMode != sfuScoringStrict ||
+		config.maxP99 != LatencyP99Max ||
+		config.maxDissolved != 0.01 {
+		t.Fatalf("default scoring = %q, p99 %s, dissolved %g; want strict, 150ms, 1%%",
+			config.scoringMode, config.maxP99, config.maxDissolved)
 	}
 	viewersPerTrack := make([]int, len(config.tracks))
 	for _, trackIndex := range config.viewerTrackIndexes {
 		viewersPerTrack[trackIndex]++
 	}
 	for index, viewers := range viewersPerTrack {
-		if viewers != 250 {
-			t.Fatalf("track %d has %d viewers, want 250", index, viewers)
+		if viewers != 500 {
+			t.Fatalf("track %d has %d viewers, want 500", index, viewers)
 		}
 	}
 }
 
 func TestBuildSFUScaleProofConfigEnforcesTotalViewerLimit(t *testing.T) {
-	if _, err := buildSFUScaleProofConfig(21, 250); err == nil {
-		t.Fatal("scale config accepted more than 5000 total viewers")
+	if _, err := buildSFUScaleProofConfig(21, 500); err == nil {
+		t.Fatal("scale config accepted more than 10000 total viewers")
+	}
+}
+
+func TestBuildM9HProofConfigModelsSelectiveNineteenThousandParticipantEvent(t *testing.T) {
+	config := buildM9HProofConfig()
+	if config.proofID != "m9h-event-p9000-v10000-selective-fps5" {
+		t.Fatalf("proof ID = %q", config.proofID)
+	}
+	if len(config.tracks) != m9HPublisherCount || len(config.viewerTrackIndexes) != m9HViewerCount {
+		t.Fatalf("M9-H config has %d publishers and %d viewers, want %d and %d",
+			len(config.tracks), len(config.viewerTrackIndexes), m9HPublisherCount, m9HViewerCount)
+	}
+	if config.videoInterval != 200*time.Millisecond || !config.measureLatency || !config.exerciseRTCP {
+		t.Fatalf("M9-H proof settings = interval %s, latency %t, RTCP %t; want 200ms/true/true",
+			config.videoInterval, config.measureLatency, config.exerciseRTCP)
+	}
+
+	viewersPerTrack := make([]int, len(config.tracks))
+	for viewer, trackIndex := range config.viewerTrackIndexes {
+		if trackIndex < 0 || trackIndex >= len(config.tracks) {
+			t.Fatalf("viewer %d references invalid track %d", viewer, trackIndex)
+		}
+		viewersPerTrack[trackIndex]++
+	}
+	for trackIndex, viewers := range viewersPerTrack {
+		want := 1
+		if trackIndex < m9HViewerCount-m9HPublisherCount {
+			want = 2
+		}
+		if viewers != want {
+			t.Fatalf("track %d has %d viewers, want %d", trackIndex, viewers, want)
+		}
 	}
 }
 

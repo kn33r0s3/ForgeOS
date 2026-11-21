@@ -51,10 +51,21 @@ const (
 	audioSampleRate                = 8000
 	audioSamplesFrame              = audioSampleRate / 50
 	sfuNACKHistoryPackets          = 512
-	sfuScaleMaxViewersPerPublisher = 250
-	sfuScaleMaxViewers             = 5000
-	sfuDefaultEgressShardCount     = 0
-	sfuEgressShardQueueSize        = 64
+	sfuScaleMaxViewersPerPublisher = 500
+	sfuScaleMaxViewers             = 10000
+	// M9-H is an exact logical-event topology contract. It deliberately
+	// describes subscriptions, rather than broadcasting every publisher to
+	// every viewer: every viewer receives one selected track and every source
+	// is represented in the same event. A successful configuration build is
+	// not a capacity measurement; the ordinary proof gates still decide that.
+	m9HPublisherCount             = 9000
+	m9HViewerCount                = 10000
+	sfuDefaultEgressShardCount    = 0
+	sfuEgressShardQueueSize       = 64
+	sfuHostNormalPressureLevel    = 1
+	sfuHostMinFreeSwapMiB         = 2048
+	sfuHostMinFreeDiskBytes       = 10 << 30
+	sfuHostPreflightRetryInterval = 10 * time.Minute
 	// NACK aggregation (M6-H attempt 8): a viewer NACKs the same lost
 	// sequences on every RTCP interval, and retransmitting each one again
 	// drowns the router (16.7M retransmits for 306k NACKs in attempt 7)
@@ -68,17 +79,9 @@ const (
 	// Pion's NACK marshaler requires len(Nacks)+2 <= MaxUint8.
 	maxNACKPairsPerRTCPPacket = math.MaxUint8 - 2
 	nackQueueSize             = 64
-	nackMaxQueueAge           = 500 * time.Millisecond
-	// FIX 10: NACK queue age, separate from the RTP queue age.
-	// The nackWorker drops a NACK that waited > nackMaxQueueAge
-	// (500 ms) in the queue. After the 60 s media phase the worker
-	// is still draining the RTP backlog, so the injected synthetic
-	// NACKs (the wait needs every one) can wait > 500 ms and get
-	// dropped stale — 7 dropped in 092, leaving NACKForwarded 6
-	// short of 5,000. The synthetic sequence is always valid (it is
-	// LastSequenceNumber+1000, in the future), so a 10 s queue age
-	// is safe for NACKs. The RTP queue age stays 500 ms — raising
-	// it would forward stale RTP and break the latency gate.
+	defaultNACKMaxQueueAge    = 500 * time.Millisecond
+	// Legacy name retained for the configurable max age of queued RTP
+	// media. The separate NACK feedback queue has no age limit here.
 	nackFeedbackMaxQueueAge = 10 * time.Second
 	sfuRTPQueueSize         = 64
 	// FIX 2: recent-window size for the per-viewer received-sequence set
@@ -106,30 +109,6 @@ const (
 	// 360 s run ctx (setup ~40 + media 61 + settle 45 + injection
 	// 150 = ~296 s, leaving ~64 s for the wait).
 	sfuFeedbackPacingInterval = 30 * time.Millisecond
-	// FIX 17: settle delay before the feedback injection. The 113/117
-	// per-track exits are bimodal by track number: the low-numbered
-	// tracks (0001-0011, whose feedback is dispatched FIRST, right
-	// after the 60 s media phase ends) lose ~50-100 of 250 each at
-	// the publisher, while the high-numbered tracks (0012-0020,
-	// dispatched LAST, ~50-100 s later) lose ~0. The loss is a
-	// start-of-injection congestion effect, not a buffer size (FIX
-	// 7/13 read buffers and FIX 16 write buffers, all 8 MiB, did
-	// not move it) and not replay protection (FIX 14). Letting the
-	// nackWorkers drain the post-media RTP backlog before the first
-	// feedback is sent gives the early tracks the same calm system
-	// the late tracks already enjoy. FIX 17b: 15 s helped (117:
-	// publisher 86.5% -> 120: 92.4%, complete tracks 8 -> 12) but
-	// 8 tracks were still short, so the backlog takes longer than
-	// 15 s to clear; 45 s is the next step. FIX 19: 45 s + 30 ms
-	// pacing (127) reached 98.2% / 18 tracks, leaving only tracks
-	// 0001-0002 short (~55 each) — the loss is now ~2% and still
-	// concentrated in the first tracks, so the backlog takes longer
-	// than 45 s; 60 s is the next step. Timeline: setup ~40 +
-	// media 61 + settle 60 + injection ~150 = ~311 s, leaving ~49 s
-	// for the wait in the 360 s run ctx (the wait completes as soon
-	// as the last feedback arrives, so this fits if the loss is
-	// prevented).
-	sfuFeedbackSettleDelay = 60 * time.Second
 	// M7-H attempt 9: the parallel injection worker pool. 32 matches the
 	// negotiation concurrency; the serial loop's worst single blocking
 	// WriteRTCP was 42.6 s, so 32 workers keep the dispatch wall time far
@@ -152,6 +131,13 @@ var m7hHeapProfileCaptureOffsets = [...]time.Duration{
 	90 * time.Second,
 	120 * time.Second,
 }
+
+const (
+	sfuScoringStrict   = "strict"
+	sfuScoringDissolve = "dissolve"
+)
+
+var nackMaxQueueAge = defaultNACKMaxQueueAge
 
 // routerUDPMuxMode is linker-overridable for local transport isolation runs.
 var routerUDPMuxMode = "enabled"
@@ -375,19 +361,58 @@ type sfuProofResult struct {
 	ForwardingErrors               []string                   `json:"forwarding_errors"`
 	RTPQueueDrops                  uint64                     `json:"rtp_queue_drops"`
 	RTPIntentionalShed             uint64                     `json:"rtp_intentional_shed"`
+	RTPQueueDropShed               uint64                     `json:"rtp_queue_drop_shed_packets"`
 	RTPWriteErrors                 uint64                     `json:"rtp_write_errors"`
 	RTPKeyframeRecoverySamples     uint64                     `json:"rtp_keyframe_recovery_samples"`
 	RTPKeyframeRecoveryNanos       uint64                     `json:"rtp_keyframe_recovery_nanos"`
 	RTPKeyframeRecoveryMaxNanos    uint64                     `json:"rtp_keyframe_recovery_max_nanos"`
 	LatencyMode                    string                     `json:"latency_mode,omitempty"`
 	LatencyPending                 int                        `json:"latency_pending_frames"`
+	LatencyPendingDeliveries       int                        `json:"latency_pending_deliveries"`
+	ScoringMode                    string                     `json:"scoring_mode,omitempty"`
+	DeliveredFrames                uint64                     `json:"delivered_frames"`
+	DissolvedUnmatched             uint64                     `json:"dissolved_unmatched_deliveries"`
+	DissolvedShedPackets           uint64                     `json:"dissolved_shed_packets"`
+	DissolvedQueueDropPackets      uint64                     `json:"dissolved_queue_drop_packets"`
+	DissolvedCount                 uint64                     `json:"dissolved_count"`
+	DissolvedFraction              float64                    `json:"dissolved_fraction"`
+	DissolveMaxP99                 time.Duration              `json:"dissolve_max_p99_ns,omitempty"`
+	DissolveMaxFraction            float64                    `json:"dissolve_max_fraction,omitempty"`
+	NACKMaxQueueAge                time.Duration              `json:"nack_max_queue_age_ns,omitempty"`
+	HostPreflight                  *sfuHostSnapshot           `json:"host_preflight,omitempty"`
 	LatencyEvidenceDirectory       string                     `json:"latency_evidence_directory,omitempty"`
 	FrameDiagnostics               *sfuFrameDiagnosticSummary `json:"frame_diagnostics,omitempty"`
 	MeasurementPass                *bool                      `json:"measurement_pass,omitempty"`
 }
 
 type proofErrorResult struct {
-	Error string `json:"error"`
+	Error         string           `json:"error"`
+	Status        string           `json:"status,omitempty"`
+	HostPreflight *sfuHostSnapshot `json:"host_preflight,omitempty"`
+	HostGuard     *sfuHostAbort    `json:"host_guard,omitempty"`
+}
+
+type sfuHostSnapshot struct {
+	ObservedAt    time.Time `json:"observed_at_utc"`
+	PressureLevel int       `json:"pressure_level"`
+	SwapUsedMiB   float64   `json:"swap_used_mib"`
+	SwapFreeMiB   float64   `json:"swap_free_mib"`
+	Swapouts      uint64    `json:"swapouts"`
+	Pageouts      uint64    `json:"pageouts"`
+	FreeDiskBytes uint64    `json:"free_disk_bytes"`
+}
+
+type sfuHostAbort struct {
+	Reason        string           `json:"reason"`
+	Snapshot      *sfuHostSnapshot `json:"snapshot,omitempty"`
+	SwapoutsDelta uint64           `json:"swapouts_delta"`
+	PageoutsDelta uint64           `json:"pageouts_delta"`
+}
+
+type sfuHostWatchdogSample struct {
+	Snapshot      sfuHostSnapshot `json:"snapshot"`
+	SwapoutsDelta uint64          `json:"swapouts_delta"`
+	PageoutsDelta uint64          `json:"pageouts_delta"`
 }
 
 func sfuMeasurementPass(result sfuProofResult, expectedViewers int, exerciseRTCP bool) bool {
@@ -415,21 +440,299 @@ func sfuMeasurementPass(result sfuProofResult, expectedViewers int, exerciseRTCP
 	return pass
 }
 
+func applySFUDissolveMetrics(result *sfuProofResult) {
+	var deliveredFrames, unmatched uint64
+	for _, viewer := range result.Viewers {
+		if viewer.Latency == nil {
+			continue
+		}
+		if viewer.Latency.Frames > 0 {
+			deliveredFrames += uint64(viewer.Latency.Frames)
+		}
+		if viewer.Latency.Unmatched > 0 {
+			unmatched += uint64(viewer.Latency.Unmatched)
+		}
+	}
+	if result.LatencyPendingDeliveries > 0 {
+		unmatched += uint64(result.LatencyPendingDeliveries)
+	}
+
+	queueDropShed := result.RTPQueueDropShed
+	if queueDropShed > result.RTPIntentionalShed {
+		queueDropShed = result.RTPIntentionalShed
+	}
+	result.DeliveredFrames = deliveredFrames
+	result.DissolvedUnmatched = unmatched
+	result.DissolvedShedPackets = result.RTPIntentionalShed - queueDropShed
+	result.DissolvedQueueDropPackets = result.RTPQueueDrops
+	result.DissolvedCount = result.DissolvedUnmatched +
+		result.DissolvedShedPackets +
+		result.DissolvedQueueDropPackets
+	denominator := result.DeliveredFrames + result.DissolvedCount
+	if denominator == 0 {
+		result.DissolvedFraction = 0
+		return
+	}
+	result.DissolvedFraction = float64(result.DissolvedCount) / float64(denominator)
+}
+
+func sfuDissolveMeasurementPass(
+	result sfuProofResult,
+	expectedViewers int,
+	exerciseRTCP bool,
+	maxP99 time.Duration,
+	maxDissolved float64,
+) bool {
+	pass := len(result.Viewers) == expectedViewers &&
+		result.PublisherState == peerConnectionConnected &&
+		result.UnauthorizedSubscriptionDenied &&
+		result.CleanupVerified &&
+		result.RTPWriteErrors == 0 &&
+		len(result.ForwardingErrors) == 0 &&
+		result.DissolvedFraction <= maxDissolved
+	for _, viewer := range result.Viewers {
+		if viewer.Latency == nil || viewer.Latency.Frames == 0 ||
+			viewer.Latency.P99 > maxP99 ||
+			!viewer.OnlyRequested || viewer.PeerConnection != peerConnectionConnected {
+			pass = false
+		}
+		if exerciseRTCP &&
+			(viewer.FeedbackForwarded.NACKReceived == 0 ||
+				viewer.FeedbackForwarded.NACKRetransmitted == 0 ||
+				viewer.FeedbackForwarded.NACKForwarded == 0 ||
+				viewer.FeedbackForwarded.PLIForwarded == 0 ||
+				viewer.FeedbackForwarded.FIRForwarded == 0) {
+			pass = false
+		}
+	}
+	return pass
+}
+
 func writeProofError(w io.Writer, err error) error {
-	return json.NewEncoder(w).Encode(proofErrorResult{Error: err.Error()})
+	return writeProofErrorResult(w, proofErrorResult{Error: err.Error()})
+}
+
+func writeProofErrorResult(w io.Writer, result proofErrorResult) error {
+	return json.NewEncoder(w).Encode(result)
+}
+
+func sfuHostPreflightFailures(snapshot sfuHostSnapshot) []string {
+	var failures []string
+	if snapshot.PressureLevel != sfuHostNormalPressureLevel {
+		failures = append(failures, fmt.Sprintf(
+			"memory pressure level %d is not NORMAL (%d)",
+			snapshot.PressureLevel,
+			sfuHostNormalPressureLevel,
+		))
+	}
+	if snapshot.SwapFreeMiB < sfuHostMinFreeSwapMiB {
+		failures = append(failures, fmt.Sprintf(
+			"free swap %.2f MiB is below %d MiB",
+			snapshot.SwapFreeMiB,
+			sfuHostMinFreeSwapMiB,
+		))
+	}
+	if snapshot.FreeDiskBytes < sfuHostMinFreeDiskBytes {
+		failures = append(failures, fmt.Sprintf(
+			"free disk %d bytes is below %d bytes",
+			snapshot.FreeDiskBytes,
+			sfuHostMinFreeDiskBytes,
+		))
+	}
+	return failures
+}
+
+func waitForSFUHostPreflight() (sfuHostSnapshot, error) {
+	for {
+		snapshot, err := readSFUHostSnapshot()
+		if err != nil {
+			fmt.Fprintf(
+				os.Stderr,
+				"host_preflight=UNKNOWN error=%q recheck_after=%s\n",
+				err.Error(),
+				sfuHostPreflightRetryInterval,
+			)
+			time.Sleep(sfuHostPreflightRetryInterval)
+			continue
+		}
+		encoded, err := json.Marshal(snapshot)
+		if err != nil {
+			return sfuHostSnapshot{}, fmt.Errorf("encode host preflight sample: %w", err)
+		}
+		fmt.Fprintf(os.Stderr, "host_preflight_sample=%s\n", encoded)
+		if failures := sfuHostPreflightFailures(snapshot); len(failures) == 0 {
+			return snapshot, nil
+		} else {
+			fmt.Fprintf(
+				os.Stderr,
+				"host_preflight=NOT_READY reasons=%q recheck_after=%s\n",
+				strings.Join(failures, "; "),
+				sfuHostPreflightRetryInterval,
+			)
+		}
+		time.Sleep(sfuHostPreflightRetryInterval)
+	}
+}
+
+func readSFUHostSnapshot() (sfuHostSnapshot, error) {
+	snapshot := sfuHostSnapshot{ObservedAt: time.Now().UTC()}
+	pressureOutput, err := exec.Command("sysctl", "-n", "kern.memorystatus_vm_pressure_level").Output()
+	if err != nil {
+		return snapshot, fmt.Errorf("read macOS VM pressure: %w", err)
+	}
+	snapshot.PressureLevel, err = strconv.Atoi(strings.TrimSpace(string(pressureOutput)))
+	if err != nil {
+		return snapshot, fmt.Errorf("parse macOS VM pressure %q: %w", strings.TrimSpace(string(pressureOutput)), err)
+	}
+	snapshot.SwapUsedMiB, snapshot.SwapFreeMiB, err = readAudioSwapMiB()
+	if err != nil {
+		return snapshot, err
+	}
+	vmStatOutput, err := exec.Command("vm_stat").Output()
+	if err != nil {
+		return snapshot, fmt.Errorf("read macOS VM counters: %w", err)
+	}
+	snapshot.Swapouts, err = parseVMStatCounter(string(vmStatOutput), "Swapouts")
+	if err != nil {
+		return snapshot, err
+	}
+	snapshot.Pageouts, err = parseVMStatCounter(string(vmStatOutput), "Pageouts")
+	if err != nil {
+		return snapshot, err
+	}
+	diskOutput, err := exec.Command("df", "-k", ".").Output()
+	if err != nil {
+		return snapshot, fmt.Errorf("read free disk space: %w", err)
+	}
+	snapshot.FreeDiskBytes, err = parseDFAvailableBytes(string(diskOutput))
+	if err != nil {
+		return snapshot, err
+	}
+	return snapshot, nil
+}
+
+func parseVMStatCounter(output, label string) (uint64, error) {
+	for _, line := range strings.Split(output, "\n") {
+		name, value, found := strings.Cut(strings.TrimSpace(line), ":")
+		if !found || name != label {
+			continue
+		}
+		fields := strings.Fields(value)
+		if len(fields) == 0 {
+			return 0, fmt.Errorf("vm_stat %s counter has no value", label)
+		}
+		counter, err := strconv.ParseUint(strings.TrimSuffix(fields[0], "."), 10, 64)
+		if err != nil {
+			return 0, fmt.Errorf("parse vm_stat %s counter %q: %w", label, fields[0], err)
+		}
+		return counter, nil
+	}
+	return 0, fmt.Errorf("vm_stat output lacks %s counter", label)
+}
+
+func parseDFAvailableBytes(output string) (uint64, error) {
+	lines := strings.Split(strings.TrimSpace(output), "\n")
+	if len(lines) < 2 {
+		return 0, errors.New("df output lacks a filesystem row")
+	}
+	fields := strings.Fields(lines[len(lines)-1])
+	if len(fields) < 4 {
+		return 0, fmt.Errorf("df output row lacks available blocks: %s", lines[len(lines)-1])
+	}
+	availableBlocks, err := strconv.ParseUint(fields[3], 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("parse df available blocks %q: %w", fields[3], err)
+	}
+	return availableBlocks * 1024, nil
+}
+
+func startSFUHostWatchdog(
+	ctx context.Context,
+	cancel context.CancelFunc,
+	baseline sfuHostSnapshot,
+) <-chan *sfuHostAbort {
+	done := make(chan *sfuHostAbort, 1)
+	go func() {
+		defer close(done)
+		ticker := time.NewTicker(time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				snapshot, err := readSFUHostSnapshot()
+				if err != nil {
+					abort := &sfuHostAbort{Reason: fmt.Sprintf("host watchdog sampling failed: %v", err)}
+					done <- abort
+					cancel()
+					return
+				}
+				sample := sfuHostWatchdogSample{
+					Snapshot:      snapshot,
+					SwapoutsDelta: counterDelta(baseline.Swapouts, snapshot.Swapouts),
+					PageoutsDelta: counterDelta(baseline.Pageouts, snapshot.Pageouts),
+				}
+				encoded, err := json.Marshal(sample)
+				if err != nil {
+					abort := &sfuHostAbort{Reason: fmt.Sprintf("encode host watchdog sample: %v", err)}
+					done <- abort
+					cancel()
+					return
+				}
+				fmt.Fprintf(os.Stderr, "host_watchdog_sample=%s\n", encoded)
+				if failures := sfuHostPreflightFailures(snapshot); len(failures) != 0 {
+					done <- &sfuHostAbort{
+						Reason:        strings.Join(failures, "; "),
+						Snapshot:      &snapshot,
+						SwapoutsDelta: sample.SwapoutsDelta,
+						PageoutsDelta: sample.PageoutsDelta,
+					}
+					cancel()
+					return
+				}
+			}
+		}
+	}()
+	return done
+}
+
+func counterDelta(baseline, current uint64) uint64 {
+	if current < baseline {
+		return 0
+	}
+	return current - baseline
 }
 
 func main() {
-	mode := flag.String("mode", "pair", "local proof mode: pair, sfu, sfu-single, sfu-cascade, m1h, m2h, m3h, m4h, m5h, m6h, m7h, or audio-rung1")
+	mode := flag.String("mode", "pair", "local proof mode: pair, sfu, sfu-single, sfu-cascade, m1h, m2h, m3h, m4h, m5h, m6h, m7h, m9h, or audio-rung1")
 	videoPath := flag.String("video-file", "", "local Annex-B H.264 source file")
 	duration := flag.Duration("duration", 3*time.Second, "local media send duration")
 	audioSpeakers := flag.Int("audio-speakers", 10, "speaker count for audio-rung1 mode")
 	audioListeners := flag.Int("audio-listeners", 100, "listener count for audio-rung1 mode")
-	sfuPublishers := flag.Int("sfu-publishers", 1, "publisher count for sfu-single mode (1-1000)")
+	sfuPublishers := flag.Int("sfu-publishers", 1, "publisher count for sfu-single mode (1-3000)")
 	sfuViewersPerPublisher := flag.Int(
 		"sfu-viewers-per-publisher",
 		1,
-		"viewer count per publisher for sfu-single mode (1-250; total viewers capped at 5000)",
+		"viewer count per publisher for sfu-single mode (1-500; total viewers capped at 10000)",
+	)
+	sfuScoringMode := flag.String(
+		"sfu-score-mode",
+		sfuScoringStrict,
+		"sfu-single scoring mode: strict or dissolve (default strict)",
+	)
+	sfuMaxP99 := flag.Duration("sfu-max-p99", LatencyP99Max, "maximum delivered-frame p99 latency for dissolve scoring")
+	sfuMaxDissolved := flag.Float64("sfu-max-dissolved", 0.01, "maximum dissolved fraction for dissolve scoring (0-1)")
+	allowUnsafeHost := flag.Bool(
+		"allow-unsafe-host",
+		false,
+		"explicitly bypass the scale-proof host preflight and watchdog for this local invocation",
+	)
+	flag.DurationVar(
+		&nackMaxQueueAge,
+		"nack-max-queue-age",
+		nackMaxQueueAge,
+		"maximum queue age before stale RTP is dropped",
 	)
 	sfuFrameDiagnosticOutput := flag.String(
 		"sfu-frame-diagnostic-output",
@@ -449,6 +752,66 @@ func main() {
 	m7hSFUToken := flag.String("m7h-sfu-token", "", "private token for the local M7-H router process")
 	m7hPairs := flag.Int("m7h-viewers", 3000, "M7-H publisher/viewer pair count (1-3000; one viewer per publisher)")
 	flag.Parse()
+	if *sfuScoringMode != sfuScoringStrict && *sfuScoringMode != sfuScoringDissolve {
+		fail("--sfu-score-mode must be %q or %q", sfuScoringStrict, sfuScoringDissolve)
+	}
+	if *sfuScoringMode != sfuScoringStrict && *mode != "sfu-single" {
+		fail("--sfu-score-mode dissolve is supported only in sfu-single mode")
+	}
+	if *sfuMaxP99 <= 0 {
+		fail("--sfu-max-p99 must be positive")
+	}
+	if *sfuMaxDissolved < 0 || *sfuMaxDissolved > 1 {
+		fail("--sfu-max-dissolved must be between 0 and 1")
+	}
+	if nackMaxQueueAge <= 0 {
+		fail("--nack-max-queue-age must be positive")
+	}
+	maxHeapBytesExplicit := false
+	flag.Visit(func(parsed *flag.Flag) {
+		if parsed.Name == "max-heap-bytes" {
+			maxHeapBytesExplicit = true
+		}
+	})
+	isScaleProof := *mode == "sfu-single" || *mode == "m9h"
+	if *mode == "sfu-single" && !maxHeapBytesExplicit {
+		*maxHeapBytes = defaultSFUHeapBudget(*sfuPublishers, *sfuViewersPerPublisher)
+		fmt.Fprintf(os.Stderr, "sfu-single default heap budget: maxHeapBytes=%d\n", *maxHeapBytes)
+	}
+	if *mode == "m9h" && !maxHeapBytesExplicit {
+		*maxHeapBytes = defaultSFUHeapBudgetForViewers(m9HViewerCount)
+		fmt.Fprintf(os.Stderr, "m9h default heap budget: maxHeapBytes=%d\n", *maxHeapBytes)
+	}
+	var sfuHostPreflight *sfuHostSnapshot
+	if isScaleProof {
+		var snapshot sfuHostSnapshot
+		var err error
+		if *allowUnsafeHost {
+			snapshot, err = readSFUHostSnapshot()
+		} else {
+			snapshot, err = waitForSFUHostPreflight()
+		}
+		if err != nil {
+			writeErr := writeProofErrorResult(os.Stdout, proofErrorResult{
+				Error:  fmt.Sprintf("read sfu-single host preflight: %v", err),
+				Status: "NOT_STARTED-BY-HOST",
+			})
+			if writeErr != nil {
+				fail("read sfu-single host preflight: %v (write error result: %v)", err, writeErr)
+			}
+			fail("read sfu-single host preflight: %v", err)
+		}
+		if *allowUnsafeHost {
+			encoded, marshalErr := json.Marshal(snapshot)
+			if marshalErr != nil {
+				fail("encode unsafe host override snapshot: %v", marshalErr)
+			}
+			fmt.Fprintf(os.Stderr,
+				"host_preflight=OVERRIDDEN allowUnsafeHost=true failures=%q snapshot=%s\n",
+				strings.Join(sfuHostPreflightFailures(snapshot), "; "), encoded)
+		}
+		sfuHostPreflight = &snapshot
+	}
 	// FIX 21: harden the 4 GiB heap limit into the binary. The runtime
 	// already honours GOMEMLIMIT when set (run 133 used the env var);
 	// this only supplies the same 4 GiB default when the env is unset,
@@ -547,6 +910,8 @@ func main() {
 		setupAllowance = 45 * time.Minute
 	} else if *mode == "m7h" {
 		setupAllowance = 60 * time.Minute
+	} else if *mode == "m9h" {
+		setupAllowance = 2 * time.Hour
 	} else if *mode == "audio-rung1" {
 		setupAllowance = 30 * time.Minute
 	}
@@ -554,8 +919,12 @@ func main() {
 	defer cancel()
 	var result any
 	var heapBudgetDone <-chan error
+	var hostWatchdogDone <-chan *sfuHostAbort
 	if err = checkGoHeapBudget(*maxHeapBytes); err == nil {
 		heapBudgetDone = startHeapBudgetMonitor(ctx, *maxHeapBytes, cancel)
+		if isScaleProof && !*allowUnsafeHost {
+			hostWatchdogDone = startSFUHostWatchdog(ctx, cancel, *sfuHostPreflight)
+		}
 		switch *mode {
 		case "pair":
 			result, err = runLocalPair(ctx, videoFrames, *duration)
@@ -564,20 +933,18 @@ func main() {
 		case "sfu-cascade":
 			result, err = runLocalSFUProcessCascadeProof(ctx, videoFrames, *duration)
 		case "sfu-single":
-			if frameDiagnosticRecorder != nil {
-				result, err = runLocalSFUScaleProofWithDiagnostics(
-					ctx,
-					videoFrames,
-					*duration,
-					*sfuPublishers,
-					*sfuViewersPerPublisher,
-					frameDiagnosticRecorder,
-				)
-			} else if *sfuPublishers == 1 && *sfuViewersPerPublisher == 1 {
-				result, err = runLocalSFUSinglePairProof(ctx, videoFrames, *duration)
-			} else {
-				result, err = runLocalSFUScaleProof(ctx, videoFrames, *duration, *sfuPublishers, *sfuViewersPerPublisher)
-			}
+			result, err = runLocalSFUScaleProofWithOptions(
+				ctx,
+				videoFrames,
+				*duration,
+				*sfuPublishers,
+				*sfuViewersPerPublisher,
+				frameDiagnosticRecorder,
+				*sfuScoringMode,
+				*sfuMaxP99,
+				*sfuMaxDissolved,
+				sfuHostPreflight,
+			)
 		case "m1h":
 			result, err = runLocalM1HProof(ctx, videoFrames, *duration)
 		case "m2h":
@@ -592,10 +959,12 @@ func main() {
 			result, err = runLocalM6HProof(ctx, videoFrames, *duration)
 		case "m7h":
 			result, err = runLocalM7HProof(ctx, videoFrames, *duration, *m7hPairs)
+		case "m9h":
+			result, err = runLocalM9HProof(ctx, videoFrames, *duration, sfuHostPreflight)
 		case "audio-rung1":
 			result, err = runLocalAudioRungBothModes(ctx, *duration, *audioSpeakers, *audioListeners)
 		default:
-			fail("unsupported --mode %q (want pair, sfu, sfu-single, sfu-cascade, m1h, m2h, m3h, m4h, m5h, m6h, m7h, or audio-rung1)", *mode)
+			fail("unsupported --mode %q (want pair, sfu, sfu-single, sfu-cascade, m1h, m2h, m3h, m4h, m5h, m6h, m7h, m9h, or audio-rung1)", *mode)
 		}
 	}
 	cancel()
@@ -608,12 +977,31 @@ func main() {
 			}
 		}
 	}
+	var hostAbort *sfuHostAbort
+	if hostWatchdogDone != nil {
+		hostAbort = <-hostWatchdogDone
+	}
+	if hostAbort != nil {
+		err = errors.Join(err, fmt.Errorf("ABORTED-BY-HOST: %s", hostAbort.Reason))
+	}
 	if frameDiagnosticFile != nil {
 		if closeErr := frameDiagnosticFile.Close(); closeErr != nil {
 			err = errors.Join(err, fmt.Errorf("close frame diagnostic output: %w", closeErr))
 		}
 	}
 	if err != nil {
+		if hostAbort != nil {
+			writeErr := writeProofErrorResult(os.Stdout, proofErrorResult{
+				Error:         err.Error(),
+				Status:        "ABORTED-BY-HOST",
+				HostPreflight: sfuHostPreflight,
+				HostGuard:     hostAbort,
+			})
+			if writeErr != nil {
+				fail("run local Pion %s proof: %v (write error result: %v)", *mode, err, writeErr)
+			}
+			fail("run local Pion %s proof: %v", *mode, err)
+		}
 		if writeErr := writeProofError(os.Stdout, err); writeErr != nil {
 			fail("run local Pion %s proof: %v (write error result: %v)", *mode, err, writeErr)
 		}
@@ -750,6 +1138,30 @@ func goHeapBudgetExceeded(heapAlloc, maxHeapBytes uint64) error {
 		heapAlloc,
 		maxHeapBytes,
 	)
+}
+
+func defaultSFUHeapBudget(publisherCount, viewersPerPublisher int) uint64 {
+	if publisherCount < 1 || viewersPerPublisher < 1 {
+		return 0
+	}
+	return defaultSFUHeapBudgetForViewers(publisherCount * viewersPerPublisher)
+}
+
+func defaultSFUHeapBudgetForViewers(viewerCount int) uint64 {
+	if viewerCount < 1 {
+		return 0
+	}
+	const (
+		estimatedHeapBytesPerViewer = 500_000
+		budgetMultiplier            = 2
+		minimumHeapBudgetBytes      = 256 << 20
+	)
+	viewers := uint64(viewerCount)
+	budget := viewers * estimatedHeapBytesPerViewer * budgetMultiplier
+	if budget < minimumHeapBudgetBytes {
+		return minimumHeapBudgetBytes
+	}
+	return budget
 }
 
 func logHeapBudgetSample(phase string, maxHeapBytes uint64, memory runtime.MemStats) {
@@ -4652,6 +5064,7 @@ type sfuRouter struct {
 	rtpForwarded                   atomic.Uint64
 	rtpQueueDropped                atomic.Uint64
 	rtpIntentionalShed             atomic.Uint64
+	rtpQueueDropShed               atomic.Uint64
 	rtpDropped                     atomic.Uint64
 	rtpRecoveryNanos               atomic.Uint64
 	rtpRecoverySamples             atomic.Uint64
@@ -4820,10 +5233,16 @@ type sfuProofConfig struct {
 	viewerTrackIndexes []int
 	measureLatency     bool
 	exerciseRTCP       bool
-	videoInterval      time.Duration
-	logRTPPath         bool
-	frameDiagnostics   *sfuFrameDiagnosticRecorder
-	remoteSFU          *m7hRemoteSFUClient
+	scoringMode        string
+	maxP99             time.Duration
+	maxDissolved       float64
+	hostPreflight      *sfuHostSnapshot
+	// Small proofs use 1s; scale proofs give the RTP backlog 60s to drain.
+	feedbackSettleDelay time.Duration
+	videoInterval       time.Duration
+	logRTPPath          bool
+	frameDiagnostics    *sfuFrameDiagnosticRecorder
+	remoteSFU           *m7hRemoteSFUClient
 }
 
 type sfuSendResult struct {
@@ -7563,6 +7982,7 @@ func (r *sfuRouter) forwardTrack(source *sfuPublishedTrack) {
 				dropped, err := subscription.enqueueRTP(packet)
 				if dropped {
 					r.rtpQueueDropped.Add(1)
+					r.rtpQueueDropShed.Add(1)
 					r.recordRTPIntentionalShed(subscription)
 					r.requestRecoveryKeyframe(subscription)
 				}
@@ -8125,6 +8545,7 @@ func (r *sfuRouter) forwardQueuedRTP(subscription *sfuSubscription, queued queue
 		subscription.markNeedsKeyframe()
 		subscription.rtpQueueDropped.Add(1)
 		r.rtpQueueDropped.Add(1)
+		r.rtpQueueDropShed.Add(1)
 		r.recordRTPIntentionalShed(subscription)
 		r.requestRecoveryKeyframe(subscription)
 		return
@@ -8501,6 +8922,32 @@ func runLocalSFUScaleProofWithDiagnostics(
 	viewersPerPublisher int,
 	frameDiagnostics *sfuFrameDiagnosticRecorder,
 ) (sfuProofResult, error) {
+	return runLocalSFUScaleProofWithOptions(
+		ctx,
+		videoFrames,
+		duration,
+		publisherCount,
+		viewersPerPublisher,
+		frameDiagnostics,
+		sfuScoringStrict,
+		LatencyP99Max,
+		0.01,
+		nil,
+	)
+}
+
+func runLocalSFUScaleProofWithOptions(
+	ctx context.Context,
+	videoFrames []media.Sample,
+	duration time.Duration,
+	publisherCount int,
+	viewersPerPublisher int,
+	frameDiagnostics *sfuFrameDiagnosticRecorder,
+	scoringMode string,
+	maxP99 time.Duration,
+	maxDissolved float64,
+	hostPreflight *sfuHostSnapshot,
+) (sfuProofResult, error) {
 	config, err := buildSFUScaleProofConfig(publisherCount, viewersPerPublisher)
 	if err != nil {
 		return sfuProofResult{}, err
@@ -8509,6 +8956,10 @@ func runLocalSFUScaleProofWithDiagnostics(
 		return sfuProofResult{}, fmt.Errorf("SFU scale duration must be at least %s", MinDuration)
 	}
 	config.frameDiagnostics = frameDiagnostics
+	config.scoringMode = scoringMode
+	config.maxP99 = maxP99
+	config.maxDissolved = maxDissolved
+	config.hostPreflight = hostPreflight
 	return runLocalSFUProofWithConfig(ctx, videoFrames, duration, config)
 }
 
@@ -8543,13 +8994,17 @@ func buildSFUScaleProofConfig(publisherCount int, viewersPerPublisher int) (sfuP
 		}
 	}
 	return sfuProofConfig{
-		proofID:            fmt.Sprintf("m6h-scale-p%d-vpp%d-v%d-fps5", publisherCount, viewersPerPublisher, totalViewers),
-		tracks:             tracks,
-		viewerTrackIndexes: viewerTrackIndexes,
-		measureLatency:     true,
-		exerciseRTCP:       true,
-		videoInterval:      200 * time.Millisecond,
-		logRTPPath:         true,
+		proofID:             fmt.Sprintf("m6h-scale-p%d-vpp%d-v%d-fps5", publisherCount, viewersPerPublisher, totalViewers),
+		tracks:              tracks,
+		viewerTrackIndexes:  viewerTrackIndexes,
+		measureLatency:      true,
+		exerciseRTCP:        true,
+		scoringMode:         sfuScoringStrict,
+		maxP99:              LatencyP99Max,
+		maxDissolved:        0.01,
+		feedbackSettleDelay: 60 * time.Second,
+		videoInterval:       200 * time.Millisecond,
+		logRTPPath:          true,
 	}, nil
 }
 
@@ -8761,6 +9216,49 @@ func runLocalM7HProof(
 	config.remoteSFU = remoteSFU
 	result, proofErr := runLocalSFUProofWithConfig(ctx, videoFrames, duration, config)
 	return result, errors.Join(proofErr, remoteSFU.Close())
+}
+
+// buildM9HProofConfig expresses the 19,000-participant Hami event in the
+// existing selective-subscription proof primitive. Every one of the 9,000
+// publisher tracks has at least one viewer and the first 1,000 have a second
+// viewer, yielding 10,000 viewers without assigning any viewer more than one
+// stream. Discovery/switching remains the existing authorize/subscribe/
+// unsubscribe path; this config must not be interpreted as a runtime pass.
+func buildM9HProofConfig() sfuProofConfig {
+	tracks := make([]sfuTrackSpec, m9HPublisherCount)
+	viewerTrackIndexes := make([]int, 0, m9HViewerCount)
+	for publisherIndex := range tracks {
+		tracks[publisherIndex] = sfuTrackSpec{
+			publisherID: fmt.Sprintf("hami-m9h-publisher-%05d", publisherIndex+1),
+			trackID:     fmt.Sprintf("stream-%05d", publisherIndex+1),
+		}
+		viewerTrackIndexes = append(viewerTrackIndexes, publisherIndex)
+	}
+	for publisherIndex := 0; len(viewerTrackIndexes) < m9HViewerCount; publisherIndex++ {
+		viewerTrackIndexes = append(viewerTrackIndexes, publisherIndex)
+	}
+	return sfuProofConfig{
+		proofID:            "m9h-event-p9000-v10000-selective-fps5",
+		tracks:             tracks,
+		viewerTrackIndexes: viewerTrackIndexes,
+		measureLatency:     true,
+		exerciseRTCP:       true,
+		videoInterval:      200 * time.Millisecond,
+	}
+}
+
+func runLocalM9HProof(
+	ctx context.Context,
+	videoFrames []media.Sample,
+	duration time.Duration,
+	hostPreflight *sfuHostSnapshot,
+) (sfuProofResult, error) {
+	if duration < MinDuration {
+		return sfuProofResult{}, fmt.Errorf("M9-H duration must be at least %s", MinDuration)
+	}
+	config := buildM9HProofConfig()
+	config.hostPreflight = hostPreflight
+	return runLocalSFUProofWithConfig(ctx, videoFrames, duration, config)
 }
 
 func runLocalSFUProcessCascadeProof(
@@ -9986,6 +10484,23 @@ func runLocalSFUProofWithConfig(
 	if duration <= 0 {
 		return sfuProofResult{}, errors.New("media duration must be positive")
 	}
+	if config.feedbackSettleDelay <= 0 {
+		config.feedbackSettleDelay = time.Second
+	}
+	if config.scoringMode == "" {
+		config.scoringMode = sfuScoringStrict
+		config.maxP99 = LatencyP99Max
+		config.maxDissolved = 0.01
+	}
+	if config.scoringMode != sfuScoringStrict && config.scoringMode != sfuScoringDissolve {
+		return sfuProofResult{}, fmt.Errorf("unsupported SFU scoring mode %q", config.scoringMode)
+	}
+	if config.maxP99 <= 0 {
+		return sfuProofResult{}, errors.New("SFU maximum p99 must be positive")
+	}
+	if config.maxDissolved < 0 || config.maxDissolved > 1 {
+		return sfuProofResult{}, errors.New("SFU maximum dissolved fraction must be between 0 and 1")
+	}
 	if len(config.tracks) == 0 || len(config.viewerTrackIndexes) == 0 {
 		return sfuProofResult{}, errors.New("SFU proof requires tracks and viewers")
 	}
@@ -10902,7 +11417,7 @@ func runLocalSFUProofWithConfig(
 		// for the backlog to clear so every track starts from the
 		// same calm state. Bounded by the feedback ctx.
 		select {
-		case <-time.After(sfuFeedbackSettleDelay):
+		case <-time.After(config.feedbackSettleDelay):
 		case <-feedbackContext.Done():
 			return sfuProofResult{}, fmt.Errorf("feedback settle interrupted: %w", feedbackContext.Err())
 		}
@@ -11247,6 +11762,7 @@ func runLocalSFUProofWithConfig(
 	}
 	rtpQueueDrops := uint64(0)
 	rtpIntentionalShed := uint64(0)
+	rtpQueueDropShed := uint64(0)
 	rtpWriteErrors := uint64(0)
 	rtpKeyframeRecoverySamples := uint64(0)
 	rtpKeyframeRecoveryNanos := uint64(0)
@@ -11254,6 +11770,7 @@ func runLocalSFUProofWithConfig(
 	if router != nil {
 		rtpQueueDrops = router.rtpQueueDropped.Load()
 		rtpIntentionalShed = router.rtpIntentionalShed.Load()
+		rtpQueueDropShed = router.rtpQueueDropShed.Load()
 		rtpWriteErrors = router.rtpDropped.Load()
 		rtpKeyframeRecoverySamples = router.rtpRecoverySamples.Load()
 		rtpKeyframeRecoveryNanos = router.rtpRecoveryNanos.Load()
@@ -11295,14 +11812,23 @@ func runLocalSFUProofWithConfig(
 		UnauthorizedSubscriptionDenied: unauthorizedSubscriptionDenied,
 		RTPQueueDrops:                  rtpQueueDrops,
 		RTPIntentionalShed:             rtpIntentionalShed,
+		RTPQueueDropShed:               rtpQueueDropShed,
 		RTPWriteErrors:                 rtpWriteErrors,
 		RTPKeyframeRecoverySamples:     rtpKeyframeRecoverySamples,
 		RTPKeyframeRecoveryNanos:       rtpKeyframeRecoveryNanos,
 		RTPKeyframeRecoveryMaxNanos:    rtpKeyframeRecoveryMaxNanos,
+		ScoringMode:                    config.scoringMode,
+		DissolveMaxP99:                 config.maxP99,
+		DissolveMaxFraction:            config.maxDissolved,
+		NACKMaxQueueAge:                nackMaxQueueAge,
+		HostPreflight:                  config.hostPreflight,
 	}
 	if config.measureLatency {
 		result.LatencyMode = ModeReceive
 		result.LatencyPending = latencyPending
+		for _, clock := range latencyClocks {
+			result.LatencyPendingDeliveries += clock.PendingDeliveries()
+		}
 		result.LatencyEvidenceDirectory, err = os.MkdirTemp("", "hami-media-"+config.proofID+"-")
 		if err != nil {
 			return sfuProofResult{}, fmt.Errorf("create latency evidence directory: %w", err)
@@ -11468,7 +11994,17 @@ func runLocalSFUProofWithConfig(
 		return sfuProofResult{}, fmt.Errorf("SFU forwarding errors: %s", strings.Join(result.ForwardingErrors, "; "))
 	}
 	if config.measureLatency {
+		applySFUDissolveMetrics(&result)
 		measurementPass := sfuMeasurementPass(result, len(config.viewerTrackIndexes), config.exerciseRTCP)
+		if config.scoringMode == sfuScoringDissolve {
+			measurementPass = sfuDissolveMeasurementPass(
+				result,
+				len(config.viewerTrackIndexes),
+				config.exerciseRTCP,
+				config.maxP99,
+				config.maxDissolved,
+			)
+		}
 		result.MeasurementPass = &measurementPass
 	}
 	result.FrameDiagnostics = config.frameDiagnostics.summary()

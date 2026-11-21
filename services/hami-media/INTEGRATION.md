@@ -146,15 +146,47 @@ Run any publisher/fan-out shape with the same existing proof path:
   -max-heap-bytes 2147483648
 ```
 
-`-max-heap-bytes` is an optional Go-heap abort threshold. It is checked before
-peer setup and sampled every 100 ms while the proof runs; when exceeded, the
-proof is canceled and returns an explicit error. The value is **not** an
-operating-system RSS limit and does not include socket buffers or other
-processes, so leave substantial host-memory headroom and choose a conservative
-per-PC threshold. The 2 GiB value above is only an example, not a universal
-recommendation. When enabled, stderr records the configured budget and
-HeapAlloc/HeapInuse/HeapSys/GC/goroutine samples at startup and once per
-second; the proof JSON remains on stdout. `0` disables the guard.
+Scoring is strict by default: every subscriber must meet the existing latency,
+frame-count and duration gates, with zero unmatched or pending frames. For
+scale diagnosis, opt in to dissolve scoring:
+
+```sh
+./hami-media -mode sfu-single -duration 61s \
+  -video-file /path/to/local-source.h264 \
+  -sfu-publishers 20 -sfu-viewers-per-publisher 5 \
+  -sfu-score-mode dissolve -sfu-max-p99 150ms -sfu-max-dissolved 0.01
+```
+
+The JSON retains each viewer's delivered-frame p50/p95/p99. Dissolve mode
+requires every viewer's p99 to meet `-sfu-max-p99` and the overall
+`dissolved_fraction` to meet `-sfu-max-dissolved`; routing, authorization,
+RTCP, write-error, and cleanup checks remain required. The numerator counts
+unmatched events and pending frame deliveries, plus intentional-shed and
+queue-dropped RTP packets. Queue drops that are also counted as intentional
+sheds are de-duplicated. Because the last two components are packet counts,
+this is an operational observation fraction, not a claim that every packet
+corresponds to one lost frame.
+
+`-nack-max-queue-age` sets the stale queued-RTP age (default `500ms`) and is
+included in the proof JSON. It must be positive.
+
+Every `sfu-single` run first checks macOS pressure (must be NORMAL/1), free
+swap (at least 2,048 MiB), and free disk (at least 10 GiB). A failing or
+unavailable preflight is logged and retried every 10 minutes; the proof does
+not start until the readings pass. The disk floor is a conservative default
+because the existing scale ledger had no disk threshold. During a run the host
+watchdog samples those values plus `vm_stat` Swapouts and Pageouts once per
+second; a failed stop condition cancels the proof and reports
+`ABORTED-BY-HOST`, not a capacity verdict.
+
+Unless explicitly set, `sfu-single` also arms a Go-heap cap of 2× the
+estimated 0.5 MB per viewer, with a 256 MiB minimum for small proofs.
+`-max-heap-bytes` overrides that default; explicitly passing `0` disables the
+heap guard. It is checked before peer setup and sampled every 100 ms while the
+proof runs. This is **not** an operating-system RSS limit and does not include
+socket buffers or other processes. When enabled, stderr records the configured
+budget and HeapAlloc/HeapInuse/HeapSys/GC/goroutine samples at startup and once
+per second; the proof JSON remains on stdout.
 
 For split-process M7-H runs, the same limit is passed to the SFU child and
 enforced independently in the harness and SFU processes; it is not an

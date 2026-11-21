@@ -1,3 +1,45 @@
+## 2026-11-21 20:57 +0545 — dissolve scoring and host-stop guard advanced
+
+- **Existing seam/history:** the canonical `sfuMeasurementPass`,
+  `sfuProofConfig`, `LatencyRecorder`, and `sfuRouter` remain the measurement
+  and routing path. `git blame` traces strict scoring to `c232ea50`; no second
+  scoring or SFU subsystem was added.
+- **Capability increment:** feedback settle delay is now per-proof: 1 s by
+  default for small proofs and 60 s for 20×N scale configs. `sfu-single`
+  retains strict scoring by default and adds opt-in dissolve thresholds plus
+  `-nack-max-queue-age`. Per-viewer delivered-frame p50/p95/p99 stay in the
+  JSON; pending delivery opportunities and unmatched events are counted, and
+  queue-drop/intentional-shed overlap is de-duplicated in the dissolved
+  observation fraction.
+- **Host guard:** `sfu-single` now waits for pressure level 1, at least
+  2,048 MiB free swap, and at least 10 GiB free disk; the disk floor is a
+  conservative new default because no prior disk threshold was recorded.
+  Failed checks are logged and retried every 10 minutes. A one-second
+  watchdog records pressure, swapouts/pageouts, swap, and disk, cancelling
+  with `ABORTED-BY-HOST` on a stop-condition breach. The default Go heap cap
+  is 2× the 0.5 MB/viewer estimate, floored at 256 MiB.
+- **Verification:** baseline `GOTOOLCHAIN=local GOPROXY=off go test -json
+  -count=1 ./...` had one failure: `TestLocalSFURoutesAuthorizedStreamsAndRTCP`
+  timed out at 20 s against the prior 60 s small-proof settle. After the
+  config fix, every Go test passed with per-test durations captured; `go vet
+  ./...` passed. `npm test` passed 168 script + 295 TypeScript tests,
+  `npm run gates` reported GREEN, and `git diff --check` passed.
+- **Current stop:** at 20:56:45 +0545, pressure was 2, free swap was
+  1,266.88 MiB (<2,048 MiB), and free disk was 649,241,304 1-KiB blocks.
+  No media load process was found and no scale or LiveKit run started.
+- **Remaining seam/blocker:** `sfuRouter` was not extracted. It has 167
+  references in `main.go`, including 32 direct private-field accesses, and
+  48 tests access its unexported internals. A real package boundary needs a
+  deliberate exported API and new package/test files; no commit/PR
+  description authorizing those files exists in this cycle. Preserve the
+  current router and test contracts until that boundary can be stated and
+  validated.
+- **Owner dependency/next:** this work removes no owner action for a real
+  transaction. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains
+  **NOT MEASURABLE**. Next, define and document the narrow `sfuRouter`
+  package API, then extract it and rerun the Go suite; keep all load runs
+  stopped until the host preflight passes.
+
 ## 2026-11-21 01:52 +0545 — source NACK-cache retention metrics added
 
 - **Existing failure/seam:** the 3,000-pair M7-H run reached 15.06 GB
@@ -10207,3 +10249,29 @@ Obtain NDRRMA #02's official PDF attachment and inspect every page; then #04. Re
   - `यस सहायकको नाम के हो, र यसलाई कसले बनाएको हो?`:
     `तपाईंले जनाएको "यस सहायकको नाम" अस्पष्ट छ। तपाईंले जस्तै "यस" अथवा "यस सहायक" के अर्थ दिनु भने त्यो बारेमा अधिक स्पष्ट उत्तर दिन सकिन्छ`
 - **Prototype lessons and next dependency:** an initial read-only SQL probe built five placeholders but supplied 25 bindings and was rejected before returning data; the corrected query generated each predicate and binding together. Future probes must assert placeholder/binding counts before execution. An initial context timestamp was approximate; it was corrected by a timed source fetch. Record source publication date separately from actual retrieval time, and never infer the latter. The current cycle removes the prior unknown about direct identity and this one context-ablation result; it removes no routine owner action. Owner action still required: resolve the truthful model-lineage presentation and authorize/establish a provenance-eligible REAL evidence source in the existing store. The next removable dependency is a verified source ingestion through the existing evidence path followed by read-only retrieval; do not write retrieved text to training data. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+
+## 2026-11-21 — M9-H 19,000-participant event contract
+
+- **Target topology (not a capacity result):** the existing
+  `services/hami-media/main.go:sfuProofConfig` selective-subscription seam now
+  has an exact M9-H configuration: 9,000 publisher tracks and 10,000 viewers
+  in one logical event. Every source has at least one subscription; 1,000
+  sources have two; no viewer is assigned more than one stream. The existing
+  `authorizeSubscription` / `subscribe` / `unsubscribe` path remains the
+  control path for discovery and switching. No all-to-all media broadcast was
+  introduced.
+- **Verification boundary:** the config shape is covered by a deterministic Go
+  test and `m9h` uses the same strict per-viewer latency, requested-track,
+  RTCP, and cleanup gates as the current proof runner. This only establishes a
+  target contract. It is **not** a 19,000-participant runtime pass, LiveKit
+  Cloud result, production deployment, or network-capacity claim.
+- **Current blocker and owner dependency:** the local proof refuses to start
+  below the existing 2,048 MiB free-swap floor. Host observation at this
+  cycle: 1,210.88 MiB free. Independent compute/network capacity and a
+  provisioned LiveKit deployment remain required to verify the target. No
+  external service, spend, production action, or real transaction occurred;
+  `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+- **Next removable dependency:** after the host floor is met, pass the
+  smaller matched rungs and use separately resourced generator/SFU hosts for
+  an M9-H staged measurement. Do not promote configuration or a local loopback
+  test to a 19,000-participant capacity claim.

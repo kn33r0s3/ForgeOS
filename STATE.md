@@ -1,5 +1,6 @@
 ## Current continuation — 2026-11-21 01:52 +0545 — M7-H cache retention instrumented
 
+- 20:56 continuation: dissolve scoring, configurable NACK age, 1s small-proof/60s scale settle, host preflight/watchdog, and viewer-scaled heap cap are implemented; Go tests/vet, npm tests (168+295), and gates pass, but pressure is 2 and free swap 1,266.88 MiB, so no load ran; router extraction remains the next code seam.
 - Started from the existing 3,000-pair M7-H failure: 15.06 GB HeapAlloc,
   120,631 goroutines, 2,588 stale publishers, and no final p99. UDP write-lock
   contention remains a profile correlation, not a proven cause.
