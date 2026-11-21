@@ -3243,6 +3243,35 @@ This file rots if it isn't maintained. Two mechanisms keep it live:
 The "Verified" stamp in Current state is the last live check. If it is more
 than a few days old, re-verify before trusting the details.
 
+## Last verified state snapshot (2026-11-21)
+
+**Update 2026-11-21 (daily freshness check, 06:23 NPT):** HEAD at `173ab79b`
+(since 2026-11-20: Hami media/SFU work — RTP copy-cost reduction, unsafe
+Pion NACK no-copy path recorded, M7-H profiling and port-diagnostics guard,
+scale topology widened; AI configuration and model gateway updates with
+serving-model description corrections and secret-scan false-positive clears;
+cross-system outage and restoration evidence recorded — local media/AI
+work and documentation only; no runtime, collector or production-config
+change, and production remains 402-disabled so none of it is live).
+`git pull --ff-only` fast-forwarded `2d2f8b34..173ab79b`;
+`main` == `origin/main`. Working tree clean before this edit.
+
+- **Health: NOT OK — both endpoints still return HTTP 402
+  `Payment required` / `DEPLOYMENT_DISABLED` (haminp and
+  forge-os-ebon, confirmed on the check read). Unchanged from
+  2026-10-31. It matches the Vercel account/deployment gate
+  already recorded in the handoff on 2026-10-31; the exact Vercel
+  cause remains pending normal team authorization, and no bypass or
+  permission change was made here.
+- **Intake: UNKNOWN this run —** `/api/forge-bot/config` also returns
+  the same 402 `DEPLOYMENT_DISABLED` response, so `intake_enabled` could
+  not be verified. Last verified value (2026-10-31) was `false`; no
+  change is claimed.
+- **Unknowns:** 113 D-entries in `docs/UNKNOWN_MAP.md` (unchanged from
+  2026-11-20; no new D-entries since Discovery round 24 added D109–D113).
+- **Blockers (unchanged):** zero real seller conversations; zero verified
+  transactions. Owner-side gates still hold.
+
 ## Last verified state snapshot (2026-11-20)
 
 **Update 2026-11-20 (daily freshness check, 06:23 NPT):** HEAD at `a42b2468`
