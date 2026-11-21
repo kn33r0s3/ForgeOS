@@ -1,3 +1,12 @@
+## Current queue — 2026-11-22 05:07 +0545 — native Hami Media and D109/D110
+
+1. **Native Hami Media verification.** External LiveKit harness is retired by 364ec46. Run the existing services/hami-media Go suite and go vet on an authorized environment; npm test and npm run gates are already green on exact-head CI. Recheck host pressure/free swap before any load; the last 802.69 MiB reading is stale and below the recorded 2,048 MiB floor. M7-H acceptance and M9-H 19,000-participant capacity remain NOT MEASURABLE.
+2. **D109/D110 — cash-access channel reconciliation.** Obtain current official PSP authorized-representative lists and verify cash-out service, limits, location and effective date. Keep merchant QR, official-representative cash-out, cash-in, ATM and bank withdrawal distinct. eSewa Cash Out is publicly listed as disabled from Bhadra 3, 2083; Khalti agent cash-out remains UNKNOWN. No provider/merchant contact or published directory without authorization.
+3. **Source rights.** NRB Payment Systems, eSewa and Khalti remain manual-only / NOT CLEARED. Review exact robots, terms, intended fields and operation scope before any collection or provider transmission. Do not add them to source_clearance_registry by inference.
+4. **Existing source-time capability.** When the supported source-edit path is available, preserve source-declared effective period, provider/service role, scope, units, limits, page/report date and retrieval time through the existing normalize → Signal → Evidence → assessment → citation seam. No new schema or collector.
+5. **Deployment boundary.** Exact-SHA Vercel deployment reports READY, but independent production-content verification remains HTTP 402; public runtime health is UNKNOWN.
+6. **Parallel discovery continues.** D93, D95, D96, D98, D99/D100 and other domains remain independent; none is gated by D109/D110 or the media track.
+
 ## Current queue — 2026-11-21 01:52 +0545 — quantify M7-H packet retention
 
 - 20:56 continuation: dissolve scoring, configurable NACK age, feedback settle config, host preflight/watchdog, and viewer-scaled heap cap passed Go/npm/gate checks; current pressure 2 and 1,266.88 MiB free swap hold the ladder, and `sfuRouter` package extraction is still pending.
