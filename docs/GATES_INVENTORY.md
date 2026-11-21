@@ -119,7 +119,7 @@ Nepali eSewa + Khalti.
 |---|---|---|---|
 | Cycle | `backend/app/api/scheduled.py:340` (`GET /cycle`) | HTTP GET requires the `CRON_SECRET` bearer token and `X-API-Key` | Runs the daily cycle; email/SMS sends use the decision gate. The route checks the owner key because GET is not covered by write middleware. |
 | Intelligence | `backend/app/api/scheduled.py:456` (`GET /intelligence`) | HTTP GET | Intelligence pipeline run (read/collect). |
-| CI (GitHub Actions) | `.github/workflows/forgeos-ci.yml` | push to `main`, PR to `main` | backend-tests, evidence-triage-tests, frontend-tests, typecheck, lint, build, route-smoke, secret-scan (gitleaks), repository-guards, livekit-local-smoke. |
+| CI (GitHub Actions) | `.github/workflows/forgeos-ci.yml` | push to `main`, PR to `main` | backend-tests, evidence-triage-tests, frontend-tests, typecheck, lint, build, route-smoke, secret-scan (gitleaks), repository-guards, gate-checks. |
 | Secret scan | `.github/workflows/secrets.yml` | push, PR, workflow_call | gitleaks. |
 | Verify deploy | `.github/workflows/verify-deploy.yml` | push to `main`, workflow_dispatch | Deploy verification. |
 | Hourly discovery push to main | **NOT FOUND in repo** | UNKNOWN | No hourly job, no `git push`, no scheduler found in `scripts/`, `.github/`, `scheduled.py`, or `cycle_scheduler.py`. See §11. |

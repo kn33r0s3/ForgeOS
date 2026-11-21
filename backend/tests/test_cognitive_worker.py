@@ -779,7 +779,7 @@ class ReplacementGoalPlanner:
         return {
             "status": "PROPOSED",
             "objective_interpretation": (
-                "Validate whether one LiveKit room can support the requested broadcaster "
+                "Validate whether Hami Media can support the requested broadcaster "
                 "and viewer load under the stated latency target."
             ),
             "success_criteria": [
@@ -790,12 +790,12 @@ class ReplacementGoalPlanner:
             "assumptions": ["The 100 ms target requires an explicit measurement definition."],
             "unknowns": ["Per-viewer bitrate, codec, geography and traffic distribution."],
             "evidence_needed": ["A repeatable single-room load test with production-like media."],
-            "capability_gaps": ["No verified load-test executor or production LiveKit infrastructure is registered."],
+            "capability_gaps": ["No verified load-test executor or production Hami Media infrastructure is registered."],
             "steps": [
                 {
                     "order": 1,
                     "operation_class": "research",
-                    "title": "Resolve LiveKit room capacity constraints",
+                    "title": "Resolve Hami Media capacity constraints",
                     "purpose": "Compare documented self-hosted limits with the one-room target.",
                     "required_capabilities": ["web_research"],
                     "verification": "Verify official versioned documentation and capture the room placement constraints.",
@@ -884,7 +884,7 @@ def test_goal_plan_is_persisted_idempotently_and_never_executes(db, monkeypatch)
 
     goal = models.Goal(
         statement=(
-            "Deploy a multi-streamer LiveKit platform: nine independent streamer "
+            "Deploy a multi-streamer Hami Media platform: nine independent streamer "
             "containers, up to 4,000 viewers in one room, target 100 ms real-time latency."
         ),
         target_metric="9 streamers; 4,000 viewers in one room; 100 ms latency",

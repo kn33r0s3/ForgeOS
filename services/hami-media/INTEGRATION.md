@@ -1,8 +1,8 @@
 # M1-H Measurement Harness — Integration
 
 Built on the VM (Go 1.27.4, the same version as the Mac) so it is ready
-to place the moment the single-node SFU router lands. No LiveKit in the
-path; no new dependencies.
+to place the moment the single-node SFU router lands. The path is native;
+no new dependencies.
 
 ## Drop-in files
 
@@ -86,8 +86,8 @@ RTP input has no EOF when a publisher stops.
 ## Local Opus audio rung (TEST only)
 
 The `audio-rung1` mode uses Hami's existing Pion SFU router, local
-PeerConnections, and FFmpeg/libopus. It requires no LiveKit service, Cloud,
-Docker, paid service, new database table, or product UI. The default first
+PeerConnections, and FFmpeg/libopus. It requires no external media service,
+Cloud, Docker, paid service, new database table, or product UI. The default first
 rung is 10 Opus speakers × 100 listeners in one room, and a single invocation
 runs both server mixing and selective forwarding sequentially:
 
@@ -121,11 +121,11 @@ the mixed output. The inherited M1-H p95/p99 thresholds are reported by the
 recorder but are not audio-specific acceptance thresholds. No distribution
 mode is selected by this harness.
 
-## Single-PC SFU scale proof (no LiveKit service)
+## Single-PC SFU scale proof
 
 The existing `sfu-single` mode starts the simulated publisher, Hami's Pion
-router, and viewers inside one process on loopback. It does not need LiveKit
-Cloud, a LiveKit server, Docker, credentials, or a paid service. Results are
+router, and viewers inside one process on loopback. It does not need Cloud,
+an external SFU, Docker, credentials, or a paid service. Results are
 local `TEST` evidence, not production capacity or multi-machine routing.
 
 Requirements are Go (the module declares Go 1.24 or newer), the pinned Pion

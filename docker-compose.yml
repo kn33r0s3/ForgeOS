@@ -47,7 +47,6 @@ services:
     ports:
       - "127.0.0.1:8000:8000"
     restart: unless-stopped
-
   worker:
     profiles: ["worker"]
     build:
@@ -115,72 +114,3 @@ services:
       backend:
         condition: service_healthy
     restart: unless-stopped
-
-  # Opt-in local LiveKit smoke environment. All published host ports are loopback-only.
-  livekit:
-    profiles: ["livekit-local"]
-    image: livekit/livekit-server:v1.13.11
-    container_name: forgeos-livekit
-    command: ["--bind", "0.0.0.0"]
-    environment:
-      LIVEKIT_CONFIG: |
-        port: 7880
-        log_level: info
-        rtc:
-          tcp_port: 7881
-          udp_port: 7882
-        keys:
-          devkey: secret
-    ports:
-      - "127.0.0.1:7880:7880/tcp"
-      - "127.0.0.1:7881:7881/tcp"
-      - "127.0.0.1:7882:7882/udp"
-    restart: unless-stopped
-    stop_grace_period: 30s
-
-  # Each scaled replica joins the same room and publishes LiveKit's synthetic demo video.
-  # The CLI generates a unique participant identity when --identity is omitted.
-  livekit-publisher:
-    profiles: ["livekit-local"]
-    image: livekit/livekit-cli:v2.19.4
-    depends_on:
-      - livekit
-    command:
-      - room
-      - join
-      - --url
-      - ws://livekit:7880
-      - --api-key
-      - devkey
-      - --api-secret
-      - secret
-      - --publish-demo
-      - hami-proving-ground
-    restart: unless-stopped
-
-  # One-off local smoke: connect 25 simulated subscribers for 30 seconds.
-  livekit-load-test:
-    profiles: ["livekit-local"]
-    image: livekit/livekit-cli:v2.19.4
-    depends_on:
-      - livekit
-    command:
-      - load-test
-      - --url
-      - ws://livekit:7880
-      - --api-key
-      - devkey
-      - --api-secret
-      - secret
-      - --room
-      - hami-proving-ground
-      - --duration
-      - "${LIVEKIT_TEST_DURATION:-30s}"
-      - --subscribers
-      - "${LIVEKIT_TEST_SUBSCRIBERS:-25}"
-      - --num-per-second
-      - "${LIVEKIT_TEST_JOIN_RATE:-10}"
-      - --layout
-      - "${LIVEKIT_TEST_LAYOUT:-speaker}"
-      - --video-resolution
-      - "${LIVEKIT_TEST_VIDEO_RESOLUTION:-low}"

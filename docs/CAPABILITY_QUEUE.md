@@ -1,3 +1,22 @@
+## 2026-11-22 +0545 — native media path made exclusive
+
+- **Existing seam/history:** `services/hami-media/main.go` is the canonical
+  Pion SFU, selective-subscription, and measurement path; `git log --follow`
+  traces it to `4f22ec18`. Its current imports are Pion packages, not an
+  external media SDK.
+- **Owner direction and capability increment:** the owner retired the legacy
+  external media harness. The root Compose profile, Cloud-scale configuration,
+  helper, CI job, startup contracts, task-specific plan, and public gate names
+  are removed or redirected in place to Hami Media. No alternate media system
+  was added.
+- **Owner dependency:** this removes the recurring decision to choose between
+  two media stacks. The remaining blocker is native Hami Media capacity proof
+  on an adequately provisioned host; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION`
+  remains **NOT MEASURABLE** because no verified real transaction exists.
+- **Verification pending:** run the native media Go suite plus `npm test` and
+  `npm run gates` after the removal; preserve historical Git commits as
+  provenance rather than an executable dependency.
+
 ## 2026-11-21 20:57 +0545 — dissolve scoring and host-stop guard advanced
 
 - **Existing seam/history:** the canonical `sfuMeasurementPass`,

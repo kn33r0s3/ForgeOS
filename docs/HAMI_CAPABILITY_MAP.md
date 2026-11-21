@@ -41,8 +41,7 @@ was not a line-by-line audit of every archived document and source file.
 
 - Exact-head [CI run 43740740891](https://github.com/kn33r0s3/ForgeOS/actions/runs/43740740891)
   failed: backend 53 failed / 1,310 passed / 2 skipped; frontend tests had
-  three inbox failures. The other CI jobs, including LiveKit's 100-subscriber
-  local test, passed. [Deploy verifier 43740741005](https://github.com/kn33r0s3/ForgeOS/actions/runs/43740741005)
+  three inbox failures. The other CI jobs passed. [Deploy verifier 43740741005](https://github.com/kn33r0s3/ForgeOS/actions/runs/43740741005)
   failed retrieving production content with HTTP 402; later checks were
   skipped. [Secret scan 43740740987](https://github.com/kn33r0s3/ForgeOS/actions/runs/43740740987)
   passed.
@@ -82,8 +81,8 @@ was not a line-by-line audit of every archived document and source file.
   version; triage source-clearance-dependent tests separately from unrelated
   failures without bypassing rights; verify hardened image builds and bind
   mount behavior on the deployment OS; then resolve production availability
-  only with owner-authorized configuration. Do not run the external LiveKit
-  load harness without explicit spend/usage authorization.
+  only with owner-authorized configuration. Native Hami Media is the sole
+  media execution path.
 
 ## Capability inventory
 
