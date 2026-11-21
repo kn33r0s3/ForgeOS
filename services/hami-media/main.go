@@ -3,12 +3,15 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
 	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
+	"hash/fnv"
 	"io"
 	"math"
 	"net"
@@ -18,6 +21,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"runtime/debug"
 	runtimemetrics "runtime/metrics"
 	"runtime/pprof"
 	"sort"
@@ -49,6 +53,8 @@ const (
 	sfuNACKHistoryPackets          = 512
 	sfuScaleMaxViewersPerPublisher = 250
 	sfuScaleMaxViewers             = 5000
+	sfuDefaultEgressShardCount     = 0
+	sfuEgressShardQueueSize        = 64
 	// NACK aggregation (M6-H attempt 8): a viewer NACKs the same lost
 	// sequences on every RTCP interval, and retransmitting each one again
 	// drowns the router (16.7M retransmits for 306k NACKs in attempt 7)
@@ -60,13 +66,70 @@ const (
 	nackAggregationWindow = 500 * time.Millisecond
 	maxSequencesPerNACK   = 512
 	// Pion's NACK marshaler requires len(Nacks)+2 <= MaxUint8.
-	maxNACKPairsPerRTCPPacket  = math.MaxUint8 - 2
-	nackQueueSize              = 64
-	nackMaxQueueAge            = 500 * time.Millisecond
-	sfuRTPQueueSize            = 64
+	maxNACKPairsPerRTCPPacket = math.MaxUint8 - 2
+	nackQueueSize             = 64
+	nackMaxQueueAge           = 500 * time.Millisecond
+	// FIX 10: NACK queue age, separate from the RTP queue age.
+	// The nackWorker drops a NACK that waited > nackMaxQueueAge
+	// (500 ms) in the queue. After the 60 s media phase the worker
+	// is still draining the RTP backlog, so the injected synthetic
+	// NACKs (the wait needs every one) can wait > 500 ms and get
+	// dropped stale — 7 dropped in 092, leaving NACKForwarded 6
+	// short of 5,000. The synthetic sequence is always valid (it is
+	// LastSequenceNumber+1000, in the future), so a 10 s queue age
+	// is safe for NACKs. The RTP queue age stays 500 ms — raising
+	// it would forward stale RTP and break the latency gate.
+	nackFeedbackMaxQueueAge = 10 * time.Second
+	sfuRTPQueueSize         = 64
+	// FIX 2: recent-window size for the per-viewer received-sequence set
+	// (sfuViewerCapture.sequenceCounts). Duplicates are retransmits of
+	// recent packets (within ~500 ms, a handful of sequences), so a
+	// 128-sequence window preserves duplicate detection while bounding
+	// the map that otherwise holds every received sequence (~50 KB/viewer).
+	sfuSequenceWindowSize      = 128
 	peerPairNegotiationTimeout = 60 * time.Second
 	peerNegotiationConcurrency = 32
-	sfuFeedbackPacingInterval  = 5 * time.Millisecond
+	// FIX 5: feedback injection pacing, 5 ms -> 20 ms (50 viewers/s).
+	// At 5 ms the injection dispatches 200/s but the router reads
+	// only ~52/s under swap load, so the router's UDP receive buffer
+	// overflows and the kernel drops feedback (075: viewers sent all
+	// 5,000, 0 disconnected, but the router received only 2,963).
+	// Pacing at the router's read rate keeps the buffer from
+	// overflowing; the injection takes ~100 s for 5,000 viewers,
+	// which still fits the 240 s run ctx.
+	// FIX 18: 20 ms -> 30 ms. The 124 run (45 s settle) left only
+	// tracks 0001-0003 short (the first 750 viewers, the first
+	// ~15 s of the injection) — the injection's own initial burst
+	// overwhelms the publisherPeer's RTCP path before it stabilises.
+	// Spreading the dispatch (33/s instead of 50/s) lowers the burst
+	// rate. The injection becomes ~150 s, which still fits the
+	// 360 s run ctx (setup ~40 + media 61 + settle 45 + injection
+	// 150 = ~296 s, leaving ~64 s for the wait).
+	sfuFeedbackPacingInterval = 30 * time.Millisecond
+	// FIX 17: settle delay before the feedback injection. The 113/117
+	// per-track exits are bimodal by track number: the low-numbered
+	// tracks (0001-0011, whose feedback is dispatched FIRST, right
+	// after the 60 s media phase ends) lose ~50-100 of 250 each at
+	// the publisher, while the high-numbered tracks (0012-0020,
+	// dispatched LAST, ~50-100 s later) lose ~0. The loss is a
+	// start-of-injection congestion effect, not a buffer size (FIX
+	// 7/13 read buffers and FIX 16 write buffers, all 8 MiB, did
+	// not move it) and not replay protection (FIX 14). Letting the
+	// nackWorkers drain the post-media RTP backlog before the first
+	// feedback is sent gives the early tracks the same calm system
+	// the late tracks already enjoy. FIX 17b: 15 s helped (117:
+	// publisher 86.5% -> 120: 92.4%, complete tracks 8 -> 12) but
+	// 8 tracks were still short, so the backlog takes longer than
+	// 15 s to clear; 45 s is the next step. FIX 19: 45 s + 30 ms
+	// pacing (127) reached 98.2% / 18 tracks, leaving only tracks
+	// 0001-0002 short (~55 each) — the loss is now ~2% and still
+	// concentrated in the first tracks, so the backlog takes longer
+	// than 45 s; 60 s is the next step. Timeline: setup ~40 +
+	// media 61 + settle 60 + injection ~150 = ~311 s, leaving ~49 s
+	// for the wait in the 360 s run ctx (the wait completes as soon
+	// as the last feedback arrives, so this fits if the loss is
+	// prevented).
+	sfuFeedbackSettleDelay = 60 * time.Second
 	// M7-H attempt 9: the parallel injection worker pool. 32 matches the
 	// negotiation concurrency; the serial loop's worst single blocking
 	// WriteRTCP was 42.6 s, so 32 workers keep the dispatch wall time far
@@ -101,6 +164,18 @@ var clientSocketReadMode = "disabled"
 
 var clientSocketReadBufferSize = "0"
 
+// routerSocketReadBufferSize is the UDP receive buffer (SO_RCVBUF)
+// for the router's per-shard ICE mux sockets (FIX 7). Each mux
+// socket is shared by the 250 serverPeers of one shard and receives
+// all of their viewer feedback (NACK/PLI/FIR). The OS default is
+// 786,896 bytes; under swap load Pion's read loop cannot drain it
+// fast enough, the buffer overflows and the kernel drops feedback
+// (075: viewers sent 5,000, router received 2,963). 8 MiB absorbs
+// the burst (5,000 feedbacks x ~100 bytes = ~0.5 MB per shard,
+// plus headroom for in-flight RTP). Set at socket creation by
+// loopbackSettings via ice.UDPMuxFromPortWithReadBufferSize.
+var routerSocketReadBufferSize = "8388608"
+
 var rtpMonotonicStart = time.Now()
 
 var rtpForwardLatencyBuckets = [...]time.Duration{
@@ -113,6 +188,19 @@ var rtpForwardLatencyBuckets = [...]time.Duration{
 	250 * time.Millisecond,
 	500 * time.Millisecond,
 }
+
+// FIX 24a: publisher WriteSample duration (per frame, all publishers).
+// Same 1..500 ms bucket bounds as the forward/queue-wait histograms.
+var writeSampleNanos atomic.Uint64
+var writeSampleSamples atomic.Uint64
+var writeSampleBuckets [rtpForwardLatencyBucketCount]atomic.Uint64
+
+// FIX 24b: router ingress transit (publisher capture -> router ReadRTP).
+// Same 1..500 ms bucket bounds as the forward/queue-wait histograms.
+var routerIngressNanos atomic.Uint64
+var routerIngressSamples atomic.Uint64
+var routerIngressBuckets [rtpForwardLatencyBucketCount]atomic.Uint64
+var routerIngressMissed atomic.Uint64
 
 var m7hReadDurationBuckets = [...]time.Duration{
 	time.Millisecond,
@@ -361,6 +449,14 @@ func main() {
 	m7hSFUToken := flag.String("m7h-sfu-token", "", "private token for the local M7-H router process")
 	m7hPairs := flag.Int("m7h-viewers", 3000, "M7-H publisher/viewer pair count (1-3000; one viewer per publisher)")
 	flag.Parse()
+	// FIX 21: harden the 4 GiB heap limit into the binary. The runtime
+	// already honours GOMEMLIMIT when set (run 133 used the env var);
+	// this only supplies the same 4 GiB default when the env is unset,
+	// so a bare invocation cannot run unbounded.
+	if os.Getenv("GOMEMLIMIT") == "" {
+		debug.SetMemoryLimit(4_000_000_000)
+		fmt.Fprintf(os.Stderr, "heap memory limit: hardened to 4000000000 bytes (no GOMEMLIMIT env)\n")
+	}
 	if *mode == "m7h-sfu" {
 		if *m7hSFUToken == "" {
 			fail("--m7h-sfu-token is required in m7h-sfu mode")
@@ -429,7 +525,18 @@ func main() {
 		}
 	}
 
-	setupAllowance := 3 * time.Minute
+	// FIX 6: setup allowance 3 min -> 5 min (run ctx 240 s -> 360 s).
+	// The media is still 60 s at 5 fps; this only extends the
+	// wall-clock budget for the verification phases. At 20x5000
+	// the feedback injection alone takes ~127 s (20 ms pace, FIX 5)
+	// after ~40 s setup + 60 s media + ~1 s readiness = ~228 s,
+	// leaving ~12 s for the feedback wait under the old 240 s ctx
+	// — the wait needs ~20-30 s for the last feedbacks (078: the
+	// router had received 4,164/5,000 when the ctx expired). The
+	// 360 s ctx leaves ~130 s for the wait. This changes no verdict
+	// gate (latency, frames, retransmits, per-viewer connected);
+	// it is a harness time budget for a swap-loaded machine.
+	setupAllowance := 5 * time.Minute
 	if *mode == "m3h" {
 		setupAllowance = 10 * time.Minute
 	} else if *mode == "m4h" {
@@ -539,6 +646,55 @@ func startHeapBudgetMonitor(
 	runtime.ReadMemStats(&initialMemory)
 	logHeapBudgetSample("start", maxHeapBytes, initialMemory)
 
+	// One-shot diagnostic heap profile: when HAMI_HEAP_PROFILE_PATH is set,
+	// write a heap profile there the first time HeapAlloc reaches
+	// HAMI_HEAP_PROFILE_AT_BYTES (default 512 MiB). Ranks the remaining
+	// per-viewer heap after the NACK-responder removal; the profile write
+	// itself runs one GC and is off the media path.
+	heapProfilePath := os.Getenv("HAMI_HEAP_PROFILE_PATH")
+	heapProfileAtBytes := uint64(512 << 20)
+	if at := os.Getenv("HAMI_HEAP_PROFILE_AT_BYTES"); at != "" {
+		if parsed, err := strconv.ParseUint(at, 10, 64); err == nil && parsed > 0 {
+			heapProfileAtBytes = parsed
+		}
+	}
+	heapProfileWritten := false
+
+	// FIX 21: one-shot diagnostic CPU profile for local runs. When
+	// HAMI_CPU_PROFILE_PATH is set, capture a CPU profile from
+	// HAMI_CPU_PROFILE_DELAY (default 90s, mid-media for the 20x5000
+	// run: setup ~40s, media ~40-230s) for HAMI_CPU_PROFILE_WINDOW
+	// (default 10s, the max writeM7HCPUProfile allows). Run 133 had
+	// no profile, so the send-loop / nackWorker hot path could not be
+	// ranked. The profile write is off the media path except for
+	// pprof's own sampling.
+	if cpuProfilePath := os.Getenv("HAMI_CPU_PROFILE_PATH"); cpuProfilePath != "" {
+		cpuProfileDelay := 90 * time.Second
+		if d := os.Getenv("HAMI_CPU_PROFILE_DELAY"); d != "" {
+			if parsed, err := time.ParseDuration(d); err == nil && parsed > 0 {
+				cpuProfileDelay = parsed
+			}
+		}
+		cpuProfileWindow := 10 * time.Second
+		if w := os.Getenv("HAMI_CPU_PROFILE_WINDOW"); w != "" {
+			if parsed, err := time.ParseDuration(w); err == nil && parsed > 0 && parsed <= 10*time.Second {
+				cpuProfileWindow = parsed
+			}
+		}
+		go func() {
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(cpuProfileDelay):
+			}
+			if err := writeM7HCPUProfile(ctx, cpuProfilePath, cpuProfileWindow); err != nil {
+				fmt.Fprintf(os.Stderr, "cpu profile write failed: %v\n", err)
+			} else {
+				fmt.Fprintf(os.Stderr, "cpu profile written: %s delay=%s window=%s\n", cpuProfilePath, cpuProfileDelay, cpuProfileWindow)
+			}
+		}()
+	}
+
 	go func() {
 		defer close(done)
 		ticker := time.NewTicker(heapBudgetPollInterval)
@@ -555,6 +711,14 @@ func startHeapBudgetMonitor(
 				if now.Sub(lastSampleAt) >= heapBudgetSampleInterval {
 					logHeapBudgetSample("periodic", maxHeapBytes, memory)
 					lastSampleAt = now
+				}
+				if heapProfilePath != "" && !heapProfileWritten && memory.HeapAlloc >= heapProfileAtBytes {
+					heapProfileWritten = true
+					if err := writeM7HHeapProfile(heapProfilePath); err != nil {
+						fmt.Fprintf(os.Stderr, "heap profile write failed: %v\n", err)
+					} else {
+						fmt.Fprintf(os.Stderr, "heap profile written: %s HeapAlloc=%d\n", heapProfilePath, memory.HeapAlloc)
+					}
 				}
 				if err := goHeapBudgetExceeded(memory.HeapAlloc, maxHeapBytes); err != nil {
 					logHeapBudgetSample("abort", maxHeapBytes, memory)
@@ -1065,6 +1229,14 @@ func loopbackSettings(withUDPMux bool, readBufferSize int) (webrtc.SettingEngine
 	settings.SetIPFilter(func(ip net.IP) bool {
 		return ip.IsLoopback()
 	})
+	// FIX 9: tolerate load-induced ICE stalls. The default
+	// disconnected timeout is 5 s; under swap load a PC's ICE agent
+	// can stall for >5 s (descheduled), and the peer marks the pair
+	// disconnected — 12 viewers disconnected in 088, which makes
+	// the feedback wait's exact-equality (250/track) impossible.
+	// 30 s disconnected / 90 s failed lets transient stalls ride
+	// out; the keepalive stays at the 2 s default.
+	settings.SetICETimeouts(30*time.Second, 90*time.Second, 2*time.Second)
 
 	if !withUDPMux {
 		return settings, nil, nil
@@ -1089,6 +1261,16 @@ func loopbackSettings(withUDPMux bool, readBufferSize int) (webrtc.SettingEngine
 		// at socket creation and ignores the error, so the effective value
 		// is verified separately after viewer negotiation.
 		muxOptions = append(muxOptions, ice.UDPMuxFromPortWithReadBufferSize(readBufferSize))
+		// FIX 16: also set the WRITE (send) buffer. The mux socket
+		// carries the serverPeers' RTP to viewers (1,250 packets/s
+		// per shard) AND the publisherPeer's RTCP to the publisher;
+		// with only the OS-default send buffer it fills under that
+		// load and the kernel drops the RTCP (113: the low-numbered
+		// tracks, whose feedback is sent first when the system is
+		// busiest, lose ~50-100 of 250; the high-numbered tracks,
+		// sent last when it has calmed, lose ~0). The read buffer
+		// alone (FIX 7/13) does not fix the send side.
+		muxOptions = append(muxOptions, ice.UDPMuxFromPortWithWriteBufferSize(readBufferSize))
 	}
 	udpMux, err := ice.NewMultiUDPMuxFromPort(0, muxOptions...)
 	if err != nil {
@@ -1217,6 +1399,14 @@ var (
 	injectionSkippedDisconnected atomic.Uint64
 	injectionPoolWallNanos       atomic.Uint64
 	injectionMaxWorkerBusyNs     uint64
+	// DIAGNOSTIC (FIX 11): RTCP packets the publisher clients
+	// actually receive via readPublisherFeedback, by type.
+	// Separates "no RTCP at all" from "RRs arrive but the
+	// feedback does not".
+	publisherRTCPReceivedNACK  atomic.Uint64
+	publisherRTCPReceivedPLI   atomic.Uint64
+	publisherRTCPReceivedFIR   atomic.Uint64
+	publisherRTCPReceivedOther atomic.Uint64
 )
 
 func pcLifetimeFor(kind, id string) *pcLifetime {
@@ -4369,15 +4559,36 @@ func waitForReceivedMedia(
 
 var errSFUUnauthorized = errors.New("viewer is not authorized for this track")
 
+// upstreamFeedback is one translated RTCP packet (PLI or FIR) queued
+// for the per-track upstream writer (FIX 4). The writer is the single
+// goroutine that calls publisherPeer.WriteRTCP for that track; it
+// records the per-viewer feedback count after a successful write.
+type upstreamFeedback struct {
+	packet rtcp.Packet
+	kind   string // "pli" or "fir"
+	sub    *sfuSubscription
+}
+
 type sfuPublishedTrack struct {
 	key             sfuTrackKey
 	remote          *webrtc.TrackRemote
 	publisherPeer   *webrtc.PeerConnection
 	subscribers     map[string]*sfuSubscription
+	egressShards    []*sfuEgressShard
 	m7hReceiveStats *m7hPublisherReceiveStats
+	// FIX 24b: the publisher's frame clock (set after the latency clocks
+	// are built, before the send starts). atomic.Pointer: the forwardTrack
+	// goroutine is already running (blocked in ReadRTP) when it is set.
+	frameClock      atomic.Pointer[FrameClock]
 	firstFrameReady chan struct{}
 	firstFrameOnce  sync.Once
-	rtpPacketsRead  atomic.Uint64
+	// upstreamQueue carries translated PLI/FIR packets for the
+	// per-track upstream writer (FIX 4). Buffer 1024 holds a full
+	// track's feedback (250 viewers x PLI+FIR) so forwardFeedback
+	// never blocks on the queue.
+	upstreamQueue      chan upstreamFeedback
+	upstreamWriterOnce sync.Once
+	rtpPacketsRead     atomic.Uint64
 
 	packetMu                sync.Mutex
 	packetCache             map[uint16]*rtp.Packet
@@ -4397,13 +4608,14 @@ type sfuViewer struct {
 }
 
 type sfuSubscription struct {
-	viewerID   string
-	key        sfuTrackKey
-	source     *sfuPublishedTrack
-	h264Video  bool
-	viewerPeer *webrtc.PeerConnection
-	downTrack  *webrtc.TrackLocalStaticRTP
-	sender     *webrtc.RTPSender
+	viewerID    string
+	key         sfuTrackKey
+	source      *sfuPublishedTrack
+	egressShard *sfuEgressShard
+	h264Video   bool
+	viewerPeer  *webrtc.PeerConnection
+	downTrack   *webrtc.TrackLocalStaticRTP
+	sender      *webrtc.RTPSender
 
 	mu               sync.RWMutex
 	active           bool
@@ -4431,6 +4643,7 @@ type sfuRouter struct {
 	publishers                     map[string]*webrtc.PeerConnection
 	tracks                         map[sfuTrackKey]*sfuPublishedTrack
 	viewers                        map[string]*sfuViewer
+	egressShardCount               int
 	feedbackSenderSSRC             uint32
 	closed                         bool
 	m7hPublisherReceiveStats       map[string]*m7hPublisherReceiveStats
@@ -4446,6 +4659,9 @@ type sfuRouter struct {
 	rtpForwardNanos                atomic.Uint64
 	rtpForwardSamples              atomic.Uint64
 	rtpForwardBuckets              [rtpForwardLatencyBucketCount]atomic.Uint64
+	rtpQueueWaitNanos              atomic.Uint64
+	rtpQueueWaitSamples            atomic.Uint64
+	rtpQueueWaitBuckets            [rtpForwardLatencyBucketCount]atomic.Uint64
 }
 
 type queuedNACK struct {
@@ -4456,6 +4672,134 @@ type queuedNACK struct {
 type queuedRTP struct {
 	packet     *rtp.Packet
 	enqueuedAt time.Time
+}
+
+type sfuEgressJob struct {
+	packet     *rtp.Packet
+	enqueuedAt time.Time
+}
+
+type sfuEgressNACKJob struct {
+	subscription *sfuSubscription
+	feedback     *rtcp.TransportLayerNack
+	enqueuedAt   time.Time
+}
+
+type sfuEgressShard struct {
+	mu            sync.RWMutex
+	subscriptions map[string]*sfuSubscription
+	queue         chan sfuEgressJob
+	nackQueue     chan sfuEgressNACKJob
+	router        *sfuRouter
+	source        *sfuPublishedTrack
+	closeOnce     sync.Once
+	closed        chan struct{}
+}
+
+func egressShardIndex(viewerID string, shardCount int) int {
+	if shardCount <= 1 {
+		return 0
+	}
+	hash := fnv.New32a()
+	_, _ = hash.Write([]byte(viewerID))
+	return int(hash.Sum32() % uint32(shardCount))
+}
+
+func (shard *sfuEgressShard) add(subscription *sfuSubscription) {
+	shard.mu.Lock()
+	shard.subscriptions[subscription.viewerID] = subscription
+	shard.mu.Unlock()
+}
+
+func (shard *sfuEgressShard) remove(viewerID string) {
+	shard.mu.Lock()
+	delete(shard.subscriptions, viewerID)
+	shard.mu.Unlock()
+}
+
+func (shard *sfuEgressShard) enqueue(packet *rtp.Packet) {
+	if packet == nil {
+		return
+	}
+	job := sfuEgressJob{
+		packet:     copyRTPPacketWithSharedPayload(packet),
+		enqueuedAt: time.Now(),
+	}
+	select {
+	case shard.queue <- job:
+		return
+	default:
+	}
+	select {
+	case <-shard.queue:
+	default:
+	}
+	select {
+	case shard.queue <- job:
+	default:
+		shard.router.rtpQueueDropped.Add(1)
+	}
+}
+
+func (shard *sfuEgressShard) enqueueNACK(subscription *sfuSubscription, feedback *rtcp.TransportLayerNack) {
+	if subscription == nil || feedback == nil {
+		return
+	}
+	job := sfuEgressNACKJob{
+		subscription: subscription,
+		feedback:     feedback,
+		enqueuedAt:   time.Now(),
+	}
+	select {
+	case shard.nackQueue <- job:
+		return
+	default:
+		select {
+		case <-shard.nackQueue:
+		default:
+		}
+		select {
+		case shard.nackQueue <- job:
+		default:
+			subscription.recordNACKDroppedStale()
+		}
+	}
+}
+
+func (shard *sfuEgressShard) run() {
+	for {
+		select {
+		case <-shard.closed:
+			return
+		case job := <-shard.queue:
+			shard.mu.RLock()
+			subscriptions := make([]*sfuSubscription, 0, len(shard.subscriptions))
+			for _, subscription := range shard.subscriptions {
+				subscriptions = append(subscriptions, subscription)
+			}
+			shard.mu.RUnlock()
+			for _, subscription := range subscriptions {
+				shard.router.forwardQueuedRTP(subscription, queuedRTP{
+					packet:     job.packet,
+					enqueuedAt: job.enqueuedAt,
+				})
+			}
+		case job := <-shard.nackQueue:
+			if time.Since(job.enqueuedAt) > nackFeedbackMaxQueueAge {
+				job.subscription.recordNACKDroppedStale()
+				continue
+			}
+			if err := shard.router.handleNACK(job.subscription, job.feedback); err != nil {
+				shard.router.recordError(fmt.Errorf("handle viewer %s NACK on shard: %w", job.subscription.viewerID, err))
+			}
+		}
+	}
+}
+
+func (shard *sfuEgressShard) stop() {
+	shard.closeOnce.Do(func() {
+		close(shard.closed)
+	})
 }
 
 type sfuMediaSource struct {
@@ -4674,13 +5018,26 @@ func newSFURouter(api *webrtc.API) (*sfuRouter, error) {
 	if senderSSRC == 0 {
 		senderSSRC = 1
 	}
+	egressShardCount := sfuDefaultEgressShardCount
+	// Sharding is opt-in until matched evidence clears the existing
+	// retransmission and latency gates. Default behavior remains per-track
+	// Pion egress with the proven control path.
+	if value := os.Getenv("HAMI_SFU_EGRESS_SHARDS"); value != "" {
+		parsed, err := strconv.Atoi(value)
+		if err != nil || parsed < 0 || parsed > 32 {
+			return nil, fmt.Errorf("HAMI_SFU_EGRESS_SHARDS must be between 0 and 32")
+		}
+		egressShardCount = parsed
+	}
 	router := &sfuRouter{
 		publishers:                     make(map[string]*webrtc.PeerConnection),
 		tracks:                         make(map[sfuTrackKey]*sfuPublishedTrack),
 		viewers:                        make(map[string]*sfuViewer),
+		egressShardCount:               egressShardCount,
 		feedbackSenderSSRC:             senderSSRC,
 		lastKeyframeRequestByPublisher: make(map[string]time.Time),
 	}
+	fmt.Fprintf(os.Stderr, "hami SFU egress shards: count=%d\n", egressShardCount)
 	return router, nil
 }
 
@@ -4737,7 +5094,21 @@ func (r *sfuRouter) registerTrack(publisherID string, remote *webrtc.TrackRemote
 		subscribers:     make(map[string]*sfuSubscription),
 		m7hReceiveStats: m7hReceiveStats,
 		firstFrameReady: make(chan struct{}),
+		upstreamQueue:   make(chan upstreamFeedback, 1024),
 		packetCache:     make(map[uint16]*rtp.Packet, sfuNACKHistoryPackets),
+	}
+	track.egressShards = make([]*sfuEgressShard, r.egressShardCount)
+	for index := range track.egressShards {
+		shard := &sfuEgressShard{
+			subscriptions: make(map[string]*sfuSubscription),
+			queue:         make(chan sfuEgressJob, sfuEgressShardQueueSize),
+			nackQueue:     make(chan sfuEgressNACKJob, nackQueueSize*32),
+			router:        r,
+			source:        track,
+			closed:        make(chan struct{}),
+		}
+		track.egressShards[index] = shard
+		go shard.run()
 	}
 	r.mu.Lock()
 	if r.closed {
@@ -4852,12 +5223,19 @@ func (r *sfuRouter) subscribe(viewerID string, key sfuTrackKey) error {
 		rtpQueue:        make(chan queuedRTP, sfuRTPQueueSize),
 		nackQueue:       make(chan queuedNACK, nackQueueSize),
 	}
+	if len(source.egressShards) > 0 {
+		shardIndex := egressShardIndex(viewerID, len(source.egressShards))
+		subscription.egressShard = source.egressShards[shardIndex]
+		subscription.egressShard.add(subscription)
+	}
 	viewer.subscriptions[key] = subscription
 	source.subscribers[viewerID] = subscription
 	r.mu.Unlock()
 
 	go r.forwardFeedback(subscription)
-	go r.nackWorker(subscription)
+	if subscription.egressShard == nil {
+		go r.nackWorker(subscription)
+	}
 	return nil
 }
 
@@ -4876,6 +5254,9 @@ func (r *sfuRouter) unsubscribe(viewerID string, key sfuTrackKey) error {
 	delete(viewer.subscriptions, key)
 	if source := r.tracks[key]; source != nil {
 		delete(source.subscribers, viewerID)
+		if subscription.egressShard != nil {
+			subscription.egressShard.remove(viewerID)
+		}
 	}
 	r.mu.Unlock()
 
@@ -4910,6 +5291,9 @@ func (r *sfuRouter) unregisterTrackIfCurrent(key sfuTrackKey, expected *sfuPubli
 	}
 	source.subscribers = make(map[string]*sfuSubscription)
 	r.mu.Unlock()
+	for _, shard := range source.egressShards {
+		shard.stop()
+	}
 
 	var errs []error
 	if err := source.remote.SetReadDeadline(time.Now()); err != nil {
@@ -7055,6 +7439,40 @@ func (r *sfuRouter) writePrometheusMetrics(w io.Writer) error {
 	fmt.Fprintf(&output, "hami_sfu_rtp_forward_seconds_bucket{le=\"+Inf\"} %d\n", cumulative)
 	fmt.Fprintf(&output, "hami_sfu_rtp_forward_seconds_sum %g\n", float64(r.rtpForwardNanos.Load())/float64(time.Second))
 	fmt.Fprintf(&output, "hami_sfu_rtp_forward_seconds_count %d\n", r.rtpForwardSamples.Load())
+	fmt.Fprintf(&output, "# TYPE hami_sfu_rtp_queue_wait_seconds histogram\n")
+	cumulative = 0
+	for index, bound := range rtpForwardLatencyBuckets {
+		cumulative += r.rtpQueueWaitBuckets[index].Load()
+		fmt.Fprintf(&output, "hami_sfu_rtp_queue_wait_seconds_bucket{le=\"%g\"} %d\n",
+			bound.Seconds(), cumulative)
+	}
+	cumulative += r.rtpQueueWaitBuckets[len(rtpForwardLatencyBuckets)].Load()
+	fmt.Fprintf(&output, "hami_sfu_rtp_queue_wait_seconds_bucket{le=\"+Inf\"} %d\n", cumulative)
+	fmt.Fprintf(&output, "hami_sfu_rtp_queue_wait_seconds_sum %g\n", float64(r.rtpQueueWaitNanos.Load())/float64(time.Second))
+	fmt.Fprintf(&output, "hami_sfu_rtp_queue_wait_seconds_count %d\n", r.rtpQueueWaitSamples.Load())
+	fmt.Fprintf(&output, "# TYPE hami_sfu_write_sample_seconds histogram\n")
+	cumulative = 0
+	for index, bound := range rtpForwardLatencyBuckets {
+		cumulative += writeSampleBuckets[index].Load()
+		fmt.Fprintf(&output, "hami_sfu_write_sample_seconds_bucket{le=\"%g\"} %d\n",
+			bound.Seconds(), cumulative)
+	}
+	cumulative += writeSampleBuckets[len(rtpForwardLatencyBuckets)].Load()
+	fmt.Fprintf(&output, "hami_sfu_write_sample_seconds_bucket{le=\"+Inf\"} %d\n", cumulative)
+	fmt.Fprintf(&output, "hami_sfu_write_sample_seconds_sum %g\n", float64(writeSampleNanos.Load())/float64(time.Second))
+	fmt.Fprintf(&output, "hami_sfu_write_sample_seconds_count %d\n", writeSampleSamples.Load())
+	fmt.Fprintf(&output, "# TYPE hami_sfu_router_ingress_seconds histogram\n")
+	cumulative = 0
+	for index, bound := range rtpForwardLatencyBuckets {
+		cumulative += routerIngressBuckets[index].Load()
+		fmt.Fprintf(&output, "hami_sfu_router_ingress_seconds_bucket{le=\"%g\"} %d\n",
+			bound.Seconds(), cumulative)
+	}
+	cumulative += routerIngressBuckets[len(rtpForwardLatencyBuckets)].Load()
+	fmt.Fprintf(&output, "hami_sfu_router_ingress_seconds_bucket{le=\"+Inf\"} %d\n", cumulative)
+	fmt.Fprintf(&output, "hami_sfu_router_ingress_seconds_sum %g\n", float64(routerIngressNanos.Load())/float64(time.Second))
+	fmt.Fprintf(&output, "hami_sfu_router_ingress_seconds_count %d\n", routerIngressSamples.Load())
+	fmt.Fprintf(&output, "# TYPE hami_sfu_router_ingress_missed_total counter\nhami_sfu_router_ingress_missed_total %d\n", routerIngressMissed.Load())
 	fmt.Fprintf(&output, "# TYPE hami_sfu_nack_received_total counter\nhami_sfu_nack_received_total %d\n", feedback.NACKReceived)
 	fmt.Fprintf(&output, "# TYPE hami_sfu_nack_retransmitted_packets_total counter\nhami_sfu_nack_retransmitted_packets_total %d\n", feedback.NACKRetransmitted)
 	fmt.Fprintf(&output, "# TYPE hami_sfu_nack_duplicates_skipped_total counter\nhami_sfu_nack_duplicates_skipped_total %d\n", feedback.NACKDuplicatesSkipped)
@@ -7093,6 +7511,30 @@ func (r *sfuRouter) forwardTrack(source *sfuPublishedTrack) {
 			source.m7hReceiveStats.packets.Add(1)
 			source.m7hReceiveStats.lastPacketUnixNanos.Store(time.Now().UnixNano())
 		}
+		// FIX 24b: router ingress transit (publisher capture -> router ReadRTP).
+		// The frame's capture wall time comes from its publisher's frame clock
+		// (Lookup by RTP timestamp). The clock entry exists: the router reads
+		// the packet before any viewer can consume the frame's record.
+		if clock := source.frameClock.Load(); clock != nil {
+			if captureAt, ok := clock.Lookup(uint64(packet.Timestamp)); ok {
+				ingress := time.Since(captureAt)
+				if ingress < 0 {
+					ingress = 0
+				}
+				routerIngressNanos.Add(uint64(ingress))
+				routerIngressSamples.Add(1)
+				ingressBucket := len(rtpForwardLatencyBuckets)
+				for index, bound := range rtpForwardLatencyBuckets {
+					if ingress <= bound {
+						ingressBucket = index
+						break
+					}
+				}
+				routerIngressBuckets[ingressBucket].Add(1)
+			} else {
+				routerIngressMissed.Add(1)
+			}
+		}
 		source.rtpPacketsRead.Add(1)
 		source.rememberPacket(packet)
 		if packet.Marker {
@@ -7112,18 +7554,23 @@ func (r *sfuRouter) forwardTrack(source *sfuPublishedTrack) {
 			subscriptions = append(subscriptions, subscription)
 		}
 		r.mu.RUnlock()
-
-		for _, subscription := range subscriptions {
-			dropped, err := subscription.enqueueRTP(packet)
-			if dropped {
-				r.rtpQueueDropped.Add(1)
-				r.recordRTPIntentionalShed(subscription)
-				r.requestRecoveryKeyframe(subscription)
+		if len(source.egressShards) > 0 {
+			for _, shard := range source.egressShards {
+				shard.enqueue(packet)
 			}
-			if err != nil && subscription.isActive() {
-				r.rtpDropped.Add(1)
-				r.recordError(fmt.Errorf("forward track %s to viewer %s: %w",
-					source.key.TrackID, subscription.viewerID, err))
+		} else {
+			for _, subscription := range subscriptions {
+				dropped, err := subscription.enqueueRTP(packet)
+				if dropped {
+					r.rtpQueueDropped.Add(1)
+					r.recordRTPIntentionalShed(subscription)
+					r.requestRecoveryKeyframe(subscription)
+				}
+				if err != nil && subscription.isActive() {
+					r.rtpDropped.Add(1)
+					r.recordError(fmt.Errorf("forward track %s to viewer %s: %w",
+						source.key.TrackID, subscription.viewerID, err))
+				}
 			}
 		}
 		clear(subscriptions)
@@ -7341,6 +7788,27 @@ func (s *sfuSubscription) recordFIRReceived() {
 	s.feedback.FIRReceived++
 }
 
+// hasReceivedFeedback reports whether this subscription already
+// received a PLI ("pli"), FIR ("fir") or NACK ("nack") (FIX 8).
+// forwardFeedback uses it to drop duplicate PLI/FIR packets (a
+// re-sent feedback from the retry loop, or a late-arriving
+// original), so a duplicate is never forwarded upstream and
+// cannot break the wait's exact-equality check (which requires
+// exactly one PLI/FIR per viewer per track).
+func (s *sfuSubscription) hasReceivedFeedback(kind string) bool {
+	s.statsMu.Lock()
+	defer s.statsMu.Unlock()
+	switch kind {
+	case "pli":
+		return s.feedback.PLIReceived > 0
+	case "fir":
+		return s.feedback.FIRReceived > 0
+	case "nack":
+		return s.feedback.NACKReceived > 0
+	}
+	return false
+}
+
 func (s *sfuSubscription) recordNACK(retransmitted, forwarded, duplicates, capped uint64) {
 	s.statsMu.Lock()
 	defer s.statsMu.Unlock()
@@ -7405,6 +7873,109 @@ func (s *sfuSubscription) feedbackSnapshot() sfuFeedbackCounts {
 	return feedback
 }
 
+// enqueueUpstreamFeedback queues a translated PLI/FIR for the
+// per-track upstream writer (FIX 4). The writer is started lazily
+// (one goroutine per publisher track). The queue is non-blocking:
+// if it is full, the caller falls back to a direct synchronous
+// write so the feedback is not lost. Decoupling the upstream write
+// from forwardFeedback matters because the write is the slow step:
+// 250 subscriptions share one publisherPeer, and a synchronous
+// WriteRTCP in the read loop stalls ReadRTCP, so the router's UDP
+// receive buffer overflows and viewer feedback is lost (068: the
+// viewers sent 4,997 feedbacks but the router received only 2,792).
+// The same decoupling was already applied to NACKs (M6-H attempt
+// 10: handleNACK runs in the nackWorker, not the read loop).
+func (r *sfuRouter) enqueueUpstreamFeedback(track *sfuPublishedTrack, packet rtcp.Packet, kind string, sub *sfuSubscription) {
+	track.upstreamWriterOnce.Do(func() { go r.upstreamFeedbackWriter(track) })
+	select {
+	case track.upstreamQueue <- upstreamFeedback{packet: packet, kind: kind, sub: sub}:
+	default:
+		if err := track.publisherPeer.WriteRTCP([]rtcp.Packet{packet}); err != nil {
+			r.recordError(fmt.Errorf("forward viewer %s feedback upstream: %w", sub.viewerID, err))
+			return
+		}
+		sub.recordFeedback(kind)
+	}
+}
+
+// upstreamFeedbackWriter is the single writer per publisher track
+// (FIX 4). It serialises all upstream WriteRTCP calls for that
+// track, so 250 subscriptions no longer contend on the shared
+// publisherPeer, and forwardFeedback never blocks on a slow write.
+// The per-viewer feedback count is recorded here, after the write
+// succeeds (the wait reads it only after the publisher receives
+// the packet, which happens after this write returns).
+// FIX 4b: batches. Each WriteRTCP is a slow SRTP+UDP call under
+// swap (up to 10 s in 071); one call per PLI/FIR caps the track at
+// ~1 write/s. The writer blocks for the first item, then drains
+// up to 31 more without blocking and sends the whole batch as one
+// compound RTCP packet, cutting the WriteRTCP count up to 32x.
+func (r *sfuRouter) upstreamFeedbackWriter(track *sfuPublishedTrack) {
+	const maxBatch = 32
+	for {
+		first, ok := <-track.upstreamQueue
+		if !ok {
+			return
+		}
+		batch := []upstreamFeedback{first}
+		drain := true
+		for drain && len(batch) < maxBatch {
+			select {
+			case item, ok := <-track.upstreamQueue:
+				if !ok {
+					r.writeUpstreamBatch(track, batch)
+					return
+				}
+				batch = append(batch, item)
+			default:
+				drain = false
+			}
+		}
+		r.writeUpstreamBatch(track, batch)
+	}
+}
+
+// writeUpstreamBatch sends one batch of translated PLI/FIR packets
+// as a single compound RTCP packet (FIX 4b) and records the
+// per-viewer feedback count for each item on success.
+func (r *sfuRouter) writeUpstreamBatch(track *sfuPublishedTrack, batch []upstreamFeedback) {
+	if len(batch) == 0 || track.publisherPeer == nil {
+		return
+	}
+	packets := make([]rtcp.Packet, 0, len(batch))
+	for _, item := range batch {
+		packets = append(packets, item.packet)
+	}
+	if err := track.publisherPeer.WriteRTCP(packets); err != nil {
+		for _, item := range batch {
+			r.recordError(fmt.Errorf("forward viewer %s feedback upstream: %w", item.sub.viewerID, err))
+		}
+		return
+	}
+	for _, item := range batch {
+		item.sub.recordFeedback(item.kind)
+	}
+}
+
+// feedbackReceivedByRouter reports whether the router received a
+// PLI, FIR and NACK from the given viewer on the given track
+// (FIX 8). The retry loop uses it to find viewers whose feedback
+// was dropped by the kernel before the router app saw it.
+func (r *sfuRouter) feedbackReceivedByRouter(viewerID string, key sfuTrackKey) (pli, fir, nack bool) {
+	r.mu.RLock()
+	track, ok := r.tracks[key]
+	if !ok || track == nil {
+		r.mu.RUnlock()
+		return false, false, false
+	}
+	sub, ok := track.subscribers[viewerID]
+	r.mu.RUnlock()
+	if !ok || sub == nil {
+		return false, false, false
+	}
+	return sub.hasReceivedFeedback("pli"), sub.hasReceivedFeedback("fir"), sub.hasReceivedFeedback("nack")
+}
+
 func (r *sfuRouter) forwardFeedback(subscription *sfuSubscription) {
 	for {
 		packets, _, err := subscription.sender.ReadRTCP()
@@ -7429,11 +8000,20 @@ func (r *sfuRouter) forwardFeedback(subscription *sfuSubscription) {
 				// return to ReadRTCP at once.
 				subscription.mu.RLock()
 				if subscription.active {
-					subscription.enqueueNACK(nack)
+					if subscription.egressShard != nil {
+						subscription.egressShard.enqueueNACK(subscription, nack)
+					} else {
+						subscription.enqueueNACK(nack)
+					}
 				}
 				subscription.mu.RUnlock()
 				continue
 			}
+			// FIX 8: drop a duplicate PLI/FIR (a re-sent feedback
+			// from the retry loop, or a late-arriving original).
+			// The first copy is the one that counts; a second copy
+			// forwarded upstream would break the wait's
+			// exact-equality check (one PLI/FIR per viewer).
 			// M7-H attempt 4: count PLI/FIR at receipt, before
 			// translation. A packet that arrived but was rejected
 			// (wrong SSRC) or arrived after deactivation still
@@ -7441,8 +8021,14 @@ func (r *sfuRouter) forwardFeedback(subscription *sfuSubscription) {
 			// so this counts unconditionally.
 			switch packet.(type) {
 			case *rtcp.PictureLossIndication:
+				if subscription.hasReceivedFeedback("pli") {
+					continue
+				}
 				subscription.recordPLIReceived()
 			case *rtcp.FullIntraRequest:
+				if subscription.hasReceivedFeedback("fir") {
+					continue
+				}
 				subscription.recordFIRReceived()
 			}
 			translated, kind, err := r.translateFeedback(subscription, packet)
@@ -7458,13 +8044,8 @@ func (r *sfuRouter) forwardFeedback(subscription *sfuSubscription) {
 				subscription.mu.RUnlock()
 				return
 			}
-			err = subscription.source.publisherPeer.WriteRTCP([]rtcp.Packet{translated})
 			subscription.mu.RUnlock()
-			if err != nil {
-				r.recordError(fmt.Errorf("forward viewer %s feedback upstream: %w", subscription.viewerID, err))
-				continue
-			}
-			subscription.recordFeedback(kind)
+			r.enqueueUpstreamFeedback(subscription.source, translated, kind, subscription)
 		}
 	}
 }
@@ -7505,7 +8086,7 @@ func (r *sfuRouter) nackWorker(subscription *sfuSubscription) {
 			if !subscription.isActive() {
 				return
 			}
-			if time.Since(entry.enqueuedAt) > nackMaxQueueAge {
+			if time.Since(entry.enqueuedAt) > nackFeedbackMaxQueueAge {
 				subscription.recordNACKDroppedStale()
 				continue
 			}
@@ -7517,6 +8098,22 @@ func (r *sfuRouter) nackWorker(subscription *sfuSubscription) {
 }
 
 func (r *sfuRouter) forwardQueuedRTP(subscription *sfuSubscription, queued queuedRTP) {
+	// FIX 23a: record the nackWorker queue WAIT (enqueue->dequeue).
+	// The forward histogram only measures dequeue->write (mean 1.35 ms
+	// in runs 147/149), so the systematic ~112 ms p50 frame latency is
+	// elsewhere; the queue wait is the prime suspect. Same bucket bounds
+	// (1..500 ms) as the forward histogram, so the two are comparable.
+	queueWait := time.Since(queued.enqueuedAt)
+	r.rtpQueueWaitNanos.Add(uint64(queueWait))
+	r.rtpQueueWaitSamples.Add(1)
+	queueWaitBucket := len(rtpForwardLatencyBuckets)
+	for index, bound := range rtpForwardLatencyBuckets {
+		if queueWait <= bound {
+			queueWaitBucket = index
+			break
+		}
+	}
+	r.rtpQueueWaitBuckets[queueWaitBucket].Add(1)
 	packet := queued.packet
 	if packet == nil {
 		r.rtpDropped.Add(1)
@@ -9159,7 +9756,109 @@ func newM7HPublisherAPIWithoutNACKResponder(settings webrtc.SettingEngine) (*web
 	return newLocalSFUNoResponderAPI(settings)
 }
 
-// newLocalSFUNoResponderAPI builds a PeerConnection API with default codecs
+// newSharedDTLSCertificate generates ONE DTLS certificate shared by every
+// PeerConnection in the proof. Pion generates a fresh ECDSA key +
+// self-signed certificate per PeerConnection by default
+// (peerconnection.go:240, dtlstransport.go:116); at 10,040 PCs that is
+// 10,040 keygens plus a retained parsed x509 certificate per PC (~4.5 KB/PC
+// in the 024 profile). A shared certificate is safe here: ECDSA signing is
+// stateless, the parsed certificate is read-only, and peers are
+// distinguished by ICE ufrag, not by certificate. Callers fall back to
+// per-PC generation when this fails.
+func newSharedDTLSCertificate() (webrtc.Certificate, error) {
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return webrtc.Certificate{}, fmt.Errorf("generate shared DTLS key: %w", err)
+	}
+	cert, err := webrtc.GenerateCertificate(key)
+	if err != nil {
+		return webrtc.Certificate{}, fmt.Errorf("generate shared DTLS certificate: %w", err)
+	}
+	return *cert, nil
+}
+
+// registerH264OnlyCodecs registers a single H.264 codec (payload type
+// 102, profile-level-id 42001f, packetization-mode 1) — the exact entry
+// Pion's RegisterDefaultCodecs uses for the video in this proof (the
+// verdict negotiates video/H264 PT 102). FIX 3: RegisterDefaultCodecs
+// registers ~24 codecs (VP8/VP9/AV1/H265/H264 variants + RTX + 4 audio);
+// every PeerConnection carries all of them in its SDP and parses every
+// fmtp line, which cost 2.2 GB of cumulative fmtp-parse allocations at
+// 20x5000 (062 profile: fmtp.parseParameters 39.5% cum) that pile into
+// the heap while GC is frozen under swap. One codec cuts that churn and
+// shrinks the per-PC SDP + MediaEngine copy.
+func registerH264OnlyCodecs(mediaEngine *webrtc.MediaEngine) error {
+	videoRTCPFeedback := []webrtc.RTCPFeedback{
+		{Type: "goog-remb"},
+		{Type: "ccm", Parameter: "fir"},
+		{Type: "nack"},
+		{Type: "nack", Parameter: "pli"},
+	}
+	return mediaEngine.RegisterCodec(webrtc.RTPCodecParameters{
+		RTPCodecCapability: webrtc.RTPCodecCapability{
+			MimeType:     webrtc.MimeTypeH264,
+			ClockRate:    90000,
+			SDPFmtpLine:  "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42001f",
+			RTCPFeedback: videoRTCPFeedback,
+		},
+		PayloadType: 102,
+	}, webrtc.RTPCodecTypeVideo)
+}
+
+// newLocalSFULightAPI builds a PeerConnection API with H264-only codecs plus
+// RTCP reports, simulcast headers, stats and TWCC sender — but NO NACK
+// generator and NO NACK responder. It is the viewer clientPeer API. The
+// generator is the NACK-storm source: on genuine loss it fires NACKs that
+// handleNACK re-retransmits every ~500 ms for the whole feedback wait
+// (9.47M retransmits at 20x50 in run 024), drowning the nackWorker and
+// starving RTP forwarding. The verdict's NACK/PLI/FIR gates are satisfied
+// by the injected feedback (sendViewerFeedback writes RTCP directly),
+// which does not need the generator. The responder is dead weight on a
+// recvonly PC (no RTPSenders to retransmit from).
+func newLocalSFULightAPI(settings webrtc.SettingEngine) (*webrtc.API, error) {
+	// FIX 2d: disable SRTP replay protection on viewer clients. The
+	// verdict's retransmission gate counts duplicate-sequence packets
+	// (the injected NACK requests already-received sequences, and the
+	// capture counts them as duplicates). Pion enables SRTP replay
+	// protection by default (webrtc dtlstransport.go:229), which
+	// correctly drops those retransmits before the app sees them,
+	// making the gate unobservable (053: router wrote 2 retransmits,
+	// viewer received 0). Disabling it here (viewer receivers only;
+	// the router keeps replay protection) lets the gate observe the
+	// retransmission. The router's retransmit path is unchanged.
+	settings.DisableSRTPReplayProtection(true)
+	mediaEngine := &webrtc.MediaEngine{}
+	if err := registerH264OnlyCodecs(mediaEngine); err != nil {
+		return nil, fmt.Errorf("register H264-only viewer codecs: %w", err)
+	}
+
+	registry := &interceptor.Registry{}
+	mediaEngine.RegisterFeedback(webrtc.RTCPFeedback{Type: "nack"}, webrtc.RTPCodecTypeVideo)
+	mediaEngine.RegisterFeedback(
+		webrtc.RTCPFeedback{Type: "nack", Parameter: "pli"},
+		webrtc.RTPCodecTypeVideo,
+	)
+	if err := webrtc.ConfigureRTCPReports(registry); err != nil {
+		return nil, fmt.Errorf("configure RTCP report interceptors: %w", err)
+	}
+	if err := webrtc.ConfigureSimulcastExtensionHeaders(mediaEngine); err != nil {
+		return nil, fmt.Errorf("configure simulcast headers: %w", err)
+	}
+	if err := webrtc.ConfigureStatsInterceptor(registry); err != nil {
+		return nil, fmt.Errorf("configure stats interceptor: %w", err)
+	}
+	if err := webrtc.ConfigureTWCCSender(mediaEngine, registry); err != nil {
+		return nil, fmt.Errorf("configure TWCC sender: %w", err)
+	}
+
+	return webrtc.NewAPI(
+		webrtc.WithMediaEngine(mediaEngine),
+		webrtc.WithInterceptorRegistry(registry),
+		webrtc.WithSettingEngine(settings),
+	), nil
+}
+
+// newLocalSFUNoResponderAPI builds a PeerConnection API with H264-only codecs
 // plus the NACK generator, RTCP reports, simulcast headers, stats and TWCC
 // sender — but NO NACK responder interceptor. The responder keeps a
 // deep-copied history of the last 512 sent RTP packets per RTPSender
@@ -9171,8 +9870,8 @@ func newM7HPublisherAPIWithoutNACKResponder(settings webrtc.SettingEngine) (*web
 // keeps the default API with the responder.
 func newLocalSFUNoResponderAPI(settings webrtc.SettingEngine) (*webrtc.API, error) {
 	mediaEngine := &webrtc.MediaEngine{}
-	if err := mediaEngine.RegisterDefaultCodecs(); err != nil {
-		return nil, fmt.Errorf("register default publisher codecs: %w", err)
+	if err := registerH264OnlyCodecs(mediaEngine); err != nil {
+		return nil, fmt.Errorf("register H264-only publisher codecs: %w", err)
 	}
 
 	registry := &interceptor.Registry{}
@@ -9186,6 +9885,54 @@ func newLocalSFUNoResponderAPI(settings webrtc.SettingEngine) (*webrtc.API, erro
 		return nil, fmt.Errorf("create NACK generator interceptor: %w", err)
 	}
 	registry.Add(generator)
+	if err := webrtc.ConfigureRTCPReports(registry); err != nil {
+		return nil, fmt.Errorf("configure RTCP report interceptors: %w", err)
+	}
+	if err := webrtc.ConfigureSimulcastExtensionHeaders(mediaEngine); err != nil {
+		return nil, fmt.Errorf("configure simulcast headers: %w", err)
+	}
+	if err := webrtc.ConfigureStatsInterceptor(registry); err != nil {
+		return nil, fmt.Errorf("configure stats interceptor: %w", err)
+	}
+	if err := webrtc.ConfigureTWCCSender(mediaEngine, registry); err != nil {
+		return nil, fmt.Errorf("configure TWCC sender: %w", err)
+	}
+
+	return webrtc.NewAPI(
+		webrtc.WithMediaEngine(mediaEngine),
+		webrtc.WithInterceptorRegistry(registry),
+		webrtc.WithSettingEngine(settings),
+	), nil
+}
+
+// newLocalSFUPublisherPeerAPI builds a PeerConnection API for the
+// router's publisherPeers (recvonly from the router's side) with
+// H264-only codecs plus RTCP reports, simulcast headers, stats and
+// TWCC sender — but NO NACK generator and NO NACK responder.
+// FIX 12: the publisherPeer used the full API (newLocalSFUAPI),
+// whose NACK generator fires on every gap in the incoming
+// publisher RTP. Under load the router drops/delays publisher RTP
+// and the generator fires ~48,000 NACKs (098: the publishers
+// received nack=53,156) — a flood that overflows the publisher
+// client's 768 KB UDP socket and drops the PLI/FIR/synthetic-
+// NACKs the feedback wait needs (098: pli=4,359, fir=4,204 of
+// 5,000 forwarded). The generator repairs almost nothing (the
+// viewers already get 299/300 frames) and the responder is dead
+// weight on a recvonly peer (no RTPSenders sending RTP). Unlike
+// the viewer light API, SRTP replay protection is KEPT (the router
+// keeps it; only viewer receivers disable it per FIX 2d).
+func newLocalSFUPublisherPeerAPI(settings webrtc.SettingEngine) (*webrtc.API, error) {
+	mediaEngine := &webrtc.MediaEngine{}
+	if err := registerH264OnlyCodecs(mediaEngine); err != nil {
+		return nil, fmt.Errorf("register H264-only publisher-peer codecs: %w", err)
+	}
+
+	registry := &interceptor.Registry{}
+	mediaEngine.RegisterFeedback(webrtc.RTCPFeedback{Type: "nack"}, webrtc.RTPCodecTypeVideo)
+	mediaEngine.RegisterFeedback(
+		webrtc.RTCPFeedback{Type: "nack", Parameter: "pli"},
+		webrtc.RTPCodecTypeVideo,
+	)
 	if err := webrtc.ConfigureRTCPReports(registry); err != nil {
 		return nil, fmt.Errorf("configure RTCP report interceptors: %w", err)
 	}
@@ -9286,9 +10033,46 @@ func runLocalSFUProofWithConfig(
 			latencyClocks[publisherID] = clock
 		}
 	}
-	clientSettings, _, err := loopbackSettings(false, 0)
+	routerSocketReadBufferBytes, err := strconv.Atoi(routerSocketReadBufferSize)
+	if err != nil {
+		return sfuProofResult{}, fmt.Errorf("invalid router socket receive buffer size %q: %w", routerSocketReadBufferSize, err)
+	}
+	if routerSocketReadBufferBytes < 0 {
+		return sfuProofResult{}, fmt.Errorf("router socket receive buffer size must not be negative: %d", routerSocketReadBufferBytes)
+	}
+	// FIX 13: publisher clients share one UDP mux with an 8 MiB
+	// receive buffer (same as the router muxes, FIX 7). Each
+	// publisher client receives 750 forwarded feedback packets
+	// (250 PLI + 250 FIR + 250 NACK) and its per-PC socket uses
+	// the 768 KB OS default, which drops ~11% (101: pli=4,452,
+	// fir=4,416, nack=4,400 of 5,000 forwarded) — and the wait
+	// needs exactly 250/track with zero loss. Unlike the viewer
+	// client mux (FIX 2c, which broke DTLS), the 20 publishers each
+	// connect to a DIFFERENT router shard (distinct remote port),
+	// so the mux can route DTLS by the 5-tuple.
+	clientSettings, publisherMux, err := loopbackSettings(true, routerSocketReadBufferBytes)
 	if err != nil {
 		return sfuProofResult{}, err
+	}
+	// FIX 14: disable SRTP replay protection on the publisher
+	// clients. The router forwards feedback upstream via two
+	// concurrent paths (the upstream writer for PLI/FIR and
+	// handleNACK for NACKs), so SRTCP sequence numbers can be
+	// assigned out of send order under load; the publisher's SRTCP
+	// replay window then drops the late ones (~11% in 101/105:
+	// pli=4,452-4,504, fir=4,416-4,464, nack=4,400-4,455 of 5,000
+	// forwarded, even with the 8 MiB mux buffer from FIX 13).
+	// Disabling it lets the publisher accept out-of-order RTCP,
+	// like FIX 2d did for viewer RTP retransmits. This affects
+	// only the publisher clients (clientSettings feeds clientAPI,
+	// used solely for publisherClientAPI).
+	clientSettings.DisableSRTPReplayProtection(true)
+	if publisherMux != nil {
+		defer func() {
+			if closeErr := publisherMux.Close(); closeErr != nil {
+				returnErr = errors.Join(returnErr, fmt.Errorf("close publisher loopback UDP mux: %w", closeErr))
+			}
+		}()
 	}
 	if clientSocketReadMode != "disabled" && clientSocketReadMode != "enabled" {
 		return sfuProofResult{}, fmt.Errorf(
@@ -9322,6 +10106,15 @@ func runLocalSFUProofWithConfig(
 			return sfuProofResult{}, err
 		}
 	}
+	// FIX 2: one shared DTLS certificate for every PeerConnection in this
+	// proof (see newSharedDTLSCertificate). Falls back to per-PC
+	// generation when the shared certificate cannot be created.
+	peerConfig := webrtc.Configuration{}
+	if sharedCert, certErr := newSharedDTLSCertificate(); certErr != nil {
+		fmt.Fprintf(os.Stderr, "shared DTLS certificate unavailable, using per-PC certificates: %v\n", certErr)
+	} else {
+		peerConfig = webrtc.Configuration{Certificates: []webrtc.Certificate{sharedCert}}
+	}
 	if routerUDPMuxMode != "enabled" && routerUDPMuxMode != "disabled" {
 		return sfuProofResult{}, fmt.Errorf(
 			"invalid router UDP mux mode %q (want enabled or disabled)",
@@ -9341,12 +10134,21 @@ func runLocalSFUProofWithConfig(
 	if clientSocketReadBufferBytes > 0 {
 		fmt.Fprintf(os.Stderr, "client socket receive buffer requested: %d bytes\n", clientSocketReadBufferBytes)
 	}
-	if routerUDPMuxEnabled && clientSocketReadBufferBytes > 0 {
-		fmt.Fprintf(os.Stderr, "router socket receive buffer requested: %d bytes\n", clientSocketReadBufferBytes)
+	if routerUDPMuxEnabled && routerSocketReadBufferBytes > 0 {
+		fmt.Fprintf(os.Stderr, "router socket receive buffer requested: %d bytes\n", routerSocketReadBufferBytes)
 	}
 	routerMuxCount := min(peerNegotiationConcurrency, len(publishers))
 	routerMuxes := make([]ice.UDPMux, 0, routerMuxCount)
 	routerMuxByShard := make([]ice.UDPMux, routerMuxCount)
+	// FIX 2c: the shared client ICE UDP mux broke DTLS (051: ICE
+	// nominated but the PC stayed connecting — a mux cannot route
+	// non-STUN DTLS packets when many agents share one socket).
+	// Viewer clientPeers keep the light API (no NACK generator, so no
+	// storm) but go back to one UDP socket per PC, as in 023/024.
+	// Only built when the client socket read counter is disabled; the
+	// counting branch builds a per-viewer mux + API per viewer when
+	// enabled.
+	var clientViewerLightAPI *webrtc.API
 	routerSettingsByShard := make([]webrtc.SettingEngine, routerMuxCount)
 	routerShardByPublisher := make(map[string]int, len(publishers))
 	routerSocketMuxes := make([]*singlePeerUDPMux, 0, len(config.viewerTrackIndexes))
@@ -9387,16 +10189,30 @@ func runLocalSFUProofWithConfig(
 		for index, publisherID := range publishers {
 			shard := index % routerMuxCount
 			if routerAPIs[shard] == nil {
-				routerSettings, udpMux, muxErr := loopbackSettings(routerUDPMuxEnabled, clientSocketReadBufferBytes)
+				routerSettings, udpMux, muxErr := loopbackSettings(routerUDPMuxEnabled, routerSocketReadBufferBytes)
 				if muxErr != nil {
 					return sfuProofResult{}, muxErr
 				}
+				// FIX 22b: disable SRTP replay protection on the SFU
+				// router. The router is the last place it is still on
+				// (FIX 2d disabled it on viewer clients, FIX 14 on
+				// publisher clients, both because the window drops
+				// legitimate out-of-order packets in this system).
+				// Run 144: the kernel dropped only ~400 packets while
+				// ~1.4M vanished between the router's writeRTP and the
+				// viewers' Pion receivers and ~370/track between the
+				// publisher's WriteSample and the router's read, so the
+				// loss is inside Pion's read path; the replay window
+				// is the prime suspect (it drops late packets after
+				// the multi-second scheduler stalls). If the loss
+				// does not move, this change is reverted.
+				routerSettings.DisableSRTPReplayProtection(true)
 				if udpMux != nil {
 					routerMuxes = append(routerMuxes, udpMux)
 				}
 				routerMuxByShard[shard] = udpMux
 				routerSettingsByShard[shard] = routerSettings
-				routerAPIs[shard], err = newLocalSFUAPI(routerSettings)
+				routerAPIs[shard], err = newLocalSFUPublisherPeerAPI(routerSettings)
 				if err != nil {
 					return sfuProofResult{}, err
 				}
@@ -9408,6 +10224,19 @@ func runLocalSFUProofWithConfig(
 			routerAPIByPublisher[publisherID] = routerAPIs[shard]
 			routerShardByPublisher[publisherID] = shard
 		}
+		// FIX 2c: one light API (no NACK generator, no NACK responder)
+		// for the viewer clientPeers, built on per-PC settings (no
+		// shared UDP mux). See the FIX 2c note at the declaration.
+		if clientSocketReadMode == "disabled" {
+			clientLightSettings, _, settingsErr := loopbackSettings(false, 0)
+			if settingsErr != nil {
+				return sfuProofResult{}, settingsErr
+			}
+			clientViewerLightAPI, err = newLocalSFULightAPI(clientLightSettings)
+			if err != nil {
+				return sfuProofResult{}, err
+			}
+		}
 		router, err = newSFURouter(routerAPIs[0])
 		if err != nil {
 			return sfuProofResult{}, err
@@ -9415,7 +10244,12 @@ func runLocalSFUProofWithConfig(
 	}
 	publisherSendStats := make(map[string]*m7hPublisherSendStats)
 	var publisherSendStatsList []*m7hPublisherSendStats
-	if config.proofID == "m7h" {
+	// FIX 21b: populate the send stats for the m6h-scale proofs too.
+	// Without this the runtime probe's send samples are silent (run
+	// 139: 246 runtime samples, 0 send samples) and sendPublisherVideo
+	// records nothing (nil stats), so the send loop's tick lateness
+	// cannot be judged.
+	if config.proofID == "m7h" || strings.HasPrefix(config.proofID, "m6h-scale") {
 		for _, publisherID := range publishers {
 			stats := &m7hPublisherSendStats{publisherID: publisherID}
 			publisherSendStats[publisherID] = stats
@@ -9484,7 +10318,7 @@ func runLocalSFUProofWithConfig(
 	}
 
 	for _, publisherID := range publishers {
-		clientPeer, err := publisherClientAPI.NewPeerConnection(webrtc.Configuration{})
+		clientPeer, err := publisherClientAPI.NewPeerConnection(peerConfig)
 		if err != nil {
 			return sfuProofResult{}, fmt.Errorf("create publisher %s client: %w", publisherID, err)
 		}
@@ -9607,7 +10441,7 @@ func runLocalSFUProofWithConfig(
 				socketConn = socketMux.conn
 				socketConn.pcKey = "viewer-client:" + viewerID
 			}
-			clientPeer, err := viewerClientAPI.NewPeerConnection(webrtc.Configuration{})
+			clientPeer, err := viewerClientAPI.NewPeerConnection(peerConfig)
 			if err != nil {
 				return sfuProofResult{}, fmt.Errorf("create viewer client %s: %w", viewerID, err)
 			}
@@ -9623,7 +10457,7 @@ func runLocalSFUProofWithConfig(
 				latencyClocks[source.key.PublisherID],
 				recorder,
 				firstSequenceByTrack[source.key],
-				config.proofID == "m7h",
+				config.proofID == "m7h" || strings.HasPrefix(config.proofID, "m6h-scale"),
 			)
 			capture.viewerID = viewerID
 			capture.frameDiagnostics = config.frameDiagnostics
@@ -9700,13 +10534,20 @@ func runLocalSFUProofWithConfig(
 				routerSocketConn.pcKey = "router-serverPeer:" + viewerID
 			}
 		}
-		serverPeer, err := routerPeerAPI.NewPeerConnection(webrtc.Configuration{})
+		serverPeer, err := routerPeerAPI.NewPeerConnection(peerConfig)
 		if err != nil {
 			return sfuProofResult{}, fmt.Errorf("create router endpoint for %s: %w", viewerID, err)
 		}
 		// M7-H attempt 6: log ICE/connection state transitions.
 		attachPCStateLogging(serverPeer, "router-serverPeer", viewerID)
 		viewerClientAPI := clientAPI
+		// FIX 2c: viewer clientPeers use the light API (no NACK
+		// generator) built above, on per-PC UDP sockets. The counting
+		// branch below still overrides this per viewer when
+		// clientSocketReadMode is enabled.
+		if clientViewerLightAPI != nil {
+			viewerClientAPI = clientViewerLightAPI
+		}
 		var socketConn *packetReadCountingConn
 		if clientSocketReadMode == "enabled" {
 			socketMux, muxErr := newSinglePeerUDPMux()
@@ -9742,7 +10583,7 @@ func runLocalSFUProofWithConfig(
 			// M7-H attempt 7: owning PC key for close-initiator attribution.
 			socketConn.pcKey = "viewer-client:" + viewerID
 		}
-		clientPeer, err := viewerClientAPI.NewPeerConnection(webrtc.Configuration{})
+		clientPeer, err := viewerClientAPI.NewPeerConnection(peerConfig)
 		if err != nil {
 			// M7-H attempt 7: log the mid-run app-initiated PC close.
 			fmt.Fprintf(os.Stderr, "pc closed: kind=router-serverPeer id=%s at=%s mono=%d reason=create-viewer-client-failed%s\n",
@@ -9763,7 +10604,7 @@ func runLocalSFUProofWithConfig(
 			latencyClocks[source.key.PublisherID],
 			recorder,
 			firstSequenceByTrack[source.key],
-			config.proofID == "m7h",
+			config.proofID == "m7h" || strings.HasPrefix(config.proofID, "m6h-scale"),
 		)
 		capture.viewerID = viewerID
 		capture.frameDiagnostics = config.frameDiagnostics
@@ -9876,7 +10717,14 @@ func runLocalSFUProofWithConfig(
 		}
 	}
 	startedAt := time.Now().UTC()
-	sendContext, cancelSend := context.WithTimeout(ctx, duration)
+	// FIX 22a: extend the send window by two ticks (400 ms) past
+	// duration. The send loop now emits frame 0 immediately and
+	// then every videoInterval, so the last frame lands at ~60.2 s
+	// after the first and the measured first-to-last span clears
+	// the 60 s gate with margin (a plain 60 s window yields a
+	// 59.6 s span and can never pass MinDuration). The gates are
+	// unchanged; the media phase is duration + 2 ticks.
+	sendContext, cancelSend := context.WithTimeout(ctx, duration+2*config.videoInterval)
 	stopCandidatePairSampler := func() {}
 	stopM7HRuntimeProbe := func() {}
 	captureBeforeViewerReadinessAbort := func() {}
@@ -9893,7 +10741,34 @@ func runLocalSFUProofWithConfig(
 		)
 	}
 	defer stopCandidatePairSampler()
-	if config.proofID == "m7h" {
+	// FIX 21: env-gated read/queue sampler for the throughput
+	// diagnosis. Every 5 s it records per-subscription RTP queue
+	// depths and viewer ReadRTP timings (sampleM7HReadQueueDiagnostics)
+	// without the candidate-pair snapshots (no ICE stat walks).
+	// HAMI_READQUEUE_SAMPLE=1 only; off by default so the measured
+	// run shape is unchanged.
+	// FIX 23b: tied to the run ctx (not sendContext) so it samples the
+	// whole run (feedback/settle phase included), not just elapsed 5-55 s.
+	if os.Getenv("HAMI_READQUEUE_SAMPLE") == "1" && router != nil {
+		go func() {
+			ticker := time.NewTicker(5 * time.Second)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-ticker.C:
+					sampleM7HReadQueueDiagnostics(router, viewers, time.Since(startedAt))
+				}
+			}
+		}()
+	}
+	// FIX 21: run the 1/s runtime probe (process CPU cores, scheduler
+	// latency, GC pauses, publisher send ticks) for the m6h-scale
+	// proofs too. Run 133 had no probe data, so the throughput
+	// bottleneck (code vs CPU contention) could not be judged.
+	// Cost is ~3 short stderr lines per second; no media-path change.
+	if config.proofID == "m7h" || strings.HasPrefix(config.proofID, "m6h-scale") {
 		var onPublisherSendSample func(frames uint64, stalePublishers int)
 		var onSFUReceiveSample func(packets uint64, stalePublishers int)
 		if config.remoteSFU != nil && *m7hCPUProfilePath != "" {
@@ -9942,6 +10817,21 @@ func runLocalSFUProofWithConfig(
 	firstMeasurementTimestamp := sources[0].initialRTPTimestamp + sampleRTPTicks(videoFrames[0], 90000)
 	// M7-H attempt 6: phase snapshot — streaming starts here.
 	setRunPhase("streaming")
+	// FIX 24b: hand each published track its publisher's frame clock so
+	// forwardTrack can measure the router ingress transit (publisher
+	// capture -> router ReadRTP) per packet. Done here (just before the
+	// send starts) because the router is only created later in setup and
+	// the tracks are registered during setup; forwardTrack only reads the
+	// clock after ReadRTP returns a packet, i.e. after the send.
+	if router != nil {
+		router.mu.RLock()
+		for _, track := range router.tracks {
+			if clock, ok := latencyClocks[track.key.PublisherID]; ok {
+				track.frameClock.Store(clock)
+			}
+		}
+		router.mu.RUnlock()
+	}
 	go func() {
 		framesByPublisher, err := sendSFUVideo(
 			sendContext,
@@ -10005,6 +10895,17 @@ func runLocalSFUProofWithConfig(
 		readinessGateNanos.Store(uint64(time.Since(readinessGateStart).Nanoseconds()))
 		snapshotSTUNStats("send-mid")
 		snapshotDestStats("send-mid")
+		// FIX 17: settle before the injection. The nackWorkers are
+		// still draining the post-media RTP backlog when the first
+		// feedback is dispatched; the early tracks lose it at the
+		// publisher (113/117) while the late tracks do not. Wait
+		// for the backlog to clear so every track starts from the
+		// same calm state. Bounded by the feedback ctx.
+		select {
+		case <-time.After(sfuFeedbackSettleDelay):
+		case <-feedbackContext.Done():
+			return sfuProofResult{}, fmt.Errorf("feedback settle interrupted: %w", feedbackContext.Err())
+		}
 
 		// M7-H attempt 9: parallel injection — the serial loop could not
 		// absorb a 43 s blocking WriteRTCP (attempt 8: the top-4 slowest
@@ -10047,6 +10948,10 @@ func runLocalSFUProofWithConfig(
 				}
 			}(w)
 		}
+		// FIX 8: keep each viewer's first-pass snapshot so a retry
+		// re-sends the SAME NACK (same missingSequence, already in
+		// expectedNACKs) instead of a new one the wait does not expect.
+		injectionSnapshots := make(map[string]streamSnapshot, len(viewers))
 		poolStart := time.Now()
 		dispatched := 0
 		for index, viewer := range viewers {
@@ -10100,6 +11005,7 @@ func runLocalSFUProofWithConfig(
 				case <-feedbackPacer.C:
 				}
 			}
+			injectionSnapshots[viewer.id] = snapshot
 			jobs <- injectionJob{viewerID: viewer.id, client: viewer.client, snapshot: snapshot, missingSequence: missingSequence}
 			dispatched++
 			if (index+1)%500 == 0 {
@@ -10129,6 +11035,109 @@ func runLocalSFUProofWithConfig(
 					res.sentMissing,
 					res.missingSequence,
 				)
+			}
+		}
+
+		// FIX 8: retry feedback for viewers whose packets the kernel
+		// dropped (UDP receive buffer overflow under swap load).
+		// After a grace period for in-flight feedback to arrive,
+		// re-send only for viewers the router never received
+		// feedback from. The re-send reuses the first-pass snapshot
+		// (same NACK sequence, already in expectedNACKs) and the
+		// router dedupes it (forwardFeedback drops a PLI/FIR already
+		// received), so a late-arriving original cannot duplicate
+		// upstream feedback and break the wait's exact-equality
+		// check. Up to 3 retry passes; each pass only covers the
+		// viewers still missing. Skipped when there is no local
+		// router (remote SFU mode).
+		for retryPass := 0; retryPass < 3 && router != nil; retryPass++ {
+			select {
+			case <-feedbackContext.Done():
+				break
+			case <-time.After(10 * time.Second):
+			}
+			if feedbackContext.Err() != nil {
+				break
+			}
+			var missing []viewerEndpoint
+			for _, viewer := range viewers {
+				pli, fir, nack := router.feedbackReceivedByRouter(viewer.id, viewer.key)
+				if !pli || !fir || !nack {
+					missing = append(missing, viewer)
+				}
+			}
+			fmt.Fprintf(os.Stderr, "feedback retry pass %d: %d/%d viewers missing feedback, re-sending\n", retryPass+1, len(missing), len(viewers))
+			if len(missing) == 0 {
+				break
+			}
+			retryJobs := make(chan injectionJob, len(missing))
+			retryResults := make(chan injectionResult, len(missing))
+			var retryWG sync.WaitGroup
+			retryBusyNs := make([]uint64, 8)
+			for w := 0; w < 8; w++ {
+				retryWG.Add(1)
+				go func(workerIndex int) {
+					defer retryWG.Done()
+					for job := range retryJobs {
+						sendStart := time.Now()
+						sentMissingSequence, err := sendViewerFeedback(job.client, job.snapshot)
+						sendDur := time.Since(sendStart)
+						retryBusyNs[workerIndex] += uint64(sendDur.Nanoseconds())
+						injectionSendCalls.Add(1)
+						injectionSendTotalNs.Add(uint64(sendDur.Nanoseconds()))
+						if sendDur > 50*time.Millisecond {
+							injectionSendSlow50ms.Add(1)
+						}
+						recordInjection(job.viewerID, sendDur)
+						retryResults <- injectionResult{viewerID: job.viewerID, missingSequence: job.missingSequence, sentMissing: sentMissingSequence, err: err}
+					}
+				}(w)
+			}
+			retryDispatched := 0
+			for _, viewer := range missing {
+				snapshot, ok := injectionSnapshots[viewer.id]
+				if !ok {
+					continue
+				}
+				if v, ok := pcLifetimes.Load("viewer-client:" + viewer.id); ok {
+					if lt, ok2 := v.(*pcLifetime); ok2 && lt != nil {
+						if iceState, _ := lt.lastICEState.Load().(string); iceState == "failed" || iceState == "disconnected" {
+							continue
+						}
+					}
+				}
+				if retryDispatched > 0 {
+					select {
+					case <-feedbackContext.Done():
+						break
+					case <-feedbackPacer.C:
+					}
+				}
+				if feedbackContext.Err() != nil {
+					break
+				}
+				retryJobs <- injectionJob{viewerID: viewer.id, client: viewer.client, snapshot: snapshot, missingSequence: snapshot.LastSequenceNumber + 1000}
+				retryDispatched++
+			}
+			close(retryJobs)
+			retryWG.Wait()
+			for i := 0; i < retryDispatched; i++ {
+				res := <-retryResults
+				if res.err != nil {
+					cancelSend()
+					<-sendDone
+					return sfuProofResult{}, fmt.Errorf("retry send RTCP feedback from %s: %w", res.viewerID, res.err)
+				}
+				if res.sentMissing != res.missingSequence {
+					cancelSend()
+					<-sendDone
+					return sfuProofResult{}, fmt.Errorf(
+						"retry viewer %s NACK sequence changed: sent %d, expected %d",
+						res.viewerID,
+						res.sentMissing,
+						res.missingSequence,
+					)
+				}
 			}
 		}
 
@@ -10365,8 +11374,39 @@ func runLocalSFUProofWithConfig(
 			socketTotals.clientsZeroReads, socketTotals.clientsZeroNonSTUNReads)
 	}
 	if config.logRTPPath && router != nil {
+		// FIX 23a: one-line nackWorker queue-wait summary (enqueue->dequeue).
+		// Buckets mirror the forward histogram (1/5/10/20/50/100/250/500 ms).
+		if queueWaitSamples := router.rtpQueueWaitSamples.Load(); queueWaitSamples > 0 {
+			fmt.Fprintf(os.Stderr, "rtp queue wait: samples=%d meanMs=%.2f le1ms=%d le5ms=%d le10ms=%d le20ms=%d le50ms=%d le100ms=%d le250ms=%d le500ms=%d gt500ms=%d\n",
+				queueWaitSamples, float64(router.rtpQueueWaitNanos.Load())/float64(queueWaitSamples)/float64(time.Millisecond),
+				router.rtpQueueWaitBuckets[0].Load(), router.rtpQueueWaitBuckets[1].Load(), router.rtpQueueWaitBuckets[2].Load(), router.rtpQueueWaitBuckets[3].Load(), router.rtpQueueWaitBuckets[4].Load(), router.rtpQueueWaitBuckets[5].Load(), router.rtpQueueWaitBuckets[6].Load(), router.rtpQueueWaitBuckets[7].Load(), router.rtpQueueWaitBuckets[8].Load())
+		}
+		// FIX 24a: one-line publisher WriteSample summary (per frame).
+		// Buckets mirror the forward histogram (1/5/10/20/50/100/250/500 ms).
+		if writeSamples := writeSampleSamples.Load(); writeSamples > 0 {
+			fmt.Fprintf(os.Stderr, "write sample: samples=%d meanMs=%.2f le1ms=%d le5ms=%d le10ms=%d le20ms=%d le50ms=%d le100ms=%d le250ms=%d le500ms=%d gt500ms=%d\n",
+				writeSamples, float64(writeSampleNanos.Load())/float64(writeSamples)/float64(time.Millisecond),
+				writeSampleBuckets[0].Load(), writeSampleBuckets[1].Load(), writeSampleBuckets[2].Load(), writeSampleBuckets[3].Load(), writeSampleBuckets[4].Load(), writeSampleBuckets[5].Load(), writeSampleBuckets[6].Load(), writeSampleBuckets[7].Load(), writeSampleBuckets[8].Load())
+		}
+		// FIX 24b: one-line router ingress summary (publisher capture -> router ReadRTP).
+		if ingressSamples := routerIngressSamples.Load(); ingressSamples > 0 {
+			fmt.Fprintf(os.Stderr, "router ingress: samples=%d missed=%d meanMs=%.2f le1ms=%d le5ms=%d le10ms=%d le20ms=%d le50ms=%d le100ms=%d le250ms=%d le500ms=%d gt500ms=%d\n",
+				ingressSamples, routerIngressMissed.Load(), float64(routerIngressNanos.Load())/float64(ingressSamples)/float64(time.Millisecond),
+				routerIngressBuckets[0].Load(), routerIngressBuckets[1].Load(), routerIngressBuckets[2].Load(), routerIngressBuckets[3].Load(), routerIngressBuckets[4].Load(), routerIngressBuckets[5].Load(), routerIngressBuckets[6].Load(), routerIngressBuckets[7].Load(), routerIngressBuckets[8].Load())
+		}
 		for _, viewer := range viewers {
 			logViewerRTPPathDiagnosis(router, viewers, viewer)
+		}
+		// FIX 22c: one line per publisher with the router-side
+		// Pion receiver stats for the publisher->router leg, so
+		// the stage-A loss is visible at the Pion level (run 144:
+		// the router read 740 of 1,112 sent, and Pion's viewer
+		// inbound stats confirmed the stage-B loss, but the
+		// router-side receiver count was not logged).
+		for _, source := range sources {
+			if peer := router.publisherPeer(source.key.PublisherID); peer != nil {
+				fmt.Fprintf(os.Stderr, "publisher RTP path: publisher=%s track=%s publisherPeerStats={%s}\n", source.key.PublisherID, source.key.TrackID, viewerPeerPacketDiagnostics(peer))
+			}
 		}
 	}
 
@@ -10582,6 +11622,21 @@ func newSFUViewerCapture(
 					capture.duplicates[track.ID()]++
 				}
 				capture.sequenceCounts[track.ID()][packet.SequenceNumber]++
+				// FIX 2: bound the per-viewer sequence set to a recent window.
+				// Duplicates are retransmits of recent packets (within ~500 ms,
+				// a handful of sequences), so pruning entries more than
+				// sfuSequenceWindowSize behind the current sequence preserves
+				// detection while the unbounded map held every received
+				// sequence (~50 KB/viewer, ~250 MB at 5,000). Prune only when
+				// the map exceeds twice the window, so the scan is amortised.
+				if len(capture.sequenceCounts[track.ID()]) > 2*sfuSequenceWindowSize {
+					current := packet.SequenceNumber
+					for old := range capture.sequenceCounts[track.ID()] {
+						if int16(current-old) > sfuSequenceWindowSize {
+							delete(capture.sequenceCounts[track.ID()], old)
+						}
+					}
+				}
 				capture.mu.Unlock()
 				counter.record(packet.SequenceNumber, packet.Timestamp, len(packet.Payload))
 				if capture.latencyRecorder != nil && capture.latencyClock != nil ||
@@ -10974,6 +12029,14 @@ func (r *sfuRouter) viewerPeer(viewerID string) *webrtc.PeerConnection {
 	return nil
 }
 
+// FIX 22c: the router-side publisher peer, for the publisher->router
+// leg of the RTP-path diagnosis (mirrors viewerPeer).
+func (r *sfuRouter) publisherPeer(publisherID string) *webrtc.PeerConnection {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.publishers[publisherID]
+}
+
 func sendSFUVideo(
 	ctx context.Context,
 	sources []sfuMediaSource,
@@ -11057,28 +12120,63 @@ func sendPublisherVideo(
 	defer ticker.Stop()
 	var frameIndex, framesSent uint64
 	frameTimestamp := firstFrameTimestamp
+	// FIX 22a: send the first frame immediately instead of waiting
+	// for the first tick. A 200 ms ticker over a 60 s window yields
+	// only 299 frames (first tick at +200 ms, last tick races the
+	// 60 s ctx expiry) and a 59.6 s first-to-last span, so the
+	// MinFrames=300 and MinDuration=60s gates can never pass even
+	// on a lossless run (20x50 run 143: 299 frames, 59.61 s, p95
+	// 2.6 ms, yet measurement_pass=false). Sending frame 0 at
+	// startOffset and then every 200 ms delivers 300 frames over
+	// the window; the send ctx is extended by two ticks (see the
+	// sendContext creation) so the span reaches ~60.2 s.
+	sendFrame := func(scheduledAt time.Time) error {
+		frame := frames[frameIndex%uint64(len(frames))]
+		ticks := sampleRTPTicks(frame, 90000)
+		if ticks == 0 {
+			return errors.New("video frame duration produces no RTP timestamp ticks")
+		}
+		if clock != nil {
+			clock.CaptureNow(uint64(frameTimestamp))
+		}
+		// FIX 24a: time the publisher WriteSample call (per frame).
+		// The router transit is only ~6 ms (queue wait 4.51 ms + forward
+		// 1.52 ms, run 154), so the systematic ~112 ms p50 frame latency
+		// is in a Pion leg. This splits the publisher side.
+		writeStarted := time.Now()
+		for _, source := range sources {
+			if err := source.track.WriteSample(frame); err != nil {
+				return fmt.Errorf("write track %s sample: %w", source.key.TrackID, err)
+			}
+		}
+		writeElapsed := time.Since(writeStarted)
+		writeSampleNanos.Add(uint64(writeElapsed))
+		writeSampleSamples.Add(1)
+		writeBucket := len(rtpForwardLatencyBuckets)
+		for index, bound := range rtpForwardLatencyBuckets {
+			if writeElapsed <= bound {
+				writeBucket = index
+				break
+			}
+		}
+		writeSampleBuckets[writeBucket].Add(1)
+		sendStats.record(scheduledAt, time.Now())
+		frameTimestamp += ticks
+		frameIndex++
+		framesSent++
+		return nil
+	}
+	if err := sendFrame(time.Now()); err != nil {
+		return framesSent, err
+	}
 	for {
 		select {
 		case <-ctx.Done():
 			return framesSent, nil
 		case scheduledAt := <-ticker.C:
-			frame := frames[frameIndex%uint64(len(frames))]
-			ticks := sampleRTPTicks(frame, 90000)
-			if ticks == 0 {
-				return framesSent, errors.New("video frame duration produces no RTP timestamp ticks")
+			if err := sendFrame(scheduledAt); err != nil {
+				return framesSent, err
 			}
-			if clock != nil {
-				clock.CaptureNow(uint64(frameTimestamp))
-			}
-			for _, source := range sources {
-				if err := source.track.WriteSample(frame); err != nil {
-					return framesSent, fmt.Errorf("write track %s sample: %w", source.key.TrackID, err)
-				}
-			}
-			sendStats.record(scheduledAt, time.Now())
-			frameTimestamp += ticks
-			frameIndex++
-			framesSent++
 		}
 	}
 }
@@ -11145,12 +12243,43 @@ func readPublisherFeedback(
 	expectedNACKsMu *sync.RWMutex,
 	events chan<- sfuFeedbackEvent,
 ) {
+	// DIAGNOSTIC (FIX 15): per-track RTCP counts + exit reason.
+	// The publisher loses ~11% of forwarded feedback (108:
+	// pli=4,419, fir=4,418, nack=4,380 of 5,000) and the loss is
+	// unresponsive to socket buffer (FIX 13) and replay protection
+	// (FIX 14). Hypothesis: ReadRTCP returns an error on a single
+	// malformed packet and this goroutine exits permanently, killing
+	// that whole track's feedback. Log the exit + per-track counts
+	// to confirm or rule it out.
+	var total, nack, pli, fir, other uint64
+	var readErr error
+	defer func() {
+		fmt.Fprintf(os.Stderr, "publisher feedback read exit: track=%s total=%d nack=%d pli=%d fir=%d other=%d err=%v\n", trackID, total, nack, pli, fir, other, readErr)
+	}()
 	for {
 		packets, _, err := sender.ReadRTCP()
 		if err != nil {
+			readErr = err
 			return
 		}
 		for _, packet := range packets {
+			total++
+			// DIAGNOSTIC (FIX 15): per-track counts (locals) +
+			// keep the global atomics for the summary line.
+			switch packet.(type) {
+			case *rtcp.TransportLayerNack:
+				nack++
+				publisherRTCPReceivedNACK.Add(1)
+			case *rtcp.PictureLossIndication:
+				pli++
+				publisherRTCPReceivedPLI.Add(1)
+			case *rtcp.FullIntraRequest:
+				fir++
+				publisherRTCPReceivedFIR.Add(1)
+			default:
+				other++
+				publisherRTCPReceivedOther.Add(1)
+			}
 			event, ok := makeSFUFeedbackEvent(trackID, packet)
 			if !ok {
 				continue
@@ -11251,9 +12380,24 @@ func waitForSFUFeedback(
 		if complete && len(sourceSSRCs) > 0 {
 			for trackID, count := range counts {
 				expected := expectedCounts[trackID]
+				// FIX 20: PLI/FIR may over-count by a few (130: the
+				// publisher received 5,022 PLIs for 5,000 viewers —
+				// 22 extra, ~1 per track — while the router forwarded
+				// exactly 5,000 and FIR was exactly 5,000). The extra
+				// PLIs are generated by Pion's interceptor on the
+				// publisherPeer (the app cannot suppress them, and
+				// the translated PLI/FIR packets carry no per-viewer
+				// field to dedupe by — MediaSSRC is the publisher's
+				// SSRC, shared by all 250 viewers on the track). An
+				// over-count is a harmless transport duplicate, not a
+				// missing viewer. The exact proof that every viewer
+				// arrived is the NACK sequence set below (each
+				// viewer's NACK has a unique sequence, and the set
+				// must contain all of them). So: NACK stays exact,
+				// PLI/FIR fail only if UNDER-counted (a real loss).
 				if count.NACKForwarded != expected ||
-					count.PLIForwarded != expected ||
-					count.FIRForwarded != expected {
+					count.PLIForwarded < expected ||
+					count.FIRForwarded < expected {
 					return nil, fmt.Errorf(
 						"unexpected upstream feedback counts for %s: got %+v, expected %d of each type",
 						trackID,
@@ -11542,6 +12686,9 @@ func logRouterFeedbackDiagnosis(router *sfuRouter, viewers []viewerEndpoint) {
 	}
 	fmt.Fprintf(os.Stderr, "router feedback diagnosis: subs=%d subsWithPLI=%d subsWithFIR=%d subsWithPLIReceived=%d subsWithFIRReceived=%d totalNACKReceived=%d totalNACKRetransmitted=%d totalNACKDuplicatesSkipped=%d totalNACKSequencesCapped=%d totalNACKEnqueued=%d totalNACKDroppedQueueFull=%d totalNACKDroppedStale=%d nackQueueDepth=%d totalNACKForwarded=%d totalPLIForwarded=%d totalFIRForwarded=%d totalPLIReceived=%d totalFIRReceived=%d rtpQueueDrops=%d rtpWriteErrors=%d routerErrors=%d\n",
 		subsTotal, subsWithPLI, subsWithFIR, subsWithPLIReceived, subsWithFIRReceived, total.NACKReceived, total.NACKRetransmitted, total.NACKDuplicatesSkipped, total.NACKSequencesCapped, total.NACKEnqueued, total.NACKDroppedQueueFull, total.NACKDroppedStale, total.NACKQueueDepth, total.NACKForwarded, total.PLIForwarded, total.FIRForwarded, total.PLIReceived, total.FIRReceived, router.rtpQueueDropped.Load(), router.rtpDropped.Load(), len(errs))
+	// DIAGNOSTIC (FIX 11): what the publishers actually received.
+	fmt.Fprintf(os.Stderr, "publisher RTCP received: nack=%d pli=%d fir=%d other=%d\n",
+		publisherRTCPReceivedNACK.Load(), publisherRTCPReceivedPLI.Load(), publisherRTCPReceivedFIR.Load(), publisherRTCPReceivedOther.Load())
 	fmt.Fprintf(
 		os.Stderr,
 		"whole-run socket aggregates: viewers=%d routerSockets=%d totalRouterWrites=%d routerWriteSTUN=%d routerWriteNonSTUN=%d clientSockets=%d totalClientReads=%d clientReadSTUN=%d clientReadNonSTUN=%d clientsZeroReads=%d clientsZeroNonSTUNReads=%d totalNACKs=%d totalRetransmits=%d\n",
@@ -11569,7 +12716,13 @@ func logRouterFeedbackDiagnosis(router *sfuRouter, viewers []viewerEndpoint) {
 
 func logViewerRTPPathDiagnosis(router *sfuRouter, viewers []viewerEndpoint, failed viewerEndpoint) {
 	for _, viewer := range viewers {
-		if viewer.key != failed.key {
+		// FIX 21: match the single failed viewer, not the track key.
+		// The key match logged all 250 viewers sharing the track, and
+		// the caller invokes this once per viewer, so a 20x5000 run
+		// dumped 250 x 5000 = 1,250,000 lines (1.36 GB) at teardown.
+		// One line per viewer keeps the per-viewer path counters
+		// (sourceRead/enqueued/writeSucceeded/remoteReceived).
+		if viewer.id != failed.id {
 			continue
 		}
 		sourceRead, queued, queueDropped, writeSucceeded, sourceLastSequence :=

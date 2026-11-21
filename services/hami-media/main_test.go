@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -416,6 +417,55 @@ func TestLocalSFUCascadeRoutesRTCPAcrossWorkers(t *testing.T) {
 }
 
 const webrtcConnected = "connected"
+
+func TestEgressShardDistributionIsStableAndBounded(t *testing.T) {
+	for _, count := range []int{1, 4, 32} {
+		indexes := make([]int, 0, 5000)
+		for viewer := 1; viewer <= 5000; viewer++ {
+			indexes = append(indexes, egressShardIndex(
+				fmt.Sprintf("hami-sfu-viewer-%04d", viewer),
+				count,
+			))
+		}
+		first := indexes
+		for viewer := 1; viewer <= 5000; viewer++ {
+			got := egressShardIndex(
+				fmt.Sprintf("hami-sfu-viewer-%04d", viewer),
+				count,
+			)
+			if got != first[viewer-1] {
+				t.Fatalf("shard assignment changed for viewer %d: got %d want %d", viewer, got, first[viewer-1])
+			}
+			if got < 0 || got >= count {
+				t.Fatalf("shard assignment out of range: got %d count %d", got, count)
+			}
+		}
+	}
+
+	shard := &sfuEgressShard{
+		subscriptions: make(map[string]*sfuSubscription),
+		queue:         make(chan sfuEgressJob, sfuEgressShardQueueSize),
+		closed:        make(chan struct{}),
+	}
+	packet := &rtp.Packet{Header: rtp.Header{SequenceNumber: 42, Timestamp: 99}}
+	shard.enqueue(packet)
+	job := <-shard.queue
+	if job.packet.SequenceNumber != packet.SequenceNumber {
+		t.Fatalf("egress queue changed sequence: got %d want %d", job.packet.SequenceNumber, packet.SequenceNumber)
+	}
+	if job.packet == packet {
+		t.Fatal("egress queue stored the ingress packet pointer")
+	}
+
+	shard.nackQueue = make(chan sfuEgressNACKJob, 8)
+	subscription := &sfuSubscription{viewerID: "viewer-test"}
+	feedback := &rtcp.TransportLayerNack{SenderSSRC: 1, MediaSSRC: 2}
+	shard.enqueueNACK(subscription, feedback)
+	nackJob := <-shard.nackQueue
+	if nackJob.subscription != subscription || nackJob.feedback != feedback {
+		t.Fatal("NACK egress queue changed the recovery target")
+	}
+}
 
 func TestVideoFrameAssemblerRequiresCompleteContiguousFrame(t *testing.T) {
 	assembler := &videoFrameAssembler{}

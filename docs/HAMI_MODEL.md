@@ -9,7 +9,7 @@ The mandate (Niroj, 19 Nov 2026 ~17:28–17:29):
 6. If Hami's model is unavailable, report unavailable. Never silently switch to another AI.
 7. Keep developing and evaluating Hami's own model until it becomes capable of carrying the workload.
 
-The standalone `hami-model-server.py` process loads the Hami checkpoint and tokenizer. This does not by itself prove that every repository path or deployment uses that server.
+The serving model is pinned under 'How it is served' below (MLX + clean adapter on 127.0.0.1:11436). The standalone `hami-model-server.py` process is the from-scratch pilot experiment server; it loads the Hami pilot checkpoint and tokenizer, and does not by itself prove that every repository path or deployment uses that server.
 
 ## What hami-model is today
 
