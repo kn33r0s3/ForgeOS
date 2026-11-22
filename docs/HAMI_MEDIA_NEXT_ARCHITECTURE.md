@@ -1,10 +1,11 @@
 # Hami Media Next Architecture
 
-Status: experimental direction, 2026-11-21.
+Status: experimental direction from 2026-11-21; evidence reconciled
+2026-11-23.
 
-## Failure evidence
+## Evidence chronology
 
-The latest 20-publisher / 5,000-viewer run completed with:
+An earlier report recorded a 20-publisher / 5,000-viewer run with:
 
 - 5,000/5,000 viewer peers connected.
 - 4,691/5,000 viewers passed every latency gate.
@@ -12,9 +13,26 @@ The latest 20-publisher / 5,000-viewer run completed with:
 - 0 RTP queue drops, 0 intentional sheds, and 0 RTP write errors.
 - Peak Go HeapAlloc 2.423 GiB and peak 175,796 goroutines.
 
-This failure pattern shows that repeating the 5,000-viewer shape cannot
-discover a transport cause. The next work must isolate hot-path behavior at
-bounded scales and preserve the existing control plane.
+These are historical reported measurements, not a passing 5,000-viewer result;
+the active repository does not link their raw run artifact or source SHA.
+
+A later, separately pre-registered local TEST run used 10 publishers x 500
+viewers on 2026-11-23. The host watchdog aborted it while pacing viewer 2,801
+after memory pressure reached level 2. It exited 1 without `measurement_pass`,
+a completed viewer set, cleanup/forwarding/latency results, or a usable packet
+loss result. Its raw evidence is under
+`/Users/nirojpaudyal/hami/work/capacity-run/out-amended-20261123-003638/`.
+This aborted run does not supersede or validate the earlier run's metrics;
+the harness, run conditions, and verdicts are distinct.
+
+At the 2026-11-23 01:39 +0545 host check, pressure was 2 and free swap was
+871.88 MiB. No media/load run is safe under the existing preflight; do not
+lower the gate or infer a new viewer ceiling. The 5,000-viewer ceiling remains
+NOT MEASURABLE from the latest run.
+
+After repository tests at 01:50 +0545, pressure remained 2 and free swap was
+378.44 MiB. This lower headroom is another host preflight blocker, not media
+evidence; no load was started.
 
 ## Architecture
 
@@ -109,3 +127,33 @@ The next method is a no-change baseline followed by a recovery-plane isolate:
 4. promote only a change that clears matched 500/1,000/1,500 rungs.
 
 No live 5,000 run is allowed until a smaller matched rung passes twice.
+
+## Neural and layer-selection gate
+
+The current proof path sends one H.264 encoding per publisher track; it does
+not negotiate three simulcast layers or select a source encoding per viewer.
+RFC 8853 defines simulcast as simultaneous, differently encoded RTP streams
+with RTP/SDP identification and signaling. Relabeling one encoding cannot
+create those layers.
+
+The current evidence also contains no completed, held-out per-viewer network
+traces for training or evaluating a neural estimator. Keep adaptation
+deterministic until real layers and reliable feedback/arrival measurements
+exist. A future model must first run in shadow mode against that deterministic
+baseline on held-out traces from at least two distinct network conditions;
+it must preserve hard safety bounds and be rejected if it does not improve
+the pre-registered media gates. Do not train from the host-aborted run.
+
+The next HLS experiment is likewise a transport integration, not a neural
+optimization: RFC 8216 requires media playlists and valid media segments, while
+Pion's `TrackRemote.ReadRTP` supplies RTP packets. The existing synthetic
+FFmpeg smoke does not prove Pion ingest. A local bridge must explicitly
+handle codec packetization, timestamps, segment/keyframe boundaries, and
+cleanup before claiming Hami-to-HLS playback.
+
+Research sources:
+
+- [RFC 8853 — Using Simulcast in SDP and RTP Sessions](https://www.rfc-editor.org/rfc/rfc8853)
+- [RFC 8216 — HTTP Live Streaming](https://www.rfc-editor.org/rfc/rfc8216)
+- [RFC 8888 — RTCP Feedback for Congestion Control](https://www.rfc-editor.org/rfc/rfc8888)
+- [Pion WebRTC v4.2.26 TrackRemote source](https://github.com/pion/webrtc/blob/v4.2.26/track_remote.go)

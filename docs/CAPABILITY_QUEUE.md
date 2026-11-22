@@ -1,3 +1,52 @@
+## 2026-11-23 01:46 +0545 — media evidence reconciliation and DIMAG CI truth
+
+- **Existing seams/history:** the canonical media path is still
+  `services/hami-media/main.go`; the HLS smoke in
+  `services/hami-media/INTEGRATION.md` is the current local packaging seam.
+  RFC 8216 output (playlist + segments) is not the RTP packet stream returned
+  by Pion's `TrackRemote.ReadRTP`; no Pion-to-HLS bridge or true multi-encoding
+  simulcast path has been verified. RFC 8853 requires distinct encoded RTP
+  streams/signaling. Do not add a parallel SFU or neural estimator to paper
+  over these missing media capabilities.
+- **Evidence reconciled:** the 20-publisher/5,000-viewer figures are historical
+  reported measurements without a raw artifact/source SHA linked from the
+  active repository; 4,691 passed and 309 missed p99. The later
+  10-publisher/500-viewer TEST run was host-aborted at viewer 2,801 under
+  pressure level 2 and produced no valid completed measurement or loss result.
+  Keep the runs separate; 5,000-viewer capacity and packet loss are
+  **NOT MEASURABLE** from the latest run. Raw aborted evidence remains in
+  `/Users/nirojpaudyal/hami/work/capacity-run/out-amended-20261123-003638/`.
+- **Host blocker:** after repository tests at 01:50 +0545, pressure was 2 and
+  free swap was 378.44 MiB, below the existing 2,048 MiB floor. No load or
+  media proof was started; do not lower the guard or retry until both the
+  NORMAL-pressure and free-swap preconditions pass.
+- **CI evidence and false-green defect:** exact-head ForgeOS CI
+  `45062120334` on `e1d3e4802dffce4ac6bd85feca69b39259647360` failed in DIMAG
+  worker tests because the hosted checkout lacks local trace/lead inputs.
+  `backend/tests/test_dimag_worker.py` now generates explicitly TEST-only
+  trace/dataset inputs by default, keeps the private corpus opt-in via both
+  environment variables, and raises when an acceptance assertion is false
+  (pytest ignores returned booleans). Verification: Python 3.11.16 / pytest
+  9.0.3 `python3.11 -m pytest -q backend/tests/test_dimag_worker.py` passed
+  16/16; standalone synthetic and explicit local-corpus runs each passed
+  16/16; a forced-false check mutation raised `AssertionError`; `npm test`
+  passed 164 script + 295 TypeScript tests; `npm run gates` reported GREEN;
+  `git diff --check` passed. The old exact-head workflow remains historical;
+  rerun CI on the updated commit after sync.
+- **Remaining owner/platform dependency:** tests no longer need private
+  corpus files in hosted CI, but the independent deploy verifier returned
+  HTTP 402 at production-content fetch. No account change or payment is
+  authorized by this evidence.
+- **Autonomy/economic measure:** this increment removes no owner action from a
+  real transaction. No verified real transaction exists, so
+  `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+- **Next removable dependency:** rerun hosted CI on the updated commit to
+  verify the hermetic fixture closes the missing-input failures; resolve the
+  HTTP 402 only through the authorized platform path. For media, first
+  implement and verify one local Pion-to-HLS track end to end; only then
+  collect held-out traces for a deterministic baseline and shadow-model
+  experiment.
+
 ## 2026-11-23 01:12 +0545 — SFU corrections validated; duplicate prototype superseded
 
 - **Existing canonical seam/history:** `services/hami-media/main.go` remains

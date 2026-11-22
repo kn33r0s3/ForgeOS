@@ -1,3 +1,46 @@
+# Active handoff — 2026-11-23 01:46 +0545 — media evidence and CI false-green correction
+
+## Current operation
+
+- `main` is at `e1d3e4802dffce4ac6bd85feca69b39259647360`, tracking
+  `origin/main`. This operation changed the DIMAG acceptance runner, Hami
+  Media integration notes, architecture evidence, and continuity records.
+  The owner requested GitHub sync; commit/push after the final diff review.
+- Exact-head GitHub CI `45062120334` failed in DIMAG acceptance tests because
+  required trace/lead files are not in the hosted checkout. The acceptance
+  runner now defaults to explicitly TEST-only synthetic fixtures, allows the
+  private corpus only by setting both path variables, and raises on failed
+  `check(...)` assertions instead of returning booleans pytest ignores.
+  Python 3.11.16 / pytest 9.0.3 passed targeted pytest 16/16; standalone
+  synthetic and explicit local-corpus runs each passed 16/16; a forced-false
+  check mutation raised `AssertionError`. Hosted CI still needs rerunning on
+  the updated commit.
+- Independent deploy verification `45062120274` failed at production-content
+  fetch with HTTP 402. No payment, account change, or bypass is appropriate.
+- The historic 20×250 report (4,691 pass, 309 p99 failures) has no linked raw
+  artifact/source SHA in the active repository. The later local 10×500 TEST
+  run aborted at viewer 2,801 under pressure level 2 and emitted no completed
+  measurement or loss result. These are separate evidence; do not infer a
+  capacity ceiling.
+- Fresh host check after tests at 01:50 +0545: pressure 2; free swap
+  378.44 MiB. No media load or capacity run is safe under the unchanged
+  pressure and 2,048 MiB swap gates. `npm test` passed 164 script + 295
+  TypeScript tests; `npm run gates` reported GREEN. No Go, Docker, live-room,
+  or load test was run.
+- Updated the existing HLS integration seam to state that the synthetic
+  FFmpeg smoke does not prove Pion ingest, HLS requires playlists/segments,
+  and real simulcast requires distinct encodings/signaling. Neural evaluation
+  remains blocked on completed held-out network traces; do not train from the
+  host-aborted result.
+
+## Next resumable operation
+
+Commit and push the verified changes on `main`, then inspect exact-head CI and
+deploy verification. Keep the HTTP 402 as a blocked external platform issue.
+The next media capability seam is the single local Pion-to-HLS track bridge,
+not a new SFU or neural subsystem; do not start a media run while pressure is
+2 and swap is below the established floor.
+
 # Active handoff — 2026-11-23 — SFU pressure abort and cancellation classification
 
 ## Current operation

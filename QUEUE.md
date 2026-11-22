@@ -1624,3 +1624,29 @@ The 2026-10-11 single-instance integrity audit has now been spot-checked against
 - No external contact/message, intake/outbound activation, payment/money action, paid infrastructure, credential or permission change occurred.
 - Next: re-resolve main and finish exact-head CI/verifier for `12173967…`; after natural 05:45 and 11:45 NPT runs, correlate authorized invocation evidence with a persisted CycleRun, trigger, final status, stage outcomes, and read-after-write. Retry ordinary health GETs from working DNS; Vercel access only through normal authorized consent. Any new continuity commit needs its own exact-head gates.
 ## Current continuation — 2026-11-19 16:02 NPT — send deadline corrected; ICE loss narrowed
+## Current queue — 2026-11-23 01:46 +0545 — verify DIMAG CI correction; local HLS next
+
+1. The DIMAG acceptance change now uses synthetic TEST-only inputs by default
+   and requires both environment overrides for the private corpus. Python
+   3.11.16 / pytest 9.0.3 targeted pytest passed 16/16; standalone synthetic
+   and private-corpus runs each passed 16/16; a forced-false check mutation
+   raised as expected. Keep synthetic and local-corpus evidence distinct.
+2. Main is `e1d3e4802dffce4ac6bd85feca69b39259647360`, tracking `origin/main`.
+   Exact-head CI `45062120334` has missing hosted DIMAG inputs; deploy verifier
+   `45062120274` is blocked by HTTP 402. Do not bypass either failure.
+3. Latest post-test host check at 01:50 +0545: pressure 2, free swap 378.44
+   MiB. Do not run media load until pressure is NORMAL and free swap is at
+   least 2,048 MiB.
+4. Capacity evidence remains separated: historic 20×250 report (4,691 passed,
+   309 p99 failures) lacks a raw artifact/source SHA link; later 10×500 TEST
+   attempt aborted at viewer 2,801 and has no complete measurement or loss
+   result. Capacity remains NOT MEASURABLE.
+5. Continue at the existing HLS seam: implement one local Pion-to-HLS track,
+   verify playback and cleanup, then gather completed held-out traces before
+   considering a deterministic adaptation comparison or neural shadow test.
+6. `npm test` passed 164 script + 295 TypeScript tests; `npm run gates`
+   returned GREEN. The generated `docs/GATES.md` timestamp was refreshed.
+   Rerun exact-head hosted CI after syncing; the external deploy verifier's
+   HTTP 402 remains blocked and must not be bypassed.
+
+## Earlier queue — 2026-11-23 — one-stream local HLS bridge after SFU abort

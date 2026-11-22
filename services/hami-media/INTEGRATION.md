@@ -288,6 +288,15 @@ ingest a webcam or exercise Hami's Pion publisher/router. The existing
 the split local proof, not a browser camera API. Keep this smoke separate from
 real-ingest and viewer-capacity claims.
 
+HLS output is not an RTP stream: RFC 8216 requires a media playlist and valid
+media segments, while the existing Pion `TrackRemote.ReadRTP` path yields RTP
+packets. No Pion-to-HLS bridge exists in this proof. A future local bridge
+must explicitly verify codec depacketization, timestamps, keyframe-aligned
+segment boundaries, playlist updates, and process cleanup; do not treat this
+synthetic FFmpeg smoke as evidence of that path. True simulcast also requires
+distinct encoded streams and RTP/SDP signaling (RFC 8853), not copies or
+labels of one encoding.
+
 Install FFmpeg once if it is missing. Python's standard-library HTTP server
 is sufficient; nginx is not required:
 
@@ -332,6 +341,11 @@ two-second playlist; `curl` returned HTTP 200 with
 `application/x-mpegurl`, and `ffprobe` read H.264 640×360@15 plus AAC over
 loopback. This is TEST-only evidence. Pion-to-FFmpeg ingest and browser
 playback still require separate verification.
+
+Standards references: [RFC 8216](https://www.rfc-editor.org/rfc/rfc8216)
+defines HLS playlist and segment requirements;
+[RFC 8853](https://www.rfc-editor.org/rfc/rfc8853) defines simulcast signaling
+for multiple encoded RTP streams.
 
 ## M2-H local multi-publisher proof
 

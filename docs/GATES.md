@@ -1,6 +1,6 @@
 # GATES.md — Hami's gates, generated from code
 
-Generated 2026-11-22T19:40:42.691Z by `npm run gates:report` (scripts/gates-report.mjs).
+Generated 2026-11-22T20:04:58.621Z by `npm run gates:report` (scripts/gates-report.mjs).
 Do not hand-edit this file: CI fails if it is stale. Change the code, then regenerate.
 
 **Status: GREEN — every gate holds**

@@ -9,15 +9,18 @@ and the action_reader hook end to end through execute_lead.
 
 Standalone, no pytest: run `python3 tests/test_dimag_worker.py` with
 backend/ on PYTHONPATH (or run under pytest from the repo root, like
-test_dimag_feature_builder.py). Every test runs against scratch state
-(tempfile) with a controllable FakeClock and the stub governance seam
-/ stub executor. Real trace IDs and lead IDs from the v1 run are used
-wherever a test names one.
+test_dimag_feature_builder.py). By default, tests use a generated,
+explicitly TEST-only trace/dataset fixture with the same IDs needed by the
+acceptance scenarios. To run against the private local v1 corpus, set both
+DIMAG004_TRACE_PATH and DIMAG004_DATASET_PATH explicitly. Every test runs
+against scratch state (tempfile) with a controllable FakeClock and stub
+governance seam / executor; no test sends external actions.
 
 A version passes only if ALL tests pass. No test is weakened to make it
 pass: a failing criterion is reported as failed with the evidence.
 """
 
+import atexit
 import json
 import os
 import shutil
@@ -31,17 +34,83 @@ from app.services.dimag.worker import (Worker, FakeClock, WorkerError, CrashSimu
                     execution_key_hash_for, record_hash, canonical_json,
                     sha256_file, sha256_text, parse_iso)
 
-# The v1 trace file staged on the Mac, and the v1 dataset already on
-# the Mac. Override with DIMAG004_TRACE_PATH / DIMAG004_DATASET_PATH
-# for verification runs elsewhere (e.g. the VM paths).
-TRACE_PATH = os.environ.get(
-    "DIMAG004_TRACE_PATH",
-    os.path.expanduser(
-        "~/hami/dimag-004-worker/dimag-backward-traces-v1.jsonl"))
-DATASET_PATH = os.environ.get(
-    "DIMAG004_DATASET_PATH",
-    os.path.expanduser(
-        "~/hami/dimag-002/dimag-experience-dataset-v1.jsonl"))
+# Optional private v1-corpus paths; tests default to synthetic TEST inputs.
+TRACE_OVERRIDE = os.environ.get("DIMAG004_TRACE_PATH")
+DATASET_OVERRIDE = os.environ.get("DIMAG004_DATASET_PATH")
+
+
+def _write_synthetic_test_inputs():
+    """Create hermetic TEST-only inputs, separate from the private corpus."""
+    root = tempfile.mkdtemp(prefix="dimag-004-test-inputs-")
+    trace_path = os.path.join(root, "synthetic-traces.jsonl")
+    dataset_path = os.path.join(root, "synthetic-dataset.jsonl")
+    quarantined = {1, 2, 3, 4, 5, 9, 13, 14}
+    held = {6, 8, 17, 19, 20}
+    records = []
+    dataset = []
+    for index in range(1, 21):
+        trace_id = "dimag-trace-%06d" % index
+        source_record_id = "test-source-%06d" % index
+        confidence = ("UNKNOWN" if index == 7 else
+                      "HYPOTHESIS" if index in held else "PROVEN")
+        lead = None
+        if index != 7:
+            lead = {
+                "lead_id": "dimag-lead-%06d" % index,
+                "derived_from": trace_id,
+                "hypothesis": "TEST-only hypothesis %06d" % index,
+                "falsification_condition":
+                    "TEST-only falsification condition %06d" % index,
+                "cost": "TEST-only",
+                "parent_gate": "TEST-only",
+                "quarantine_inherited": {
+                    "training_rights": "TEST_ONLY",
+                    "label_trust": "TEST_ONLY",
+                    "quarantine_reason": (
+                        "TEST-only fixture quarantine"
+                        if index in quarantined else None),
+                },
+            }
+            if index == 1:
+                lead["already_tested_by"] = "TEST-only fixture"
+        trace = {
+            "trace_version": wmod.TRACE_VERSION,
+            "trace_id": trace_id,
+            "source_record_id": source_record_id,
+            "source_record_sha256": wmod.sha256_text(source_record_id),
+            "source_domain": "TEST_SYNTHETIC",
+            "combined": {
+                "confidence": confidence,
+                "cause_class": "TEST_SYNTHETIC",
+            },
+            "diagnostic_lead": lead,
+        }
+        trace["trace_hash"] = wmod.recompute_trace_hash(trace)
+        records.append(trace)
+        dataset.append({
+            "record_id": "test-experience-%06d" % index,
+            "derived_from": source_record_id,
+            "evidence_class": "TEST",
+        })
+    with open(trace_path, "w", encoding="utf-8") as fh:
+        fh.write("\n".join(wmod.canonical_json(row) for row in records)
+                 + "\n")
+    with open(dataset_path, "w", encoding="utf-8") as fh:
+        fh.write("\n".join(wmod.canonical_json(row) for row in dataset)
+                 + "\n")
+    # Keep generated inputs for this process only.
+    atexit.register(shutil.rmtree, root, ignore_errors=True)
+    return trace_path, dataset_path
+
+
+if TRACE_OVERRIDE is not None or DATASET_OVERRIDE is not None:
+    if not TRACE_OVERRIDE or not DATASET_OVERRIDE:
+        raise ValueError(
+            "set both DIMAG004_TRACE_PATH and DIMAG004_DATASET_PATH")
+    TRACE_PATH, DATASET_PATH = TRACE_OVERRIDE, DATASET_OVERRIDE
+else:
+    TRACE_PATH, DATASET_PATH = _write_synthetic_test_inputs()
+
 CLOCK_START = "2026-11-22T04:00:00Z"
 
 RESULTS = []
@@ -52,6 +121,12 @@ def check(name, ok, evidence=""):
     print("%s %s %s" % ("PASS" if ok else "FAIL", name,
                         ("-- " + evidence) if evidence else ""))
     return ok
+
+
+def require_check(name, ok, evidence=""):
+    passed = check(name, ok, evidence)
+    if not passed:
+        raise AssertionError("Acceptance check failed: %s" % name)
 
 
 def fresh_worker():
@@ -140,7 +215,7 @@ def test_t0():
               and counts["intaked"] == 19
               and os.path.exists(os.path.join(
                   tmp, "dimag-lead-registry-v1.jsonl")))
-        return check("T0 worker runs", ok,
+        return require_check("T0 worker runs", ok,
                      "inventory leads=%d intaked=%d"
                      % (inv["leads"], counts["intaked"]))
     finally:
@@ -191,7 +266,7 @@ def test_t1():
         zero = (counts["intaked"] == 19
                 and not os.listdir(os.path.join(tmp, "leases"))
                 and not os.listdir(os.path.join(tmp, "executions")))
-        return check("T1 worked intake", ok and hashes_ok and zero,
+        return require_check("T1 worked intake", ok and hashes_ok and zero,
                      "by_status=%s hashes_recompute=%s zero_bound_leased_"
                      "executed=%s" % (json.dumps(by_status, sort_keys=True),
                                        hashes_ok, zero))
@@ -226,7 +301,7 @@ def test_t2():
               and second["record"]["phase"] == "COMPLETED"
               and worker.load_registry()["dimag-lead-000010"]
               ["intake_status"] == "DONE")
-        return check("T2 idempotent re-execution", ok,
+        return require_check("T2 idempotent re-execution", ok,
                      "calls=%d->%d records=%d->%d replayed=%s"
                      % (calls_after_first, calls_after_second,
                         len(records_after_first),
@@ -278,7 +353,7 @@ def test_t3():
             stale = exc.code
         ok_stale = stale == "exec_refused_stale_token"
         ok = ok_held and ok_grace and ok_takeover and ok_stale
-        return check("T3 lease exclusivity", ok,
+        return require_check("T3 lease exclusivity", ok,
                      "held=%s grace=%s new_token=%s stale=%s"
                      % (held, grace, ok_takeover, stale))
     finally:
@@ -377,7 +452,7 @@ def test_t4():
                     and handoff_b["outcome"]["qualitative_result"]
                     == ref_handoff["outcome"]["qualitative_result"])
         ok = ok_crash and ok_recovery and ok_resume and ok_equiv
-        return check("T4 takeover + resume equivalence", ok,
+        return require_check("T4 takeover + resume equivalence", ok,
                      "crashed=%s recovery=%s/%s resumed_a2=%s equiv=%s"
                      % (ok_crash, verdict,
                         rec_a1["recovery_verdict"] if rec_a1 else None,
@@ -477,7 +552,7 @@ def test_t5():
         no_executions = not os.listdir(os.path.join(tmp, "executions"))
         no_calls = len(executor.call_log) == 0
         ok = not failures and no_executions and no_calls
-        return check("T5 quarantined-lead refusal", ok,
+        return require_check("T5 quarantined-lead refusal", ok,
                      "failures=%s executions_created=%s executor_calls=%d"
                      % (failures, not no_executions,
                         len(executor.call_log)))
@@ -549,7 +624,7 @@ def test_t6():
                  and result3.get("reason")
                  == "exec_refused_binding_invalid")
         ok = ok_refused and ok_approved and ok_revoked and ok_e2
-        return check("T6 unapproved-action refusal", ok,
+        return require_check("T6 unapproved-action refusal", ok,
                      "refused=%s approved_executes=%s revoked_refused=%s "
                      "E2_binding_invalid=%s"
                      % (ok_refused, ok_approved, ok_revoked, ok_e2))
@@ -674,7 +749,7 @@ def test_t7():
         ok_halt = worker.halted() is not None and \
             worker.halted()["reason"] == "quarantine_violation"
         ok = ok_classes and ok_preserved and ok_halt
-        return check("T7 reconciliation finds all plants", ok,
+        return require_check("T7 reconciliation finds all plants", ok,
                      "by_class=%s preserved=%s halted=%s"
                      % (json.dumps(by_class, sort_keys=True),
                         ok_preserved, ok_halt))
@@ -771,7 +846,7 @@ def test_t8():
         ok_a1 = (rec_a1["phase"] == "UNKNOWN"
                  and rec_a1["recovery_verdict"] == "VERIFIED_NOT_EXECUTED")
         ok = ok_crash and ok_equiv and ok_a1
-        return check("T8 crash-recovery resume equivalence", ok,
+        return require_check("T8 crash-recovery resume equivalence", ok,
                      "crashed=%s equiv=%s a1_preserved=%s done=%s"
                      % (ok_crash, ok_equiv, ok_a1, sorted(crash_done)))
     finally:
@@ -819,7 +894,7 @@ def test_t9():
         calls_before = len(executor.call_log)
         wmod.run_cycle(worker, TRACE_PATH, executor=executor)
         ok = ok and len(executor.call_log) == calls_before
-        return check("T9 poison lead stops", ok,
+        return require_check("T9 poison lead stops", ok,
                      "attempts=%d calls=%d backoffs=%s dead_letter=%s"
                      % (entry.get("attempt"), len(executor.call_log),
                         backoffs,
@@ -851,7 +926,7 @@ def test_t10():
         dups = [l for l in lines
                 if l.get("outcome") == "DUPLICATE_INTAKE_IGNORED"]
         ok = ok and len(dups) == 19
-        return check("T10 duplicate-intake no-op", ok,
+        return require_check("T10 duplicate-intake no-op", ok,
                      "duplicates=%d registry_identical=%s dup_log_lines=%d"
                      % (second["duplicates"], sha_before == sha_after,
                         len(dups)))
@@ -915,7 +990,7 @@ def test_t11():
         ok = ok_first and ok_second and \
             sha256_file(trace_copy) == trace_sha_before and \
             sha256_file(dataset_copy) == dataset_sha_before
-        return check("T11 no-relabel + no-trace-edit", ok,
+        return require_check("T11 no-relabel + no-trace-edit", ok,
                      "trace_unchanged=%s dataset_unchanged=%s "
                      "hashes_recompute=%s read_only_run_ok=%s"
                      % (trace_sha_before == trace_sha_after,
@@ -963,7 +1038,7 @@ def test_t12():
               and not ev["replay"]["registry_mismatches"]
               and ok_metrics and ok_plants
               and replayed.get("replayed"))
-        return check("T12 temporal evaluation", ok,
+        return require_check("T12 temporal evaluation", ok,
                      "divergences=%d mismatches=%s metrics=%s plants=%s"
                      % (metrics["replay_divergence"],
                         ev["replay"]["registry_mismatches"],
@@ -1092,7 +1167,7 @@ def test_t13():
         }
         ok = all((results[k]["allowed"], results[k]["reason"]) == v
                  for k, v in expected.items())
-        return check("T13 field seam verdicts", ok,
+        return require_check("T13 field seam verdicts", ok,
                      json.dumps({k: (v["allowed"], v["reason"])
                                  for k, v in results.items()},
                                 sort_keys=True))
@@ -1157,7 +1232,7 @@ def test_t14():
     row_bad = dict(row, parameters_json="not json{")
     action3 = field_seam.action_dict_from_row(row_bad)
     ok = ok and action3["parameters_json"] == {}
-    return check("T14 live-row reader", ok,
+    return require_check("T14 live-row reader", ok,
                  "key_errors=%s hash_ok=%s gate_flags_open=%s dnc=%s "
                  "receipt_default=%s" % (key_errors, hash_ok,
                                          action["gate_flags_open"],
@@ -1225,7 +1300,7 @@ def test_t15():
               == "exec_refused_no_receipt_adapter"
               and registry["dimag-lead-000012"]["intake_status"]
               == "PARKED_NO_RECEIPT_ADAPTER")
-        return check("T15 hook end to end", ok,
+        return require_check("T15 hook end to end", ok,
                      "done=%s blocked=%s no_receipt=%s"
                      % (done.get("completed"),
                         blocked.get("reason"),
@@ -1255,14 +1330,20 @@ TESTS = [("T0 worker runs", test_t0),
 def main():
     passed = 0
     for name, fn in TESTS:
+        result_count = len(RESULTS)
         try:
-            if fn():
+            fn()
+            if (len(RESULTS) == result_count + 1
+                    and RESULTS[-1]["test"] == name
+                    and RESULTS[-1]["passed"]):
                 passed += 1
         except Exception as exc:  # noqa: BLE001 - a crash is a failure
             import traceback
             traceback.print_exc()
-            check(name, False, "EXCEPTION %s: %s"
-                  % (type(exc).__name__, exc))
+            if (len(RESULTS) == result_count or RESULTS[-1]["passed"]
+                    or RESULTS[-1]["test"] != name):
+                check(name, False, "EXCEPTION %s: %s"
+                      % (type(exc).__name__, exc))
     total = len(TESTS)
     print("\n%d/%d acceptance tests passing" % (passed, total))
     # Mac port: results go to the temp dir, never into the repo (the
