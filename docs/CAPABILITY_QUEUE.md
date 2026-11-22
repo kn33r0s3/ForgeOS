@@ -1,3 +1,104 @@
+## 2026-11-23 01:12 +0545 — SFU corrections validated; duplicate prototype superseded
+
+- **Existing canonical seam/history:** `services/hami-media/main.go` remains
+  the Pion SFU implementation and measurement path (`git log --follow`
+  reaches `4f22ec18`; the router originated there). The standalone
+  `hami-sfu/` server was introduced only in `92193ef5`; its independent
+  `server`, `room`, `track`, and `subscriber` state duplicates that seam.
+  Remove the active duplicate and retain its commit as Git history; do not
+  reset, amend, or erase provenance.
+- **Capability/evidence increment:** the existing SFU now has the reviewed
+  auth/token and local TURN paths, corrected packet classification and
+  fragmented-frame recovery, subscriber-attributed shard-drop recovery, and
+  graceful signal-driven TURN shutdown. The TURN guide now labels its evidence
+  as local/test only; external relay addressing and production readiness are
+  unverified. This does not establish simulcast, WAN behavior, or capacity.
+- **Verification:** after formatting, `go test ./... -count=1` passed
+  (20.960 s), `go vet ./...` and `go build ./...` passed. `npm test` passed
+  164 script tests and 295 TypeScript tests; `npm run gates:report` and
+  `npm run gates` reported GREEN; `git diff --check` passed. No Docker,
+  live-room, load, or capacity run was performed.
+- **Sync blocker:** fetched `origin/main` is `e26729d7`, 8 commits ahead of
+  the local base. Its current CI reports 13 DIMAG backend-test failures
+  (1,399 passed, 2 skipped), a commit-message gate failure, and independent
+  deploy verification failure (HTTP 402). The sole local commit ahead,
+  `92193ef5`, itself has an invalid commit subject; history will not be
+  rewritten. Local test/gate success does not resolve these remote checks.
+- **Owner dependency:** this work removes a duplicate implementation choice,
+  not an owner action for a real transaction. No verified real transaction
+  exists; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains
+  **NOT MEASURABLE**. External customer contact, money movement, production
+  activation, and public relay exposure remain outside this proof.
+- **Next:** preserve and merge remote history into `main`, resolve conflicts
+  without rewriting commits, rerun required checks, then attempt the
+  owner-requested direct sync. If branch protection or CI rejects it, retain
+  the exact failure rather than bypassing a gate.
+
+## 2026-11-23 — SFU pressure abort classified; media packet layers corrected
+
+- **Existing seam/history:** `services/hami-media/main.go` derives the feedback
+  context from the proof context and dispatches feedback through its existing
+  pacing loop. `git blame` traces the ambiguous cancellation label to
+  `c232ea50`; the cancellation fix added no alternate runner or media path.
+- **TEST evidence:** the one amended 10-publisher × 500-viewer local run stopped
+  while pacing viewer `hami-sfu-viewer-2801`. The macOS watchdog observed
+  pressure level 2 (not NORMAL), even though free swap was 1,652.81 MiB and
+  swapouts delta was 0. The process exited 1 after 158.88 s; it emitted
+  `ABORTED-BY-HOST`, no `measurement_pass`, no completed viewer list, and no
+  usable packet-loss result. Partial process footprint was 3,742,928,088 bytes
+  and CPU was 463.1%; neither constitutes a stage pass. Raw evidence is in
+  `/Users/nirojpaudyal/hami/work/capacity-run/out-amended-20261123-003638/`.
+- **Cheaply killed hypothesis (bounded to this run):** lowering the isolated
+  copy's free-swap threshold from 2,048 to 1,500 MiB would be sufficient to
+  complete the stage. It was not: the independent pressure-level guard stopped
+  it. The canonical 2,048 MiB guard remains unchanged.
+- **Evidence-quality fix:** the feedback pacing path now labels
+  `context.DeadlineExceeded` as a feedback deadline and parent
+  `context.Canceled` as an interruption. A focused regression test covers both.
+- **Capability correction:** the existing `forwardTrack` seam now carries
+  frame context through the packet classifier. The VP8 frame tag is parsed
+  after its RTP payload descriptor; H.264 FU-A/FU-B fragments inherit their
+  NAL layer. Keyframe recovery forwards a full fragmented IDR through its end
+  marker, and egress-shard queue drops are attributed to active subscribers
+  and trigger recovery. The initial VP8 interframe regression failed as
+  expected (`layer=1`, wanted `layer=2`); focused classifier, cache, queue,
+  and recovery tests pass after the correction.
+- **Scope/evidence boundary:** this is packet prioritization and NACK-cache
+  reduction, not simulcast or per-viewer layer selection. It has unit-test
+  evidence only; no live-room or capacity run was made. The 5,000-viewer
+  result and production behavior remain **NOT MEASURABLE**.
+- **Validation:** `go test ./... -count=1` passed (20.850 s);
+  `go vet ./...` and `go build ./...` passed; `npm test` passed 164 script
+  and 295 TypeScript tests; `npm run gates` was GREEN; `git diff --check`
+  passed.
+- **External context, not a capacity claim:** Pion issue
+  [#3638](https://github.com/pion/webrtc/issues/3638) discusses avoidable
+  goroutines for data-channel-only peers; this proof uses media peers, so that
+  proposal is not a direct fix. LiveKit issue
+  [#726](https://github.com/livekit/livekit/issues/726) cautions that there is
+  no universal consumer-per-core number; workload and network matter. Its
+  current self-hosting deployment guide likewise identifies CPU and bandwidth
+  as bounds. Go's
+  [context documentation](https://pkg.go.dev/context#WithTimeout) states that
+  canceling a parent cancels derived contexts, matching this run's
+  `context.Canceled` despite the child having a timeout.
+- **Implementation plan / next rung:** keep the existing host gate and
+  watchdog; do not make the 1,500 MiB diagnostic floor permanent. First extend
+  the existing local HLS smoke in `services/hami-media/INTEGRATION.md` through
+  the existing Pion remote-track seam, with local-only playback and observable
+  cleanup. Validate one stream before considering a larger loopback HTTP
+  sample. Do not equate that with WAN/CDN capacity. Any future WebRTC stage
+  must be separately pre-registered, start below the existing host gate, and
+  stop on its first failed assertion.
+- **Neural/learning boundary:** one censored TEST run has no completed loss
+  labels or held-out traces. Do not train or introduce a neural estimator from
+  it; collect replicated, governed traces and compare against a deterministic
+  baseline with a kill rule first.
+- **Owner dependency:** these diagnostic and packet-classification fixes
+  remove no owner action for a real transaction. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION`
+  remains **NOT MEASURABLE**. A real local playback proof still requires the
+  existing one-stream HLS/Pion integration seam and observed cleanup.
+
 ## 2026-11-22 +0545 — pilot corpus divergence fixed; 20/20 verified
 
 - **Existing seam and cause:** `Downloads/hami-model/build-corpus.py` is the
@@ -10364,3 +10465,20 @@ Obtain NDRRMA #02's official PDF attachment and inspect every page; then #04. Re
   smaller matched rungs and use separately resourced generator/SFU hosts for
   an M9-H staged measurement. Do not promote configuration or a local loopback
   test to a 19,000-participant capacity claim.
+## 2026-11-22 — M7-H auth/TURN/simulcast recovery in ForgeOS
+
+- **Existing seam:** recovered the reviewed auth, TURN, and simulcast work into
+  the canonical `services/hami-media` path; auth remains in
+  `m7hRemoteSFUServer` and the existing M7-H publisher/viewer handlers.
+- **Fix:** restored `requireAuth` on `m7hRemoteSFUServer`, set it in
+  `runM7HSFUServer`, passed publisher/viewer subject identity into
+  `authorizeToken`, and reused `sfuChildEnv` for the per-run HMAC key.
+- **Verification:** focused auth/turn/layer tests passed; deliberate removal
+  of the auth guard produced publisher HTTP 200 instead of 401 and viewer
+  timeout; restoring the guard passed the focused tests. Full
+  `go test ./... -count=1`, `go vet ./...`, and `go build ./...` passed in
+  `services/hami-media`.
+- **Owner dependency:** no external media or paid service was used. Live load,
+  Docker, capacity gates, production activation, and `npm test`/`npm run gates`
+  remain outside this work. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains
+  **NOT MEASURABLE**.

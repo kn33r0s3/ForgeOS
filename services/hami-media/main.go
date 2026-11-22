@@ -7,6 +7,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -37,6 +38,7 @@ import (
 	"github.com/pion/logging"
 	"github.com/pion/rtcp"
 	"github.com/pion/rtp"
+	rtpcodecs "github.com/pion/rtp/codecs"
 	"github.com/pion/stun/v4"
 	"github.com/pion/webrtc/v4"
 	"github.com/pion/webrtc/v4/pkg/media"
@@ -751,6 +753,13 @@ func main() {
 		"maximum JSONL records written by selected-frame diagnostics (1-100000)",
 	)
 	m7hSFUToken := flag.String("m7h-sfu-token", "", "private token for the local M7-H router process")
+	// Part 3: token minting flags for -mode=mint-token.
+	mintTokenRoom := flag.String("token-room", "", "room for -mode=mint-token (default HAMI_SFU_ROOM or \"default\")")
+	mintTokenRoles := flag.String("token-roles", "publish,subscribe", "comma-separated roles for -mode=mint-token: publish, subscribe")
+	mintTokenSubject := flag.String("token-subject", "", "subject for -mode=mint-token")
+	mintTokenTTL := flag.Duration("token-ttl", time.Hour, "lifetime for -mode=mint-token")
+	// Part 3: standalone TURN server flags for -mode=turn-server.
+	turnListen := flag.String("turn-listen", "", "listen address for -mode=turn-server (default HAMI_SFU_TURN_LISTEN or 127.0.0.1:3478)")
 	m7hPairs := flag.Int("m7h-viewers", 3000, "M7-H publisher/viewer pair count (1-3000; one viewer per publisher)")
 	flag.Parse()
 	if *sfuScoringMode != sfuScoringStrict && *sfuScoringMode != sfuScoringDissolve {
@@ -830,6 +839,22 @@ func main() {
 		}
 		if err := runM7HSFUServer(*m7hSFUToken, *maxHeapBytes); err != nil {
 			fail("run local M7-H SFU process: %v", err)
+		}
+		return
+	}
+	// Part 3: mint one HMAC token and print only the token. The key
+	// comes from HAMI_SFU_HMAC_KEY_FILE / HAMI_SFU_HMAC_KEY and is
+	// never printed.
+	if *mode == "mint-token" {
+		if err := runMintToken(*mintTokenRoom, *mintTokenRoles, *mintTokenSubject, *mintTokenTTL); err != nil {
+			fail("mint token: %v", err)
+		}
+		return
+	}
+	// Part 3: run the standalone TURN server until killed.
+	if *mode == "turn-server" {
+		if err := runTURNServer(*turnListen); err != nil {
+			fail("run TURN server: %v", err)
 		}
 		return
 	}
@@ -965,7 +990,7 @@ func main() {
 		case "audio-rung1":
 			result, err = runLocalAudioRungBothModes(ctx, *duration, *audioSpeakers, *audioListeners)
 		default:
-			fail("unsupported --mode %q (want pair, sfu, sfu-single, sfu-cascade, m1h, m2h, m3h, m4h, m5h, m6h, m7h, m9h, or audio-rung1)", *mode)
+			fail("unsupported --mode %q (want pair, sfu, sfu-single, sfu-cascade, m1h, m2h, m3h, m4h, m5h, m6h, m7h, m9h, mint-token, turn-server, or audio-rung1)", *mode)
 		}
 	}
 	cancel()
@@ -5011,6 +5036,9 @@ type sfuPublishedTrack struct {
 	lastSequence            uint16
 	packetCachePackets      atomic.Int64
 	packetCachePayloadBytes atomic.Int64
+	// layerDeltaCacheSkipped counts video delta packets that were never
+	// cached because layer 2 is not retained (see rememberPacket).
+	layerDeltaCacheSkipped atomic.Uint64
 }
 
 type sfuViewer struct {
@@ -5031,12 +5059,14 @@ type sfuSubscription struct {
 	downTrack   *webrtc.TrackLocalStaticRTP
 	sender      *webrtc.RTPSender
 
-	mu               sync.RWMutex
-	active           bool
-	statsMu          sync.Mutex
-	feedback         sfuFeedbackCounts
-	rtpQueue         chan queuedRTP
-	keyframeNeededAt atomic.Int64
+	mu                        sync.RWMutex
+	active                    bool
+	statsMu                   sync.Mutex
+	feedback                  sfuFeedbackCounts
+	rtpQueue                  chan queuedRTP
+	keyframeNeededAt          atomic.Int64
+	keyframeRecoveryTimestamp atomic.Uint32
+	keyframeRecoveryActive    atomic.Bool
 	// retransmittedAt records, per RTP sequence number, when this
 	// subscription last retransmitted it (NACK aggregation, M6-H
 	// attempt 8). Owned by the nackWorker goroutine only — handleNACK's
@@ -5089,11 +5119,13 @@ type queuedNACK struct {
 type queuedRTP struct {
 	packet     *rtp.Packet
 	enqueuedAt time.Time
+	layer      packetLayer
 }
 
 type sfuEgressJob struct {
 	packet     *rtp.Packet
 	enqueuedAt time.Time
+	layer      packetLayer
 }
 
 type sfuEgressNACKJob struct {
@@ -5134,27 +5166,71 @@ func (shard *sfuEgressShard) remove(viewerID string) {
 	shard.mu.Unlock()
 }
 
-func (shard *sfuEgressShard) enqueue(packet *rtp.Packet) {
+func (shard *sfuEgressShard) recordQueueDrop() {
+	shard.mu.RLock()
+	subscriptions := make([]*sfuSubscription, 0, len(shard.subscriptions))
+	for _, subscription := range shard.subscriptions {
+		subscriptions = append(subscriptions, subscription)
+	}
+	shard.mu.RUnlock()
+
+	recorded := false
+	for _, subscription := range subscriptions {
+		if !subscription.isActive() {
+			continue
+		}
+		recorded = true
+		subscription.rtpQueueDropped.Add(1)
+		shard.router.rtpQueueDropped.Add(1)
+		shard.router.rtpQueueDropShed.Add(1)
+		shard.router.recordRTPIntentionalShed(subscription)
+		subscription.markNeedsKeyframe()
+		shard.router.requestRecoveryKeyframe(subscription)
+	}
+	if !recorded {
+		shard.router.rtpQueueDropped.Add(1)
+	}
+}
+
+func (shard *sfuEgressShard) enqueue(packet *rtp.Packet, l packetLayer) {
 	if packet == nil {
 		return
 	}
 	job := sfuEgressJob{
 		packet:     copyRTPPacketWithSharedPayload(packet),
 		enqueuedAt: time.Now(),
+		layer:      l,
 	}
 	select {
 	case shard.queue <- job:
 		return
 	default:
 	}
-	select {
-	case <-shard.queue:
-	default:
+	// Queue is full. Layer 2 goes first: a delta arriving at a full
+	// queue is shed at once — it never evicts a base/keyframe job.
+	if l == layerDelta {
+		shard.recordQueueDrop()
+		return
+	}
+	// A base/keyframe job must get in. Evict the oldest delta job; only
+	// if the queue holds no delta at all, fall back to dropping the
+	// oldest job, as before.
+	evictedDelta := evictOldestDeltaEgress(shard.queue)
+	droppedOldest := false
+	if !evictedDelta {
+		select {
+		case <-shard.queue:
+			droppedOldest = true
+		default:
+		}
+	}
+	if evictedDelta || droppedOldest {
+		shard.recordQueueDrop()
 	}
 	select {
 	case shard.queue <- job:
 	default:
-		shard.router.rtpQueueDropped.Add(1)
+		shard.recordQueueDrop()
 	}
 }
 
@@ -5205,6 +5281,7 @@ func (shard *sfuEgressShard) run() {
 				shard.router.forwardQueuedRTP(subscription, queuedRTP{
 					packet:     job.packet,
 					enqueuedAt: job.enqueuedAt,
+					layer:      job.layer,
 				})
 			}
 		case job := <-shard.nackQueue:
@@ -5817,11 +5894,17 @@ type m7hRemoteSFUClient struct {
 	exitErr    error
 	closeOnce  sync.Once
 	closeErr   error
+	// Part 3: HMAC key (raw bytes, never logged) this harness minted
+	// tokens with, and the room the child SFU server serves.
+	authKey  []byte
+	authRoom string
 }
 
 type m7hRemoteSDPRequest struct {
 	PublisherID string `json:"publisher_id"`
 	Offer       string `json:"offer"`
+	// Part 3: HMAC token granting the publish role in the SFU room.
+	Token string `json:"token,omitempty"`
 }
 
 type m7hRemoteViewerRequest struct {
@@ -5829,6 +5912,8 @@ type m7hRemoteViewerRequest struct {
 	Key                     sfuTrackKey `json:"key"`
 	Offer                   string      `json:"offer"`
 	CheckUnauthorizedAccess bool        `json:"check_unauthorized_access"`
+	// Part 3: HMAC token granting the subscribe role in the SFU room.
+	Token string `json:"token,omitempty"`
 }
 
 type m7hRemoteSDPResponse struct {
@@ -5926,6 +6011,17 @@ func startM7HRemoteSFU(ctx context.Context) (*m7hRemoteSFUClient, error) {
 		_ = listenerFile.Close()
 		return nil, fmt.Errorf("create M7-H loopback authorization token: %w", err)
 	}
+	// Part 3: fresh random HMAC key for this SFU process. The child
+	// server requires it (HAMI_SFU_HMAC_KEY) and the harness mints
+	// publish/subscribe tokens from it; the key itself is never
+	// written to a file or a log.
+	var authKeyBytes [32]byte
+	if _, err := rand.Read(authKeyBytes[:]); err != nil {
+		_ = listenerFile.Close()
+		return nil, fmt.Errorf("create M7-H SFU HMAC key: %w", err)
+	}
+	authKey := authKeyBytes[:]
+	keyText := hex.EncodeToString(authKey)
 	executable, err := os.Executable()
 	if err != nil {
 		_ = listenerFile.Close()
@@ -5939,6 +6035,9 @@ func startM7HRemoteSFU(ctx context.Context) (*m7hRemoteSFUClient, error) {
 		"-m7h-sfu-token="+token,
 		"-max-heap-bytes="+strconv.FormatUint(*maxHeapBytes, 10),
 	)
+	// Part 3: pass the fresh HMAC key to the child SFU server through
+	// its environment (never through a file or a log line).
+	command.Env = sfuChildEnv(keyText)
 	command.ExtraFiles = []*os.File{listenerFile}
 	command.Stdout = io.Discard
 	var sfuLog *os.File
@@ -5974,6 +6073,8 @@ func startM7HRemoteSFU(ctx context.Context) (*m7hRemoteSFUClient, error) {
 		httpClient: &http.Client{Transport: transport},
 		cmd:        command,
 		exited:     make(chan struct{}),
+		authKey:    authKey,
+		authRoom:   "default",
 	}
 	go func() {
 		remote.exitMu.Lock()
@@ -6664,6 +6765,25 @@ func createM7HLocalOffer(ctx context.Context, peer *webrtc.PeerConnection) (stri
 	return local.SDP, nil
 }
 
+// mintToken mints a 1-hour token for the given subject/role from the
+// harness HMAC key. It returns "" with no error when the client has no
+// key, so clients built without startM7HRemoteSFU keep working against
+// servers started without auth (unit-test servers with a nil verifier).
+func (remote *m7hRemoteSFUClient) mintToken(subject, role string) (string, error) {
+	if len(remote.authKey) == 0 {
+		return "", nil
+	}
+	room := remote.authRoom
+	if room == "" {
+		room = "default"
+	}
+	verifier, err := newSFUAuthVerifier(remote.authKey, room)
+	if err != nil {
+		return "", fmt.Errorf("build SFU token verifier: %w", err)
+	}
+	return verifier.mintSFUToken(room, subject, []string{role}, time.Hour)
+}
+
 func (remote *m7hRemoteSFUClient) negotiatePublisher(
 	ctx context.Context,
 	publisherID string,
@@ -6675,10 +6795,16 @@ func (remote *m7hRemoteSFUClient) negotiatePublisher(
 	if err != nil {
 		return err
 	}
+	// Part 3: present a publish token for this publisher.
+	publishToken, err := remote.mintToken(publisherID, sfuTokenRolePublish)
+	if err != nil {
+		return err
+	}
 	var response m7hRemoteSDPResponse
 	if err := remote.request(offerCtx, http.MethodPost, "/publisher", m7hRemoteSDPRequest{
 		PublisherID: publisherID,
 		Offer:       offer,
+		Token:       publishToken,
 	}, &response); err != nil {
 		return err
 	}
@@ -6788,12 +6914,17 @@ func (remote *m7hRemoteSFUClient) negotiateViewers(
 				if err == nil {
 					phase = "post-viewer"
 					phaseStarted = time.Now()
-					err = remote.request(requestCtx, http.MethodPost, "/viewer", m7hRemoteViewerRequest{
-						ViewerID:                pair.viewerID,
-						Key:                     pair.key,
-						Offer:                   offer,
-						CheckUnauthorizedAccess: pair.checkUnauthorizedAccess,
-					}, &response)
+					var subscribeToken string
+					subscribeToken, err = remote.mintToken(pair.viewerID, sfuTokenRoleSubscribe)
+					if err == nil {
+						err = remote.request(requestCtx, http.MethodPost, "/viewer", m7hRemoteViewerRequest{
+							ViewerID:                pair.viewerID,
+							Key:                     pair.key,
+							Offer:                   offer,
+							Token:                   subscribeToken,
+							CheckUnauthorizedAccess: pair.checkUnauthorizedAccess,
+						}, &response)
+					}
 					requestDuration = time.Since(phaseStarted)
 				}
 				if err == nil {
@@ -6958,7 +7089,12 @@ type m7hRemoteSFUServer struct {
 	muxes           []ice.UDPMux
 	muxByShard      []ice.UDPMux
 	settingsByShard []webrtc.SettingEngine
-	mu              sync.RWMutex
+	// Part 3: token verifier (nil only for zero-value servers in
+	// unit tests; runM7HSFUServer always sets it and refuses to
+	// start without a key).
+	auth        *sfuAuthVerifier
+	requireAuth bool
+	mu          sync.RWMutex
 	// Last M7-H publisher receive sample (written by
 	// startM7HPublisherReceiveSampler, read by handleReceiveStats).
 	// Guarded by mu.
@@ -6991,8 +7127,17 @@ func runM7HSFUServer(token string, heapBudgetBytes uint64) (returnErr error) {
 			returnErr = errors.Join(returnErr, fmt.Errorf("M7-H SFU process: %w", heapErr))
 		}
 	}()
+	// Part 3: token auth is mandatory for the SFU server process. The
+	// key comes from HAMI_SFU_HMAC_KEY_FILE or HAMI_SFU_HMAC_KEY only;
+	// without it the server refuses to start.
+	authVerifier, err := loadSFUAuthVerifier()
+	if err != nil {
+		return fmt.Errorf("load SFU token auth: %w", err)
+	}
 	shardCount := min(peerNegotiationConcurrency, 3000)
 	server := &m7hRemoteSFUServer{
+		auth:            authVerifier,
+		requireAuth:     true,
 		apis:            make([]*webrtc.API, shardCount),
 		muxes:           make([]ice.UDPMux, 0, shardCount),
 		muxByShard:      make([]ice.UDPMux, shardCount),
@@ -7065,8 +7210,8 @@ func runM7HSFUServer(token string, heapBudgetBytes uint64) (returnErr error) {
 	if err := heapBudgetContext.Err(); err != nil {
 		return fmt.Errorf("M7-H SFU startup canceled: %w", err)
 	}
-	fmt.Fprintf(os.Stderr, "m7h split process: role=sfu pid=%d address=%s muxShards=%d\n",
-		os.Getpid(), listener.Addr().String(), shardCount)
+	fmt.Fprintf(os.Stderr, "m7h split process: role=sfu pid=%d address=%s muxShards=%d auth=on room=%s\n",
+		os.Getpid(), listener.Addr().String(), shardCount, authVerifier.room)
 	serveDone := make(chan struct{})
 	shutdownDone := make(chan error, 1)
 	go func() {
@@ -7140,6 +7285,11 @@ func (server *m7hRemoteSFUServer) handlePublisher(token string) http.HandlerFunc
 		}
 		if request.PublisherID == "" || request.Offer == "" {
 			writeM7HJSONError(w, http.StatusBadRequest, errors.New("publisher ID and SDP offer are required"))
+			return
+		}
+		// Part 3: a publish token is required; without a valid one
+		// this is a 401 and no publisher is registered.
+		if !server.authorizeToken(w, request.Token, sfuTokenRolePublish, request.PublisherID) {
 			return
 		}
 		server.mu.Lock()
@@ -7279,6 +7429,11 @@ func (server *m7hRemoteSFUServer) handleViewer(token string) http.HandlerFunc {
 		if request.ViewerID == "" || request.Key.PublisherID == "" ||
 			request.Key.TrackID == "" || request.Offer == "" {
 			writeM7HJSONError(w, http.StatusBadRequest, errors.New("viewer, track identity, and SDP offer are required"))
+			return
+		}
+		// Part 3: a subscribe token is required; without a valid one
+		// this is a 401 and no viewer is registered or authorized.
+		if !server.authorizeToken(w, request.Token, sfuTokenRoleSubscribe, request.ViewerID) {
 			return
 		}
 		setPhase("wait-tracks")
@@ -7924,7 +8079,230 @@ func (r *sfuRouter) writePrometheusMetrics(w io.Writer) error {
 	return err
 }
 
+// Layered packet division: one packet belongs to exactly one layer.
+// Packets stay in arrival / sequence order;
+// "layer one by one" is classification + selective caching/shedding,
+// never reordering. The saving is: (a) the NACK cache holds layers 0-1
+// only, never delta packets, (b) a full queue sheds layer 2 first, so a
+// base/keyframe packet is never lost to make room for a delta, (c) a shed
+// delta never reaches WriteRTP.
+//
+// Layer 0 BASE: audio packets + video parameter sets — every subscriber.
+// Layer 1 KEY: video keyframes — video subscribers, to (re)sync.
+// Layer 2 DELTA: video non-keyframes — video subscribers only, first to drop.
+type packetLayer int
+
+const (
+	layerBase  packetLayer = 0 // audio + video parameter sets
+	layerKey   packetLayer = 1 // video keyframes
+	layerDelta packetLayer = 2 // video non-keyframes
+)
+
+// packetLayerClassifier retains frame context so every packet of a fragmented
+// keyframe stays in the key layer.
+type packetLayerClassifier struct {
+	h264FragmentTimestamp uint32
+	h264FragmentLayer     packetLayer
+	h264FragmentActive    bool
+	vp8FrameTimestamp     uint32
+	vp8FrameLayer         packetLayer
+	vp8FrameActive        bool
+}
+
+// classifyPacketLayer decides which layer a standalone RTP packet belongs to.
+// codec is the track codec, e.g. "audio/opus", "video/H264", "video/VP8".
+// Audio is always the base layer. Unknown codecs fall back to the base
+// layer — safe default, every subscriber gets the packet.
+func classifyPacketLayer(codec string, pkt *rtp.Packet) packetLayer {
+	var classifier packetLayerClassifier
+	return classifier.classify(codec, pkt)
+}
+
+func (c *packetLayerClassifier) classify(codec string, pkt *rtp.Packet) packetLayer {
+	if pkt == nil {
+		return layerDelta
+	}
+	if hasPrefixFold(codec, "audio/") {
+		return layerBase
+	}
+	if strings.EqualFold(codec, "video/H264") {
+		return c.classifyH264(pkt)
+	}
+	if strings.EqualFold(codec, "video/VP8") {
+		return c.classifyVP8(pkt)
+	}
+	if hasPrefixFold(codec, "video/") {
+		return layerDelta
+	}
+	return layerBase
+}
+
+func (c *packetLayerClassifier) classifyH264(pkt *rtp.Packet) packetLayer {
+	if len(pkt.Payload) >= 2 {
+		nalType := pkt.Payload[0] & 0x1f
+		if nalType == 28 || nalType == 29 {
+			fuHeader := pkt.Payload[1]
+			start := fuHeader&0x80 != 0
+			end := fuHeader&0x40 != 0
+			if start {
+				layer := h264NALLayer(fuHeader & 0x1f)
+				c.h264FragmentTimestamp = pkt.Timestamp
+				c.h264FragmentLayer = layer
+				c.h264FragmentActive = !end
+				return layer
+			}
+			if c.h264FragmentActive {
+				if c.h264FragmentTimestamp == pkt.Timestamp {
+					layer := c.h264FragmentLayer
+					if end {
+						c.h264FragmentActive = false
+					}
+					return layer
+				}
+				c.h264FragmentActive = false
+			}
+			return layerDelta
+		}
+	}
+	if c.h264FragmentActive && c.h264FragmentTimestamp != pkt.Timestamp {
+		c.h264FragmentActive = false
+	}
+	if isH264RecoveryConfig(pkt.Payload) {
+		return layerBase
+	}
+	if isH264IDRStart(pkt.Payload) {
+		return layerKey
+	}
+	return layerDelta
+}
+
+func h264NALLayer(nalType uint8) packetLayer {
+	switch nalType {
+	case 7, 8:
+		return layerBase
+	case 5:
+		return layerKey
+	default:
+		return layerDelta
+	}
+}
+
+func (c *packetLayerClassifier) classifyVP8(pkt *rtp.Packet) packetLayer {
+	if c.vp8FrameActive && c.vp8FrameTimestamp != pkt.Timestamp {
+		c.vp8FrameActive = false
+	}
+
+	var descriptor rtpcodecs.VP8Packet
+	framePayload, err := descriptor.Unmarshal(pkt.Payload)
+	if err != nil {
+		c.vp8FrameActive = false
+		return layerDelta
+	}
+	if descriptor.S == 1 && descriptor.PID == 0 {
+		if len(framePayload) == 0 {
+			c.vp8FrameActive = false
+			return layerDelta
+		}
+		layer := layerDelta
+		if framePayload[0]&0x01 == 0 {
+			layer = layerKey
+		}
+		c.vp8FrameTimestamp = pkt.Timestamp
+		c.vp8FrameLayer = layer
+		c.vp8FrameActive = !pkt.Marker
+		return layer
+	}
+	if c.vp8FrameActive && c.vp8FrameTimestamp == pkt.Timestamp {
+		layer := c.vp8FrameLayer
+		if pkt.Marker {
+			c.vp8FrameActive = false
+		}
+		return layer
+	}
+	return layerDelta
+}
+
+// hasPrefixFold is strings.HasPrefix without allocating: EqualFold on a
+// short prefix does not allocate, while strings.ToLower would allocate a
+// new string on every packet. The classifier runs on the hot path.
+func hasPrefixFold(s, prefix string) bool {
+	if len(s) < len(prefix) {
+		return false
+	}
+	return strings.EqualFold(s[:len(prefix)], prefix)
+}
+
+// evictOldestDeltaRTP removes the oldest layer-2 packet from a full RTP
+// queue and restores the survivors in order. It reports whether a delta
+// was evicted. The queue holds at most 64 entries and the drain uses
+// only non-blocking operations, so this is bounded and fast. The
+// consumer can only remove entries while the drain runs, never add
+// them, and forwardTrack is the only producer — so every survivor
+// always fits back in and the re-enqueue default never fires.
+func evictOldestDeltaRTP(queue chan queuedRTP) bool {
+	drained := make([]queuedRTP, 0, cap(queue))
+drain:
+	for {
+		select {
+		case entry := <-queue:
+			drained = append(drained, entry)
+		default:
+			break drain
+		}
+	}
+	evicted := false
+	for i, entry := range drained {
+		if entry.layer != layerDelta {
+			continue
+		}
+		drained = append(drained[:i], drained[i+1:]...)
+		evicted = true
+		break
+	}
+	for _, entry := range drained {
+		select {
+		case queue <- entry:
+		default:
+		}
+	}
+	return evicted
+}
+
+// evictOldestDeltaEgress is evictOldestDeltaRTP for the egress-shard job
+// queue: same rule, oldest layer-2 job goes first.
+func evictOldestDeltaEgress(queue chan sfuEgressJob) bool {
+	drained := make([]sfuEgressJob, 0, cap(queue))
+drain:
+	for {
+		select {
+		case entry := <-queue:
+			drained = append(drained, entry)
+		default:
+			break drain
+		}
+	}
+	evicted := false
+	for i, entry := range drained {
+		if entry.layer != layerDelta {
+			continue
+		}
+		drained = append(drained[:i], drained[i+1:]...)
+		evicted = true
+		break
+	}
+	for _, entry := range drained {
+		select {
+		case queue <- entry:
+		default:
+		}
+	}
+	return evicted
+}
+
 func (r *sfuRouter) forwardTrack(source *sfuPublishedTrack) {
+	// The track codec never changes; classify every packet against it.
+	codec := source.remote.Codec().RTPCodecCapability.MimeType
+	var layerClassifier packetLayerClassifier
 	subscriptions := make([]*sfuSubscription, 0)
 	for {
 		packet, _, err := source.remote.ReadRTP()
@@ -7969,7 +8347,8 @@ func (r *sfuRouter) forwardTrack(source *sfuPublishedTrack) {
 			}
 		}
 		source.rtpPacketsRead.Add(1)
-		source.rememberPacket(packet)
+		l := layerClassifier.classify(codec, packet)
+		source.rememberPacket(packet, l)
 		if packet.Marker {
 			source.firstFrameOnce.Do(func() { close(source.firstFrameReady) })
 		}
@@ -7989,11 +8368,11 @@ func (r *sfuRouter) forwardTrack(source *sfuPublishedTrack) {
 		r.mu.RUnlock()
 		if len(source.egressShards) > 0 {
 			for _, shard := range source.egressShards {
-				shard.enqueue(packet)
+				shard.enqueue(packet, l)
 			}
 		} else {
 			for _, subscription := range subscriptions {
-				dropped, err := subscription.enqueueRTP(packet)
+				dropped, err := subscription.enqueueRTP(packet, l)
 				if dropped {
 					r.rtpQueueDropped.Add(1)
 					r.rtpQueueDropShed.Add(1)
@@ -8011,11 +8390,21 @@ func (r *sfuRouter) forwardTrack(source *sfuPublishedTrack) {
 	}
 }
 
-func (t *sfuPublishedTrack) rememberPacket(packet *rtp.Packet) {
+func (t *sfuPublishedTrack) rememberPacket(packet *rtp.Packet, l packetLayer) {
 	t.packetMu.Lock()
 	defer t.packetMu.Unlock()
 	sequence := packet.SequenceNumber
+	// The sequence always advances so latestSequence() tracks the live
+	// stream position — but layer 2 (video delta) packets are never
+	// cached: a lost delta is repaired by the next keyframe, not by
+	// retransmission, so holding 512 of them per track buys nothing.
+	// A NACK for a delta sequence simply comes back missing, which the
+	// existing cachedPackets miss path already handles.
 	t.lastSequence = sequence
+	if l == layerDelta {
+		t.layerDeltaCacheSkipped.Add(1)
+		return
+	}
 	// TrackRemote.ReadRTP returns an owned packet; forwarding and retransmission
 	// paths clone before writing, so retain it directly instead of duplicating its payload.
 	if _, exists := t.packetCache[sequence]; exists {
@@ -8092,7 +8481,7 @@ func (s *sfuSubscription) writeRTP(packet *rtp.Packet) (bool, error) {
 	return true, nil
 }
 
-func (s *sfuSubscription) enqueueRTP(packet *rtp.Packet) (bool, error) {
+func (s *sfuSubscription) enqueueRTP(packet *rtp.Packet, l packetLayer) (bool, error) {
 	if packet == nil {
 		return false, errors.New("RTP packet is required")
 	}
@@ -8108,6 +8497,7 @@ func (s *sfuSubscription) enqueueRTP(packet *rtp.Packet) (bool, error) {
 	queued := queuedRTP{
 		packet:     copyRTPPacketWithSharedPayload(packet),
 		enqueuedAt: time.Now(),
+		layer:      l,
 	}
 	select {
 	case s.rtpQueue <- queued:
@@ -8115,22 +8505,42 @@ func (s *sfuSubscription) enqueueRTP(packet *rtp.Packet) (bool, error) {
 		return false, nil
 	default:
 	}
-	droppedOldest := false
-	select {
-	case <-s.rtpQueue:
-		droppedOldest = true
+	// Queue is full. Layer 2 goes first: a delta arriving at a full
+	// queue is shed at once — it never evicts a base/keyframe packet.
+	// The loss still breaks the P-frame chain, so the keyframe recovery
+	// flag is set exactly as for any other shed packet.
+	if l == layerDelta {
+		s.rtpQueueDropped.Add(1)
 		s.markNeedsKeyframe()
-	default:
+		return true, nil
+	}
+	// A base/keyframe packet must get in. Evict the oldest delta in the
+	// queue; only if the queue holds no delta at all, fall back to the
+	// old behaviour (drop the oldest packet).
+	evictedDelta := evictOldestDeltaRTP(s.rtpQueue)
+	droppedOldest := false
+	if !evictedDelta {
+		select {
+		case <-s.rtpQueue:
+			droppedOldest = true
+		default:
+		}
+	}
+	if evictedDelta || droppedOldest {
+		s.markNeedsKeyframe()
 	}
 	select {
 	case s.rtpQueue <- queued:
 		s.rtpQueueEnqueued.Add(1)
-		if droppedOldest {
+		if evictedDelta || droppedOldest {
 			s.rtpQueueDropped.Add(1)
 		}
-		return droppedOldest, nil
+		return evictedDelta || droppedOldest, nil
 	default:
 		s.rtpQueueDropped.Add(1)
+		if evictedDelta {
+			return true, errors.New("RTP queue remained full after dropping its oldest delta packet")
+		}
 		return true, errors.New("RTP queue remained full after dropping its oldest packet")
 	}
 }
@@ -8139,6 +8549,7 @@ func (s *sfuSubscription) markNeedsKeyframe() bool {
 	if !s.h264Video {
 		return false
 	}
+	s.keyframeRecoveryActive.Store(false)
 	startedAt := time.Since(rtpMonotonicStart).Nanoseconds()
 	if startedAt <= 0 {
 		startedAt = 1
@@ -8158,12 +8569,40 @@ func (s *sfuSubscription) completeKeyframeRecovery() (time.Duration, bool) {
 	return time.Duration(elapsed), true
 }
 
-func (s *sfuSubscription) allowRTPDuringKeyframeRecovery(packet *rtp.Packet) (bool, bool) {
+func (s *sfuSubscription) allowRTPDuringKeyframeRecovery(
+	packet *rtp.Packet,
+	layer packetLayer,
+) (bool, bool) {
 	if !s.h264Video || s.keyframeNeededAt.Load() == 0 {
 		return true, false
 	}
-	idrStart := isH264IDRStart(packet.Payload)
-	return idrStart || isH264RecoveryConfig(packet.Payload), idrStart
+	if packet == nil {
+		return false, false
+	}
+	if layer == layerBase {
+		return true, false
+	}
+	if layer != layerKey {
+		s.keyframeRecoveryActive.Store(false)
+		return false, false
+	}
+	if isH264IDRStart(packet.Payload) {
+		s.keyframeRecoveryTimestamp.Store(packet.Timestamp)
+		s.keyframeRecoveryActive.Store(!packet.Marker)
+		return true, packet.Marker
+	}
+	if !s.keyframeRecoveryActive.Load() {
+		return false, false
+	}
+	if s.keyframeRecoveryTimestamp.Load() != packet.Timestamp {
+		s.keyframeRecoveryActive.Store(false)
+		return false, false
+	}
+	if packet.Marker {
+		s.keyframeRecoveryActive.Store(false)
+		return true, true
+	}
+	return true, false
 }
 
 func (s *sfuSubscription) stop() {
@@ -8603,7 +9042,7 @@ func (r *sfuRouter) forwardQueuedRTP(subscription *sfuSubscription, queued queue
 		return
 	}
 	needsKeyframe := subscription.keyframeNeededAt.Load() != 0
-	allowPacket, idrStart := subscription.allowRTPDuringKeyframeRecovery(packet)
+	allowPacket, keyframeComplete := subscription.allowRTPDuringKeyframeRecovery(packet, queued.layer)
 	if !allowPacket {
 		r.recordRTPIntentionalShed(subscription)
 		return
@@ -8624,7 +9063,7 @@ func (r *sfuRouter) forwardQueuedRTP(subscription *sfuSubscription, queued queue
 		}
 		r.rtpForwardBuckets[bucket].Add(1)
 	}
-	if sent && needsKeyframe && idrStart {
+	if sent && needsKeyframe && keyframeComplete {
 		if recoveryDuration, recovered := subscription.completeKeyframeRecovery(); recovered {
 			r.recordRTPKeyframeRecovery(recoveryDuration)
 		}
@@ -8947,6 +9386,13 @@ func runLocalSFUSinglePairProof(
 	duration time.Duration,
 ) (sfuProofResult, error) {
 	return runLocalSFUScaleProof(ctx, videoFrames, duration, 1, 1)
+}
+
+func feedbackPacingError(viewerID string, err error) error {
+	if errors.Is(err, context.DeadlineExceeded) {
+		return fmt.Errorf("feedback deadline exceeded while pacing viewer %s: %w", viewerID, err)
+	}
+	return fmt.Errorf("feedback pacing interrupted for viewer %s: %w", viewerID, err)
 }
 
 func runLocalSFUScaleProof(
@@ -11564,11 +12010,7 @@ func runLocalSFUProofWithConfig(
 					logPacingErrorAttribution(viewer.id)
 					cancelSend()
 					<-sendDone
-					return sfuProofResult{}, fmt.Errorf(
-						"feedback deadline ended while pacing viewer %s: %w",
-						viewer.id,
-						feedbackContext.Err(),
-					)
+					return sfuProofResult{}, feedbackPacingError(viewer.id, feedbackContext.Err())
 				case <-feedbackPacer.C:
 				}
 			}

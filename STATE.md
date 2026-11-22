@@ -1,4 +1,43 @@
-## Current continuation — 2026-11-21 01:52 +0545 — M7-H cache retention instrumented
+## Current continuation — 2026-11-23 — SFU pressure abort, no capacity result
+
+- 01:12 +0545 continuation: Go test/vet/build, `npm test` (164 script +
+  295 TypeScript tests), and the gates are green. TURN documentation states
+  only local/test evidence. A redundant standalone `hami-sfu/` implementation
+  was inspected back to its introducing commit and is being superseded from
+  the active tree; history is preserved.
+- `origin/main` was fetched at `e26729d7` (8 commits beyond the common base).
+  Its latest runs fail in DIMAG backend tests and the commit-message check;
+  deploy verification returns HTTP 402. The only local-ahead commit has a
+  malformed subject; history will not be rewritten. Merge and sync remain
+  pending.
+
+- TEST-only 10×500-viewer local stage aborted at viewer
+  `hami-sfu-viewer-2801` when pressure reached level 2. Free swap at abort was
+  1,652.81 MiB, with zero swapouts. JSON status was `ABORTED-BY-HOST`; no
+  `measurement_pass`, complete viewer list, or loss result exists.
+- The one-run 1,500 MiB source-copy threshold did not permit completion because
+  the independent pressure guard stopped the process. Canonical 2,048 MiB
+  threshold remains intact. Follow-up pressure returned to 1, but free swap
+  1,668.81 MiB remains below the canonical floor.
+- Fixed only the existing SFU feedback error classification and added
+  cancellation/deadline regression coverage. Corrected packet-layer
+  classification for VP8 frame tags and fragmented H.264 frames, and ensured
+  shard queue loss records affected subscribers and initiates recovery. The
+  change is packet prioritization, not simulcast or per-viewer layer selection.
+- Focused media tests, full Go tests (20.850 s), Go vet/build, `npm test`
+  (164 script + 295 TypeScript tests), `npm run gates`, and `git diff --check`
+  passed. No live-room, load, or Docker test was run.
+- Next: use the existing local HLS smoke / Pion track seam for one-stream
+  local playback proof, with cleanup evidence. No Cloud, paid infrastructure,
+  capacity retry, WAN inference, or neural training from the censored run.
+- Full run and implementation notes are in the top of
+  `docs/CAPABILITY_QUEUE.md` and the unique local capacity-run folder.
+- Local `main` remains 1 ahead / 8 behind `origin/main`; no commit or push
+  yet. The remote tip's CI has DIMAG backend failures, a commit-message gate
+  failure, and deploy verification blocked by HTTP 402. Do not mask these
+  failures or rewrite history while syncing.
+
+## Historical continuation — 2026-11-21 01:52 +0545 — M7-H cache retention instrumented
 
 - 20:56 continuation: dissolve scoring, configurable NACK age, 1s small-proof/60s scale settle, host preflight/watchdog, and viewer-scaled heap cap are implemented; Go tests/vet, npm tests (168+295), and gates pass, but pressure is 2 and free swap 1,266.88 MiB, so no load ran; router extraction remains the next code seam.
 - Started from the existing 3,000-pair M7-H failure: 15.06 GB HeapAlloc,

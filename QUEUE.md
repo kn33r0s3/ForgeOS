@@ -1,4 +1,40 @@
-## Current queue — 2026-11-21 01:52 +0545 — quantify M7-H packet retention
+## Current queue — 2026-11-23 — one-stream local HLS bridge after SFU abort
+
+0. Before the HLS increment, finish safe GitHub synchronization: the remote
+   main history is 8 commits ahead of the shared base; preserve it in a merge,
+   do not rewrite history, and do not bypass the known remote CI/deploy
+   failures. The redundant `hami-sfu/` copy is being superseded by the existing
+   `services/hami-media` seam; its introducing commit remains in history.
+   Local Go tests/vet/build, npm tests (164+295), and gates pass. Direct push
+   remains unverified until the merge is validated.
+
+1. The local 10×500-viewer stage aborted at pressure level 2 while pacing
+   viewer `hami-sfu-viewer-2801`; no complete media-stage or packet-loss
+   result exists. Free swap at abort was 1,652.81 MiB; swapouts delta was 0.
+   The one-off 1,500 MiB source-copy threshold did not override the separate
+   pressure guard; canonical 2,048 MiB remains unchanged.
+2. The existing feedback-pacing seam distinguishes a real child deadline from
+   parent-context cancellation. RTP layer classification now parses VP8 frame
+   tags and retains H.264/VP8 frame identity across packet fragments; shard
+   queue losses are attributed to subscribers and request recovery. These are
+   packet-priority changes, not simulcast or per-viewer layer selection.
+   Focused/full Go tests, vet/build, `npm test` (164+295), gates, and
+   `git diff --check` pass.
+3. Next code increment: extend the existing `services/hami-media/INTEGRATION.md`
+   local HLS smoke through the existing Pion remote-track seam. Begin with one
+   authorized local video track, verify playback and cleanup, then assess
+   whether an HTTP loopback sample is justified. No Cloud/CDN or claim of
+   remote audience capacity.
+4. Keep WebRTC load stopped until pressure is NORMAL and free swap is at least
+   2,048 MiB. A neural estimator remains unready: this single censored run
+   supplies no completed loss labels or held-out traces.
+5. Local main is 1 ahead / 8 behind `origin/main` and the worktree remains
+   dirty. Exact `origin/main` CI on `e26729d7` has 13 DIMAG backend failures
+   (1,399 passed, 2 skipped), a commit-message gate failure, and deploy
+   verification returned HTTP 402. Current local exact-head CI is unverified.
+   Preserve existing history and changes; no commit or push has happened yet.
+
+## Historical queue — 2026-11-21 01:52 +0545 — quantify M7-H packet retention
 
 - 20:56 continuation: dissolve scoring, configurable NACK age, feedback settle config, host preflight/watchdog, and viewer-scaled heap cap passed Go/npm/gate checks; current pressure 2 and 1,266.88 MiB free swap hold the ladder, and `sfuRouter` package extraction is still pending.
 1. Start from the reproduced 3,000-pair M7-H failure: 15.06 GB HeapAlloc,

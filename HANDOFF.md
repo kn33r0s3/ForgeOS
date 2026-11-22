@@ -1,4 +1,69 @@
-# Active handoff — 2026-11-21 01:52 +0545 — M7-H cache retention instrumented
+# Active handoff — 2026-11-23 — SFU pressure abort and cancellation classification
+
+## Current operation
+
+- Continuation at 01:12 +0545: full Go tests (20.960 s), vet/build, `npm
+  test` (164 script + 295 TypeScript tests), gates, and diff check are green.
+  The local/test-only TURN documentation now makes no external relay or
+  production claim. The one-off `hami-sfu/` server duplicated room/track/
+  subscriber state from `services/hami-media`; it is being superseded in the
+  active tree while its introducing commit remains in history.
+- Fetched `origin/main` is `e26729d7`, eight commits ahead of the common
+  base. Existing CI there has DIMAG backend failures, a commit-message gate
+  failure, and deployment verification HTTP 402. Local `92193ef5` is the sole
+  commit ahead and has an invalid subject; do not rewrite it. Merge without
+  reset/rebase, run tests again, and attempt direct push only after resolving
+  merge conflicts. Preserve any branch-protection failure.
+
+- The one amended 10-publisher × 500-viewer local run stopped at pressure
+  level 2 while pacing viewer `hami-sfu-viewer-2801`. Free swap was
+  1,652.81 MiB, swapouts delta 0. Exit code 1; no completed viewer list,
+  `measurement_pass`, or packet-loss result. Do not claim a 5,000-viewer
+  ceiling. Raw run evidence:
+  `/Users/nirojpaudyal/hami/work/capacity-run/out-amended-20261123-003638/`.
+- The isolated 1,500 MiB threshold did not override the independent
+  pressure-level watchdog. The canonical 2,048 MiB floor and watchdog remain
+  unchanged. At the 00:41:14 follow-up, pressure had returned to level 1,
+  free swap was 1,668.81 MiB, still below the canonical floor.
+- Repaired the existing feedback-pacing error label: inherited cancellation
+  now reports interruption, while an actual `DeadlineExceeded` reports a
+  deadline. Regression tests cover both.
+- Corrected the existing RTP layer classifier: VP8 keyframe detection now
+  reads the frame tag after the payload descriptor; H.264 fragmented
+  parameter sets and IDRs retain their layer across fragments; recovery waits
+  for the IDR end marker; egress-shard drops are attributed and trigger
+  subscriber recovery. This is packet prioritization, not simulcast or
+  per-viewer layer selection.
+- Validation: focused layer/recovery tests, `go test ./... -count=1`
+  (20.850 s), `go vet ./...`, `go build ./...`, `npm test` (164 script +
+  295 TypeScript tests), `npm run gates` (GREEN), and `git diff --check`
+  passed. No load, live-room, or Docker test was run.
+- External context is bounded: Pion #3638 is data-channel-only and not a
+  direct media-peer optimization; LiveKit #726 says no universal consumer
+  count applies across workloads; Go context documentation explains parent
+  cancellation propagation. No code from external projects was copied.
+- `origin/main` is `e26729d7`, 8 commits ahead of this local `main`. Its latest
+  CI has 13 unrelated DIMAG backend-test failures (1,399 passed, 2 skipped),
+  a commit-message gate failure on `e26729d7`, and independent deploy
+  verification blocked by HTTP 402. These are recorded, not repaired or
+  bypassed here.
+- Local `main` is `92193ef5b4e6170fecae8426949784b69949e1c0`, 1 commit ahead
+  and 8 behind `origin/main`, with pre-existing staged/unstaged changes. The
+  exact-head CI is not verified. No commit or push was made.
+
+## Next resumable operation
+
+Before syncing, reconcile the local `main` with `origin/main` without rewriting
+history, and preserve the dirty work. Keep the remote CI failures visible.
+After that, use the existing local HLS smoke in
+`services/hami-media/INTEGRATION.md` as the next implementation seam: bridge
+one authorized Pion remote video track into local HLS and verify local
+playback/cleanup. Do not add a competing SFU, use Cloud/CDN, or claim audience
+capacity. Keep all load stages stopped until pressure is NORMAL and free swap
+reaches the existing 2,048 MiB floor. Do not start a neural estimator until
+replicated traces and held-out labels exist.
+
+# Historical handoff — 2026-11-21 01:52 +0545 — M7-H cache retention instrumented
 
 ## Current operation
 

@@ -475,7 +475,7 @@ func TestEgressShardDistributionIsStableAndBounded(t *testing.T) {
 		closed:        make(chan struct{}),
 	}
 	packet := &rtp.Packet{Header: rtp.Header{SequenceNumber: 42, Timestamp: 99}}
-	shard.enqueue(packet)
+	shard.enqueue(packet, layerBase)
 	job := <-shard.queue
 	if job.packet.SequenceNumber != packet.SequenceNumber {
 		t.Fatalf("egress queue changed sequence: got %d want %d", job.packet.SequenceNumber, packet.SequenceNumber)
@@ -721,7 +721,7 @@ func TestRTPQueueDropsOldestPacketWithoutBlocking(t *testing.T) {
 	for sequence := uint16(1); sequence <= 3; sequence++ {
 		dropped, err := subscription.enqueueRTP(&rtp.Packet{
 			Header: rtp.Header{SequenceNumber: sequence},
-		})
+		}, layerBase)
 		if err != nil {
 			t.Fatalf("enqueue RTP sequence %d: %v", sequence, err)
 		}
@@ -768,7 +768,7 @@ func TestRTPQueueSharesPayloadAndCopiesMutableHeader(t *testing.T) {
 	}
 	queued := make([]*rtp.Packet, len(subscriptions))
 	for index, subscription := range subscriptions {
-		if _, err := subscription.enqueueRTP(packet); err != nil {
+		if _, err := subscription.enqueueRTP(packet, layerBase); err != nil {
 			t.Fatalf("enqueue packet for subscription %d: %v", index, err)
 		}
 		queued[index] = (<-subscription.rtpQueue).packet
@@ -826,24 +826,69 @@ func TestKeyframeRecoverySkipsInterFramesButAllowsParameterSetsAndIDR(t *testing
 	subscription := &sfuSubscription{h264Video: true}
 	subscription.keyframeNeededAt.Store(1)
 	tests := []struct {
-		name        string
-		payload     []byte
-		wantAllowed bool
-		wantIDR     bool
+		name         string
+		payload      []byte
+		layer        packetLayer
+		marker       bool
+		wantAllowed  bool
+		wantComplete bool
 	}{
-		{name: "non-IDR slice", payload: []byte{0x41, 0x80}},
-		{name: "SPS", payload: []byte{0x67, 1}, wantAllowed: true},
-		{name: "PPS", payload: []byte{0x68, 1}, wantAllowed: true},
-		{name: "IDR start", payload: []byte{0x65, 0x88}, wantAllowed: true, wantIDR: true},
+		{name: "non-IDR slice", payload: []byte{0x41, 0x80}, layer: layerDelta},
+		{name: "SPS", payload: []byte{0x67, 1}, layer: layerBase, wantAllowed: true},
+		{name: "PPS", payload: []byte{0x68, 1}, layer: layerBase, wantAllowed: true},
+		{name: "SPS FU-A continuation", payload: []byte{0x7c, 0x07}, layer: layerBase, wantAllowed: true},
+		{name: "IDR single NAL", payload: []byte{0x65, 0x88}, layer: layerKey, marker: true, wantAllowed: true, wantComplete: true},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			allowed, idr := subscription.allowRTPDuringKeyframeRecovery(&rtp.Packet{Payload: test.payload})
-			if allowed != test.wantAllowed || idr != test.wantIDR {
+			allowed, complete := subscription.allowRTPDuringKeyframeRecovery(
+				&rtp.Packet{Header: rtp.Header{Marker: test.marker}, Payload: test.payload},
+				test.layer,
+			)
+			if allowed != test.wantAllowed || complete != test.wantComplete {
 				t.Fatalf("recovery decision = (%v, %v), want (%v, %v)",
-					allowed, idr, test.wantAllowed, test.wantIDR)
+					allowed, complete, test.wantAllowed, test.wantComplete)
 			}
 		})
+	}
+}
+
+func TestKeyframeRecoveryForFragmentedIDRCompletesAtMarker(t *testing.T) {
+	subscription := &sfuSubscription{h264Video: true}
+	if !subscription.markNeedsKeyframe() {
+		t.Fatal("keyframe recovery was not started")
+	}
+
+	packets := []struct {
+		name         string
+		timestamp    uint32
+		payload      []byte
+		marker       bool
+		wantAllowed  bool
+		wantComplete bool
+	}{
+		{name: "orphan continuation", timestamp: 41, payload: []byte{0x7c, 0x45}},
+		{name: "IDR start", timestamp: 42, payload: []byte{0x7c, 0x85}, wantAllowed: true},
+		{name: "IDR continuation", timestamp: 42, payload: []byte{0x7c, 0x05}, wantAllowed: true},
+		{name: "IDR end", timestamp: 42, payload: []byte{0x7c, 0x45}, marker: true, wantAllowed: true, wantComplete: true},
+	}
+	for _, test := range packets {
+		t.Run(test.name, func(t *testing.T) {
+			allowed, complete := subscription.allowRTPDuringKeyframeRecovery(
+				&rtp.Packet{
+					Header:  rtp.Header{Timestamp: test.timestamp, Marker: test.marker},
+					Payload: test.payload,
+				},
+				layerKey,
+			)
+			if allowed != test.wantAllowed || complete != test.wantComplete {
+				t.Fatalf("recovery decision = (%v, %v), want (%v, %v)",
+					allowed, complete, test.wantAllowed, test.wantComplete)
+			}
+		})
+	}
+	if _, recovered := subscription.completeKeyframeRecovery(); !recovered {
+		t.Fatal("completed IDR frame did not clear keyframe recovery")
 	}
 }
 
@@ -1286,6 +1331,37 @@ func TestWaitForSFUFeedbackReturnsPartialCountsOnContextTimeout(t *testing.T) {
 	}
 }
 
+func TestFeedbackPacingErrorDistinguishesDeadlineFromCancellation(t *testing.T) {
+	tests := []struct {
+		name     string
+		err      error
+		wantText string
+	}{
+		{
+			name:     "deadline",
+			err:      context.DeadlineExceeded,
+			wantText: "feedback deadline exceeded while pacing viewer viewer-1",
+		},
+		{
+			name:     "parent cancellation",
+			err:      context.Canceled,
+			wantText: "feedback pacing interrupted for viewer viewer-1",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := feedbackPacingError("viewer-1", tt.err)
+			if !errors.Is(got, tt.err) {
+				t.Fatalf("feedback pacing error = %v, want to wrap %v", got, tt.err)
+			}
+			if !strings.Contains(got.Error(), tt.wantText) {
+				t.Fatalf("feedback pacing error = %q, want text %q", got, tt.wantText)
+			}
+		})
+	}
+}
+
 func TestIncompleteM7HViewerIDsSelectsOneUnmetTrack(t *testing.T) {
 	viewers := []viewerEndpoint{
 		{id: "viewer-1", key: sfuTrackKey{TrackID: "track-1"}},
@@ -1476,7 +1552,7 @@ func TestPrometheusMetricsExposeForwardingAndResourceSignals(t *testing.T) {
 	source.rememberPacket(&rtp.Packet{
 		Header:  rtp.Header{SequenceNumber: 42},
 		Payload: []byte{1, 2, 3},
-	})
+	}, layerBase)
 	router := &sfuRouter{
 		tracks: map[sfuTrackKey]*sfuPublishedTrack{key: source},
 		viewers: map[string]*sfuViewer{
@@ -1525,7 +1601,7 @@ func TestPublishedTrackPacketCacheAccountingHandlesReplacementAndEviction(t *tes
 		track.rememberPacket(&rtp.Packet{
 			Header:  rtp.Header{SequenceNumber: sequence},
 			Payload: make([]byte, payloadSize),
-		})
+		}, layerBase)
 	}
 
 	remember(0, 3)
