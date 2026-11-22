@@ -1,16 +1,19 @@
-## Current continuation — 2026-11-23 20:10Z — DIMAG CI correction verified; media capacity still blocked
+## Current continuation — 2026-11-23 20:20Z — DIMAG CI correction verified; media capacity still blocked
 
-- `main` is `0009591e7edfa82802da858c71d2927e6aca6931`, tracking
-  `origin/main`. Exact-head ForgeOS CI `45064618498` passed all 9 jobs,
-  including backend tests; secret scan `45064618611` passed. The previous
-  exact-head run `45062120334` had missing DIMAG inputs and false-green
+- Latest verified implementation commit `d13841326f602a9a992f2cb4812a65a2d9f10c2f`
+  is on `main` and matches `origin/main`. Exact-head ForgeOS CI
+  `45065383087` passed all 9 jobs; secret scan `45065383140` passed. Deploy
+  verification `45065383117` failed at production-content fetch with HTTP
+  402. The earlier implementation commit
+  `0009591e7edfa82802da858c71d2927e6aca6931` also passed exact-head CI
+  `45064618498` and secret scan `45064618611`. The previous exact-head run
+  `45062120334` had missing DIMAG inputs and false-green
   boolean returns. The test runner now uses explicitly TEST-only synthetic
   inputs by default, requires both environment overrides for the private
   corpus, and raises on failed assertions. Targeted pytest, standalone
   synthetic/local-corpus runs, and the false-check mutation all passed their
   expected outcomes.
-- Independent deploy verification `45064618442` remains blocked: production
-  content fetch returned HTTP 402. No account/payment change or bypass.
+- No account/payment change or bypass was made for the HTTP 402.
 - Historic 20×250 results are unlinked historical report evidence; the later
   local 10×500 TEST run aborted at viewer 2,801 under pressure 2 and yielded
   no complete measurement or loss result. Capacity remains NOT MEASURABLE.

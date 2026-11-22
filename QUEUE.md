@@ -1,9 +1,10 @@
-## Current queue — 2026-11-23 20:10Z — verify media HLS seam; keep capacity blocked
+## Current queue — 2026-11-23 20:20Z — verify media HLS seam; keep capacity blocked
 
-1. Main is `0009591e7edfa82802da858c71d2927e6aca6931`, tracking `origin/main`.
-   Exact-head CI `45064618498` passed all 9 jobs, including backend tests;
-   secret scan `45064618611` passed. Deploy verifier `45064618442` failed at
-   production-content fetch with HTTP 402; do not bypass.
+1. Latest verified implementation commit `d13841326f602a9a992f2cb4812a65a2d9f10c2f`
+   is on `main` and matches `origin/main`. Exact-head CI `45065383087`
+   passed all 9 jobs; secret scan `45065383140` passed. Deploy verifier
+   `45065383117` failed at production-content fetch with HTTP 402; do not
+   bypass.
 2. The DIMAG acceptance suite now defaults to synthetic TEST-only inputs,
    keeps the private corpus explicit via both environment variables, and
    raises on false checks. Python 3.11.16 / pytest 9.0.3 targeted pytest

@@ -1,21 +1,22 @@
-# Active handoff — 2026-11-23 01:55 +0545 — media evidence and CI correction verified
+# Active handoff — 2026-11-23 02:05 +0545 — media evidence and CI correction verified
 
 ## Current operation
 
-- `main` is at `0009591e7edfa82802da858c71d2927e6aca6931`, tracking
-  `origin/main`. The DIMAG acceptance fix, Hami Media integration notes,
-  architecture evidence, and continuity records were committed and pushed.
+- Latest verified implementation commit `d13841326f602a9a992f2cb4812a65a2d9f10c2f`
+  is on `main` and matches `origin/main`. Exact-head CI `45065383087` passed
+  all 9 jobs; secret scan `45065383140` passed. Deploy verification
+  `45065383117` failed at production-content fetch with HTTP 402.
 - Prior exact-head GitHub CI `45062120334` failed in DIMAG acceptance tests
-  because required trace/lead files are not in the hosted checkout. The acceptance
-  runner now defaults to explicitly TEST-only synthetic fixtures, allows the
-  private corpus only by setting both path variables, and raises on failed
-  `check(...)` assertions instead of returning booleans pytest ignores.
+  because required trace/lead files are not in the hosted checkout. The
+  acceptance runner now defaults to explicitly TEST-only synthetic fixtures,
+  allows the private corpus only by setting both path variables, and raises on
+  failed `check(...)` assertions instead of returning booleans pytest ignores.
   Python 3.11.16 / pytest 9.0.3 passed targeted pytest 16/16; standalone
   synthetic and explicit local-corpus runs each passed 16/16; a forced-false
-  check mutation raised `AssertionError`. Exact-head CI `45064618498` passed
-  all 9 jobs, including backend tests; secret scan `45064618611` passed.
-- Independent deploy verification `45064618442` failed at production-content
-  fetch with HTTP 402. No payment, account change, or bypass is appropriate.
+  check mutation raised `AssertionError`.
+- The earlier implementation commit `0009591e7edfa82802da858c71d2927e6aca6931`
+  passed CI run `45064618498` and secret scan `45064618611`; no payment,
+  account change, or bypass is appropriate for the HTTP 402.
 - The historic 20×250 report (4,691 pass, 309 p99 failures) has no linked raw
   artifact/source SHA in the active repository. The later local 10×500 TEST
   run aborted at viewer 2,801 under pressure level 2 and emitted no completed

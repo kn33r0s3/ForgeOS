@@ -1,5 +1,10 @@
-## 2026-11-23 01:55 +0545 (20:10Z) — media evidence reconciliation and DIMAG CI truth
+## 2026-11-23 02:05 +0545 (20:20Z) — media evidence reconciliation and DIMAG CI truth
 
+- **Latest exact-head verification:** implementation commit
+  `d13841326f602a9a992f2cb4812a65a2d9f10c2f` is on `main`; CI
+  `45065383087` passed all 9 jobs and secret scan `45065383140` passed.
+  Independent deploy verifier `45065383117` failed at production-content
+  fetch with HTTP 402.
 - **Existing seams/history:** the canonical media path is still
   `services/hami-media/main.go`; the HLS smoke in
   `services/hami-media/INTEGRATION.md` is the current local packaging seam.
