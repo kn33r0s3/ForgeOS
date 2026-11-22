@@ -18,21 +18,23 @@
   164 script tests and 295 TypeScript tests; `npm run gates:report` and
   `npm run gates` reported GREEN; `git diff --check` passed. No Docker,
   live-room, load, or capacity run was performed.
-- **Sync blocker:** fetched `origin/main` is `e26729d7`, 8 commits ahead of
-  the local base. Its current CI reports 13 DIMAG backend-test failures
-  (1,399 passed, 2 skipped), a commit-message gate failure, and independent
-  deploy verification failure (HTTP 402). The sole local commit ahead,
-  `92193ef5`, itself has an invalid commit subject; history will not be
-  rewritten. Local test/gate success does not resolve these remote checks.
+- **Sync state/blocker:** `origin/main` (`e26729d7`) is now included on local
+  `main` via merge commit `165426c`; no history was rewritten. Post-merge Go
+  test/vet/build, npm tests (164+295), and gates are green. The standalone
+  DIMAG worker acceptance script passed 16/16 with local trace data. Remote
+  CI at `e26729d7` still reports 13 worker-test failures because the required
+  trace/registry files are absent from the hosted checkout (1,399 passed,
+  2 skipped), a commit-message failure, and deploy verification HTTP 402.
+  The earlier local commit `92193ef5` also has an invalid subject. Do not
+  rewrite history or bypass these checks; a normal push remains pending.
 - **Owner dependency:** this work removes a duplicate implementation choice,
   not an owner action for a real transaction. No verified real transaction
   exists; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains
   **NOT MEASURABLE**. External customer contact, money movement, production
   activation, and public relay exposure remain outside this proof.
-- **Next:** preserve and merge remote history into `main`, resolve conflicts
-  without rewriting commits, rerun required checks, then attempt the
-  owner-requested direct sync. If branch protection or CI rejects it, retain
-  the exact failure rather than bypassing a gate.
+- **Next:** attempt the owner-requested direct sync with a normal push, then
+  verify the remote ref and resulting CI. If branch protection or CI rejects
+  it, retain the exact failure rather than bypassing a gate.
 
 ## 2026-11-23 — SFU pressure abort classified; media packet layers corrected
 

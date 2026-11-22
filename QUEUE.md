@@ -1,12 +1,12 @@
 ## Current queue — 2026-11-23 — one-stream local HLS bridge after SFU abort
 
-0. Before the HLS increment, finish safe GitHub synchronization: the remote
-   main history is 8 commits ahead of the shared base; preserve it in a merge,
-   do not rewrite history, and do not bypass the known remote CI/deploy
-   failures. The redundant `hami-sfu/` copy is being superseded by the existing
-   `services/hami-media` seam; its introducing commit remains in history.
-   Local Go tests/vet/build, npm tests (164+295), and gates pass. Direct push
-   remains unverified until the merge is validated.
+0. GitHub synchronization is locally reconciled: fetched `origin/main`
+   `e26729d7` is included in merge commit `165426c`; no history was rewritten.
+   The duplicate `hami-sfu/` implementation is removed from the active tree,
+   with its introducing commit preserved. Post-merge Go tests/vet/build,
+   npm tests (164+295), gates, and the DIMAG standalone acceptance script
+   (16/16 with local corpus) pass. Attempt only a normal direct push; retain
+   any branch-protection/CI failure.
 
 1. The local 10×500-viewer stage aborted at pressure level 2 while pacing
    viewer `hami-sfu-viewer-2801`; no complete media-stage or packet-loss
@@ -28,11 +28,11 @@
 4. Keep WebRTC load stopped until pressure is NORMAL and free swap is at least
    2,048 MiB. A neural estimator remains unready: this single censored run
    supplies no completed loss labels or held-out traces.
-5. Local main is 1 ahead / 8 behind `origin/main` and the worktree remains
-   dirty. Exact `origin/main` CI on `e26729d7` has 13 DIMAG backend failures
-   (1,399 passed, 2 skipped), a commit-message gate failure, and deploy
-   verification returned HTTP 402. Current local exact-head CI is unverified.
-   Preserve existing history and changes; no commit or push has happened yet.
+5. The previous `origin/main` CI on `e26729d7` had 13 DIMAG worker failures
+   from absent hosted trace/registry files (1,399 passed, 2 skipped), a
+   commit-message gate failure, and deploy verification HTTP 402. One earlier
+   local commit (`92193ef5`) also has a malformed subject. Do not rewrite
+   history or bypass checks; verify the result after the normal push attempt.
 
 ## Earlier queue — 2026-11-22 05:07 +0545 — native Hami Media and D109/D110
 

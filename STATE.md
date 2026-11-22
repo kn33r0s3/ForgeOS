@@ -1,15 +1,18 @@
 ## Current continuation — 2026-11-23 — SFU pressure abort, no capacity result
 
-- 01:12 +0545 continuation: Go test/vet/build, `npm test` (164 script +
-  295 TypeScript tests), and the gates are green. TURN documentation states
-  only local/test evidence. A redundant standalone `hami-sfu/` implementation
-  was inspected back to its introducing commit and is being superseded from
-  the active tree; history is preserved.
-- `origin/main` was fetched at `e26729d7` (8 commits beyond the common base).
-  Its latest runs fail in DIMAG backend tests and the commit-message check;
-  deploy verification returns HTTP 402. The only local-ahead commit has a
-  malformed subject; history will not be rewritten. Merge and sync remain
-  pending.
+- 01:25 +0545: `main` includes fetched `origin/main` through merge commit
+  `165426c`; no history was rewritten. The duplicate `hami-sfu/` app was
+  removed from the active tree after tracing its sole introduction to
+  `92193ef5`; that commit remains in history.
+- Post-merge Go test/vet/build, npm test (164 script + 295 TypeScript tests),
+  gates, and the standalone DIMAG worker acceptance script (16/16 with local
+  corpus) pass. TURN docs limit the claim to local/test evidence.
+- The prior GitHub CI at `e26729d7` failed on 13 DIMAG tests whose trace/lead
+  files are absent in the hosted checkout, the invalid commit-message gate,
+  and deploy verification HTTP 402. Local Python is 3.9.6; pytest cannot load
+  the Python 3.10+ union annotation dependency, so only the documented
+  standalone DIMAG runner is locally verified. Normal push remains pending;
+  do not rewrite history or bypass checks.
 
 - TEST-only 10×500-viewer local stage aborted at viewer
   `hami-sfu-viewer-2801` when pressure reached level 2. Free swap at abort was

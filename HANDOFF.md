@@ -2,18 +2,26 @@
 
 ## Current operation
 
-- Continuation at 01:12 +0545: full Go tests (20.960 s), vet/build, `npm
-  test` (164 script + 295 TypeScript tests), gates, and diff check are green.
-  The local/test-only TURN documentation now makes no external relay or
-  production claim. The one-off `hami-sfu/` server duplicated room/track/
-  subscriber state from `services/hami-media`; it is being superseded in the
-  active tree while its introducing commit remains in history.
-- Fetched `origin/main` is `e26729d7`, eight commits ahead of the common
-  base. Existing CI there has DIMAG backend failures, a commit-message gate
-  failure, and deployment verification HTTP 402. Local `92193ef5` is the sole
-  commit ahead and has an invalid subject; do not rewrite it. Merge without
-  reset/rebase, run tests again, and attempt direct push only after resolving
-  merge conflicts. Preserve any branch-protection failure.
+- 01:25 +0545: merged fetched `origin/main` (`e26729d7`) into `main` without
+  rewriting history; merge commit is `165426c`. The remote history is now
+  included. The local `hami-sfu/` duplicate was removed from the active tree;
+  its introducing commit remains reachable in history.
+- Post-merge validation: `go test ./... -count=1` passed (20.787 s),
+  `go vet ./...` and `go build ./...` passed. `npm test` passed 164 script
+  and 295 TypeScript tests; `npm run gates:report` and `npm run gates` were
+  GREEN. `PYTHONPATH=backend python3 backend/tests/test_dimag_worker.py`
+  passed 16/16 with the local trace corpus. No live-room, load, Docker, or
+  capacity run was performed.
+- Remote `origin/main` CI on `e26729d7` remains red: 13 DIMAG worker tests
+  require trace/registry files not present in the hosted checkout; its
+  commit-message check rejected `e26729d7`, and independent deploy
+  verification returned HTTP 402. The standalone worker suite passed locally
+  with the Mac corpus. Local `python3` is 3.9.6, so pytest import of Python
+  3.10+ union syntax is not a valid local substitute. Existing local commit
+  `92193ef5` also has an invalid subject; do not rewrite either commit.
+- Direct push to `main` is still pending. Attempt only a normal, non-force
+  push; if branch protection or the known checks reject it, retain the exact
+  failure and do not bypass the gate.
 
 - The one amended 10-publisher × 500-viewer local run stopped at pressure
   level 2 while pacing viewer `hami-sfu-viewer-2801`. Free swap was
@@ -42,20 +50,15 @@
   direct media-peer optimization; LiveKit #726 says no universal consumer
   count applies across workloads; Go context documentation explains parent
   cancellation propagation. No code from external projects was copied.
-- `origin/main` is `e26729d7`, 8 commits ahead of this local `main`. Its latest
-  CI has 13 unrelated DIMAG backend-test failures (1,399 passed, 2 skipped),
-  a commit-message gate failure on `e26729d7`, and independent deploy
-  verification blocked by HTTP 402. These are recorded, not repaired or
-  bypassed here.
-- Local `main` is `92193ef5b4e6170fecae8426949784b69949e1c0`, 1 commit ahead
-  and 8 behind `origin/main`, with pre-existing staged/unstaged changes. The
-  exact-head CI is not verified. No commit or push was made.
+- The previous 10×500 TEST attempt remains aborted at viewer 2,801 by the
+  host-pressure guard; it produced no completed capacity or packet-loss
+  result. Do not retry under this task.
 
 ## Next resumable operation
 
-Before syncing, reconcile the local `main` with `origin/main` without rewriting
-history, and preserve the dirty work. Keep the remote CI failures visible.
-After that, use the existing local HLS smoke in
+Attempt the direct push described above, then verify the remote ref and CI
+result. Keep the known CI failures visible. After synchronization is resolved,
+use the existing local HLS smoke in
 `services/hami-media/INTEGRATION.md` as the next implementation seam: bridge
 one authorized Pion remote video track into local HLS and verify local
 playback/cleanup. Do not add a competing SFU, use Cloud/CDN, or claim audience
