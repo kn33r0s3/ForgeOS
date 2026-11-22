@@ -12,8 +12,10 @@
   ForgeOS CI failed only in 13 DIMAG worker tests whose expected trace/lead
   files are absent in the hosted checkout. The standalone worker suite passed
   16/16 locally with the local corpus. Independent deploy verification failed
-  at production-content fetch with HTTP 402. The follow-up continuity record
-  is being synced on the same `main` branch.
+  at production-content fetch with HTTP 402. Continuity commit `22938c9e`
+  was also pushed to `main`; its workflows were running when the final
+  gate-report refresh began. The refreshed report is included in this final
+  sync.
 - Post-merge validation: `go test ./... -count=1` passed (20.787 s),
   `go vet ./...` and `go build ./...` passed. `npm test` passed 164 script
   and 295 TypeScript tests; `npm run gates:report` and `npm run gates` were
@@ -59,9 +61,9 @@
 
 ## Next resumable operation
 
-Verify the follow-up continuity commit is present on GitHub `main`. Keep the
-known hosted DIMAG-data and production HTTP 402 blockers visible. After
-synchronization is resolved, use the existing local HLS smoke in
+Verify the latest pushed commit is present on GitHub `main`. Keep the known
+hosted DIMAG-data and production HTTP 402 blockers visible. After that, use
+the existing local HLS smoke in
 `services/hami-media/INTEGRATION.md` as the next implementation seam: bridge
 one authorized Pion remote video track into local HLS and verify local
 playback/cleanup. Do not add a competing SFU, use Cloud/CDN, or claim audience

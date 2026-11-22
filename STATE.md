@@ -14,8 +14,9 @@
   corpus) pass. TURN docs limit the claim to local/test evidence.
 - Local Python is 3.9.6; pytest cannot load the Python 3.10+ union annotation
   dependency, so only the documented standalone DIMAG runner is locally
-  verified. The follow-up continuity commit still needs a normal push; do not
-  rewrite history or bypass checks.
+  verified. Continuity commit `22938c9e` is on remote `main`; the final
+  generated gate-report refresh is included in this sync. Do not rewrite
+  history or bypass checks.
 
 - TEST-only 10×500-viewer local stage aborted at viewer
   `hami-sfu-viewer-2801` when pressure reached level 2. Free swap at abort was

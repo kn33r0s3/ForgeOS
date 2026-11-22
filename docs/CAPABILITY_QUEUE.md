@@ -27,16 +27,17 @@
   16/16 with the local corpus. Independent deploy verification failed at
   production-content fetch with HTTP 402. Post-merge Go test/vet/build, npm
   tests (164+295), and gates are green. No history was rewritten; one earlier
-  malformed local subject remains preserved. A normal push of this follow-up
-  continuity update remains.
+  malformed local subject remains preserved. Continuity commit `22938c9e` and
+  the final generated gate-report refresh were synced to remote `main`; verify
+  the final ref after push.
 - **Owner dependency:** this work removes a duplicate implementation choice,
   not an owner action for a real transaction. No verified real transaction
   exists; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains
   **NOT MEASURABLE**. External customer contact, money movement, production
   activation, and public relay exposure remain outside this proof.
-- **Next:** sync this exact verification record with a normal push and confirm
-  the remote ref; leave the hosted-data and production HTTP 402 blockers
-  explicit rather than bypassing either gate.
+- **Next:** proceed to the existing one-stream local HLS/Pion integration seam.
+  Leave the hosted-data and production HTTP 402 blockers explicit rather than
+  bypassing either gate.
 
 ## 2026-11-23 — SFU pressure abort classified; media packet layers corrected
 

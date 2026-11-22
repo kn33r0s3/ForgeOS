@@ -7,8 +7,9 @@
    (164+295), gates, and the standalone DIMAG acceptance script (16/16 with
    local corpus) pass. On `98a9eac2`, secret scan and all non-backend CI jobs
    passed; 13 DIMAG tests fail because hosted trace/lead files are absent, and
-   independent deploy verification gets HTTP 402. Sync this follow-up note
-   with a normal push.
+   independent deploy verification gets HTTP 402. Continuity follow-up
+   `22938c9e` and the final generated gate-report refresh were synced on the
+   same `main` branch.
 
 1. The local 10×500-viewer stage aborted at pressure level 2 while pacing
    viewer `hami-sfu-viewer-2801`; no complete media-stage or packet-loss
