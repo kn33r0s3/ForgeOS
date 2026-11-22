@@ -22,6 +22,8 @@
    verify playback and cleanup, then gather completed held-out traces before
    considering deterministic adaptation or a neural shadow model.
 
+6. **Parallel Hami-wide discovery — D93 source-time and road-operations map.** The official #01–#03 page dates show a consistent one-day publication lag relative to declared cutoffs; #02's PDF body remains unread. Setu is a closed DoR/NDRRMA dispatch application, not a public source and not shown to have served D93. Next: recover the official #02 PDF if its attachment URL surfaces, then seek dated official Gorkha/Chumnubri/NEA/road-project restoration records with exact service/network/segment scope. Keep D93 UNKNOWN and do not create a duplicate dispatch system.
+
 ## Earlier queue — 2026-11-23 — one-stream local HLS bridge after SFU abort
 
 0. GitHub sync succeeded: normal push brought remote `main` to `98a9eac2`
