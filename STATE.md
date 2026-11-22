@@ -4,15 +4,18 @@
   `165426c`; no history was rewritten. The duplicate `hami-sfu/` app was
   removed from the active tree after tracing its sole introduction to
   `92193ef5`; that commit remains in history.
+- Normal push succeeded and `origin/main` matched `98a9eac2`. On that SHA,
+  secret scan, frontend tests, route smoke, build, typecheck, lint, repository
+  guards, and commit-message checks passed. ForgeOS CI has 13 DIMAG worker
+  test failures because host trace/lead files are missing in the hosted
+  checkout; independent deploy verification fails on production HTTP 402.
 - Post-merge Go test/vet/build, npm test (164 script + 295 TypeScript tests),
   gates, and the standalone DIMAG worker acceptance script (16/16 with local
   corpus) pass. TURN docs limit the claim to local/test evidence.
-- The prior GitHub CI at `e26729d7` failed on 13 DIMAG tests whose trace/lead
-  files are absent in the hosted checkout, the invalid commit-message gate,
-  and deploy verification HTTP 402. Local Python is 3.9.6; pytest cannot load
-  the Python 3.10+ union annotation dependency, so only the documented
-  standalone DIMAG runner is locally verified. Normal push remains pending;
-  do not rewrite history or bypass checks.
+- Local Python is 3.9.6; pytest cannot load the Python 3.10+ union annotation
+  dependency, so only the documented standalone DIMAG runner is locally
+  verified. The follow-up continuity commit still needs a normal push; do not
+  rewrite history or bypass checks.
 
 - TEST-only 10×500-viewer local stage aborted at viewer
   `hami-sfu-viewer-2801` when pressure reached level 2. Free swap at abort was

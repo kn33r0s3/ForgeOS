@@ -6,22 +6,25 @@
   rewriting history; merge commit is `165426c`. The remote history is now
   included. The local `hami-sfu/` duplicate was removed from the active tree;
   its introducing commit remains reachable in history.
+- The normal direct push succeeded: GitHub `main` matched `98a9eac2` on fetch.
+  For that SHA, the secret scan passed; frontend tests, route smoke, build,
+  typecheck, lint, repository guards, and commit-message checks passed.
+  ForgeOS CI failed only in 13 DIMAG worker tests whose expected trace/lead
+  files are absent in the hosted checkout. The standalone worker suite passed
+  16/16 locally with the local corpus. Independent deploy verification failed
+  at production-content fetch with HTTP 402. The follow-up continuity record
+  is being synced on the same `main` branch.
 - Post-merge validation: `go test ./... -count=1` passed (20.787 s),
   `go vet ./...` and `go build ./...` passed. `npm test` passed 164 script
   and 295 TypeScript tests; `npm run gates:report` and `npm run gates` were
   GREEN. `PYTHONPATH=backend python3 backend/tests/test_dimag_worker.py`
   passed 16/16 with the local trace corpus. No live-room, load, Docker, or
   capacity run was performed.
-- Remote `origin/main` CI on `e26729d7` remains red: 13 DIMAG worker tests
-  require trace/registry files not present in the hosted checkout; its
-  commit-message check rejected `e26729d7`, and independent deploy
-  verification returned HTTP 402. The standalone worker suite passed locally
-  with the Mac corpus. Local `python3` is 3.9.6, so pytest import of Python
-  3.10+ union syntax is not a valid local substitute. Existing local commit
-  `92193ef5` also has an invalid subject; do not rewrite either commit.
-- Direct push to `main` is still pending. Attempt only a normal, non-force
-  push; if branch protection or the known checks reject it, retain the exact
-  failure and do not bypass the gate.
+- The earlier local commit `92193ef5` has a malformed subject, but the
+  commit-message check passed for pushed SHA `98a9eac2`; do not rewrite history.
+- Local `python3` is 3.9.6, so pytest import of Python 3.10+ union syntax is
+  not a valid local substitute. The documented standalone DIMAG runner is the
+  locally verified path.
 
 - The one amended 10-publisher × 500-viewer local run stopped at pressure
   level 2 while pacing viewer `hami-sfu-viewer-2801`. Free swap was
@@ -56,9 +59,9 @@
 
 ## Next resumable operation
 
-Attempt the direct push described above, then verify the remote ref and CI
-result. Keep the known CI failures visible. After synchronization is resolved,
-use the existing local HLS smoke in
+Verify the follow-up continuity commit is present on GitHub `main`. Keep the
+known hosted DIMAG-data and production HTTP 402 blockers visible. After
+synchronization is resolved, use the existing local HLS smoke in
 `services/hami-media/INTEGRATION.md` as the next implementation seam: bridge
 one authorized Pion remote video track into local HLS and verify local
 playback/cleanup. Do not add a competing SFU, use Cloud/CDN, or claim audience

@@ -1,12 +1,14 @@
 ## Current queue — 2026-11-23 — one-stream local HLS bridge after SFU abort
 
-0. GitHub synchronization is locally reconciled: fetched `origin/main`
-   `e26729d7` is included in merge commit `165426c`; no history was rewritten.
-   The duplicate `hami-sfu/` implementation is removed from the active tree,
-   with its introducing commit preserved. Post-merge Go tests/vet/build,
-   npm tests (164+295), gates, and the DIMAG standalone acceptance script
-   (16/16 with local corpus) pass. Attempt only a normal direct push; retain
-   any branch-protection/CI failure.
+0. GitHub sync succeeded: normal push brought remote `main` to `98a9eac2`
+   after merge commit `165426c`; no history was rewritten. The duplicate
+   `hami-sfu/` implementation is removed from the active tree, with its
+   introducing commit preserved. Post-merge Go tests/vet/build, npm tests
+   (164+295), gates, and the standalone DIMAG acceptance script (16/16 with
+   local corpus) pass. On `98a9eac2`, secret scan and all non-backend CI jobs
+   passed; 13 DIMAG tests fail because hosted trace/lead files are absent, and
+   independent deploy verification gets HTTP 402. Sync this follow-up note
+   with a normal push.
 
 1. The local 10×500-viewer stage aborted at pressure level 2 while pacing
    viewer `hami-sfu-viewer-2801`; no complete media-stage or packet-loss
@@ -28,11 +30,11 @@
 4. Keep WebRTC load stopped until pressure is NORMAL and free swap is at least
    2,048 MiB. A neural estimator remains unready: this single censored run
    supplies no completed loss labels or held-out traces.
-5. The previous `origin/main` CI on `e26729d7` had 13 DIMAG worker failures
-   from absent hosted trace/registry files (1,399 passed, 2 skipped), a
-   commit-message gate failure, and deploy verification HTTP 402. One earlier
-   local commit (`92193ef5`) also has a malformed subject. Do not rewrite
-   history or bypass checks; verify the result after the normal push attempt.
+5. On `98a9eac2`, remote backend CI had 13 DIMAG worker failures from absent
+   hosted trace/registry files (1,399 passed, 2 skipped); independent deploy
+   verification returned HTTP 402. The commit-message check passed. One
+   historical local commit (`92193ef5`) is malformed but remains unchanged.
+   Do not bypass checks.
 
 ## Earlier queue — 2026-11-22 05:07 +0545 — native Hami Media and D109/D110
 

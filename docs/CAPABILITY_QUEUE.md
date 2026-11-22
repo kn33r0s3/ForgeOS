@@ -18,23 +18,25 @@
   164 script tests and 295 TypeScript tests; `npm run gates:report` and
   `npm run gates` reported GREEN; `git diff --check` passed. No Docker,
   live-room, load, or capacity run was performed.
-- **Sync state/blocker:** `origin/main` (`e26729d7`) is now included on local
-  `main` via merge commit `165426c`; no history was rewritten. Post-merge Go
-  test/vet/build, npm tests (164+295), and gates are green. The standalone
-  DIMAG worker acceptance script passed 16/16 with local trace data. Remote
-  CI at `e26729d7` still reports 13 worker-test failures because the required
-  trace/registry files are absent from the hosted checkout (1,399 passed,
-  2 skipped), a commit-message failure, and deploy verification HTTP 402.
-  The earlier local commit `92193ef5` also has an invalid subject. Do not
-  rewrite history or bypass these checks; a normal push remains pending.
+- **Sync and hosted verification:** normal push succeeded; `origin/main`
+  matched `98a9eac2` after merge commit `165426c`. On that SHA, secret scan,
+  frontend tests, route smoke, build, typecheck, lint, repository guards,
+  and commit-message checks passed. ForgeOS CI failed on 13 DIMAG worker
+  tests because their trace/lead files are not present in the hosted
+  checkout (1,399 passed, 2 skipped). The standalone worker script passed
+  16/16 with the local corpus. Independent deploy verification failed at
+  production-content fetch with HTTP 402. Post-merge Go test/vet/build, npm
+  tests (164+295), and gates are green. No history was rewritten; one earlier
+  malformed local subject remains preserved. A normal push of this follow-up
+  continuity update remains.
 - **Owner dependency:** this work removes a duplicate implementation choice,
   not an owner action for a real transaction. No verified real transaction
   exists; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains
   **NOT MEASURABLE**. External customer contact, money movement, production
   activation, and public relay exposure remain outside this proof.
-- **Next:** attempt the owner-requested direct sync with a normal push, then
-  verify the remote ref and resulting CI. If branch protection or CI rejects
-  it, retain the exact failure rather than bypassing a gate.
+- **Next:** sync this exact verification record with a normal push and confirm
+  the remote ref; leave the hosted-data and production HTTP 402 blockers
+  explicit rather than bypassing either gate.
 
 ## 2026-11-23 — SFU pressure abort classified; media packet layers corrected
 
