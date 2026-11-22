@@ -1,4 +1,4 @@
-## 2026-11-23 01:46 +0545 — media evidence reconciliation and DIMAG CI truth
+## 2026-11-23 01:55 +0545 (20:10Z) — media evidence reconciliation and DIMAG CI truth
 
 - **Existing seams/history:** the canonical media path is still
   `services/hami-media/main.go`; the HLS smoke in
@@ -22,7 +22,7 @@
   NORMAL-pressure and free-swap preconditions pass.
 - **CI evidence and false-green defect:** exact-head ForgeOS CI
   `45062120334` on `e1d3e4802dffce4ac6bd85feca69b39259647360` failed in DIMAG
-  worker tests because the hosted checkout lacks local trace/lead inputs.
+  worker tests because the hosted checkout lacked local trace/lead inputs.
   `backend/tests/test_dimag_worker.py` now generates explicitly TEST-only
   trace/dataset inputs by default, keeps the private corpus opt-in via both
   environment variables, and raises when an acceptance assertion is false
@@ -31,21 +31,20 @@
   16/16; standalone synthetic and explicit local-corpus runs each passed
   16/16; a forced-false check mutation raised `AssertionError`; `npm test`
   passed 164 script + 295 TypeScript tests; `npm run gates` reported GREEN;
-  `git diff --check` passed. The old exact-head workflow remains historical;
-  rerun CI on the updated commit after sync.
+  `git diff --check` passed. Updated commit
+  `0009591e7edfa82802da858c71d2927e6aca6931` then passed all 9 jobs in exact
+  head ForgeOS CI `45064618498`; secret scan `45064618611` passed.
 - **Remaining owner/platform dependency:** tests no longer need private
-  corpus files in hosted CI, but the independent deploy verifier returned
-  HTTP 402 at production-content fetch. No account change or payment is
-  authorized by this evidence.
+  corpus files in hosted CI. Independent deploy verifier `45064618442`
+  failed at production-content fetch with HTTP 402; no account change or
+  payment is authorized by this evidence.
 - **Autonomy/economic measure:** this increment removes no owner action from a
   real transaction. No verified real transaction exists, so
   `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
-- **Next removable dependency:** rerun hosted CI on the updated commit to
-  verify the hermetic fixture closes the missing-input failures; resolve the
-  HTTP 402 only through the authorized platform path. For media, first
-  implement and verify one local Pion-to-HLS track end to end; only then
-  collect held-out traces for a deterministic baseline and shadow-model
-  experiment.
+- **Next removable dependency:** resolve the HTTP 402 only through the
+  authorized platform path. For media, first implement and verify one local
+  Pion-to-HLS track end to end; only then collect held-out traces for a
+  deterministic baseline and shadow-model experiment.
 
 ## 2026-11-23 01:12 +0545 — SFU corrections validated; duplicate prototype superseded
 

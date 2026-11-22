@@ -1,21 +1,20 @@
-# Active handoff — 2026-11-23 01:46 +0545 — media evidence and CI false-green correction
+# Active handoff — 2026-11-23 01:55 +0545 — media evidence and CI correction verified
 
 ## Current operation
 
-- `main` is at `e1d3e4802dffce4ac6bd85feca69b39259647360`, tracking
-  `origin/main`. This operation changed the DIMAG acceptance runner, Hami
-  Media integration notes, architecture evidence, and continuity records.
-  The owner requested GitHub sync; commit/push after the final diff review.
-- Exact-head GitHub CI `45062120334` failed in DIMAG acceptance tests because
-  required trace/lead files are not in the hosted checkout. The acceptance
+- `main` is at `0009591e7edfa82802da858c71d2927e6aca6931`, tracking
+  `origin/main`. The DIMAG acceptance fix, Hami Media integration notes,
+  architecture evidence, and continuity records were committed and pushed.
+- Prior exact-head GitHub CI `45062120334` failed in DIMAG acceptance tests
+  because required trace/lead files are not in the hosted checkout. The acceptance
   runner now defaults to explicitly TEST-only synthetic fixtures, allows the
   private corpus only by setting both path variables, and raises on failed
   `check(...)` assertions instead of returning booleans pytest ignores.
   Python 3.11.16 / pytest 9.0.3 passed targeted pytest 16/16; standalone
   synthetic and explicit local-corpus runs each passed 16/16; a forced-false
-  check mutation raised `AssertionError`. Hosted CI still needs rerunning on
-  the updated commit.
-- Independent deploy verification `45062120274` failed at production-content
+  check mutation raised `AssertionError`. Exact-head CI `45064618498` passed
+  all 9 jobs, including backend tests; secret scan `45064618611` passed.
+- Independent deploy verification `45064618442` failed at production-content
   fetch with HTTP 402. No payment, account change, or bypass is appropriate.
 - The historic 20×250 report (4,691 pass, 309 p99 failures) has no linked raw
   artifact/source SHA in the active repository. The later local 10×500 TEST
@@ -35,11 +34,10 @@
 
 ## Next resumable operation
 
-Commit and push the verified changes on `main`, then inspect exact-head CI and
-deploy verification. Keep the HTTP 402 as a blocked external platform issue.
-The next media capability seam is the single local Pion-to-HLS track bridge,
-not a new SFU or neural subsystem; do not start a media run while pressure is
-2 and swap is below the established floor.
+Continue with the existing local Pion-to-HLS track bridge, not a new SFU or
+neural subsystem. Keep the HTTP 402 as a blocked external platform issue; do
+not start a media run while pressure is 2 and swap is below the established
+floor.
 
 # Active handoff — 2026-11-23 — SFU pressure abort and cancellation classification
 

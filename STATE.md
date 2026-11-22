@@ -1,4 +1,27 @@
-## Current continuation — 2026-11-23 — SFU pressure abort, no capacity result
+## Current continuation — 2026-11-23 20:10Z — DIMAG CI correction verified; media capacity still blocked
+
+- `main` is `0009591e7edfa82802da858c71d2927e6aca6931`, tracking
+  `origin/main`. Exact-head ForgeOS CI `45064618498` passed all 9 jobs,
+  including backend tests; secret scan `45064618611` passed. The previous
+  exact-head run `45062120334` had missing DIMAG inputs and false-green
+  boolean returns. The test runner now uses explicitly TEST-only synthetic
+  inputs by default, requires both environment overrides for the private
+  corpus, and raises on failed assertions. Targeted pytest, standalone
+  synthetic/local-corpus runs, and the false-check mutation all passed their
+  expected outcomes.
+- Independent deploy verification `45064618442` remains blocked: production
+  content fetch returned HTTP 402. No account/payment change or bypass.
+- Historic 20×250 results are unlinked historical report evidence; the later
+  local 10×500 TEST run aborted at viewer 2,801 under pressure 2 and yielded
+  no complete measurement or loss result. Capacity remains NOT MEASURABLE.
+- After repository tests at 01:50 +0545, pressure was 2 and free swap was
+  378.44 MiB. Keep the NORMAL-pressure and 2,048 MiB gates; no media/load run.
+- `npm test` passed 164 script + 295 TypeScript tests; `npm run gates` is
+  GREEN. The generated `docs/GATES.md` timestamp was refreshed. The HLS
+  smoke remains synthetic FFmpeg, not Pion ingest; no neural adaptation is
+  justified without completed held-out traces.
+
+## Historical continuation — 2026-11-23 — SFU pressure abort, no capacity result
 
 - 01:25 +0545: `main` includes fetched `origin/main` through merge commit
   `165426c`; no history was rewritten. The duplicate `hami-sfu/` app was
@@ -2517,31 +2540,3 @@ FOUND, NOT FIXED (need a decision / another agent — see report):
 
 BLOCKER — commit + push could not be done by this agent:
 - The Hami loop (launchd) cannot read ~/Downloads at all (macOS TCC): `git status` fails 'Unable to read current working directory: Operation not permitted', `--git-dir` fails 'not a git repository', `gofmt -l .../*.go` fails 'no such file', `shasum`/`ls` on adapter files fail 'Operation not permitted'. So NO git or go-vet step can run via the loop queue for repos under ~/Downloads. Commits must run in a TCC-authorized context (VS Code terminal / user session). Staged files for commit (ForgeOS only, [agent][task][gates] prefix): hami-loop.sh, docs/HAMI_MODEL.md, backend/app/config.py, backend/app/api/hami_chat.py, scripts/hami_model_gateway.py, STATE.md (this entry). hami-nepali-sft files (continuous_upgrade.py, sft-clean-retrain-config.yaml) are NOT in a git repo — see F6. Do NOT commit Copilot's in-progress main.go edits; main.go was being edited by Copilot during this hunt (390,275 B, 11,699 lines, packet-cache counters + goroutine-profile logging added; the new rememberPacket counter accounting was reviewed and balances).
-
-## Current continuation — 2026-11-23 01:46 +0545 — CI false-green and media evidence
-
-- `main` is `e1d3e4802dffce4ac6bd85feca69b39259647360`, tracking
-  `origin/main`. Exact-head ForgeOS CI `45062120334` failed on DIMAG tests
-  because hosted checkout inputs were absent; pytest also ignored boolean
-  results. The runner now defaults to synthetic TEST-only inputs, permits the
-  private corpus only through explicit paired environment paths, and raises
-  on false checks. Python 3.11.16 / pytest 9.0.3: targeted pytest 16/16;
-  standalone synthetic and private-corpus runs 16/16 each; forced-false
-  mutation caught. Hosted CI must be rerun on the updated commit.
-- Independent deploy verification `45062120274` failed production-content
-  fetch with HTTP 402. No payment, account change, or bypass.
-- The historic 20×250 report has no linked raw artifact/source SHA in this
-  repository. The later local 10×500 TEST run aborted at viewer 2,801 under
-  pressure level 2 and produced no complete measurement/loss output; do not
-  combine the runs or claim capacity.
-- Fresh host check after repository tests: pressure 2, free swap 378.44 MiB.
-  Keep the NORMAL-pressure and 2,048 MiB gates; no media/load run was started.
-- `npm test` passed 164 script + 295 TypeScript tests; `npm run gates` is
-  GREEN. `docs/GATES.md` received its generated timestamp refresh. No Go,
-  Docker, live-room, or load test was run.
-- The existing HLS smoke is synthetic FFmpeg and not Pion ingest. Existing
-  integration notes now state the RFC 8216 playlist/segment and RFC 8853
-  distinct-encoding boundaries. No neural estimator is justified without
-  completed held-out traces.
-
-## Earlier continuation — 2026-11-23 — SFU pressure abort, no capacity result
