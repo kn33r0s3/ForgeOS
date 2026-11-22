@@ -38,6 +38,14 @@ Chat is answered by exactly one serving path:
       (verified by re-hashing `adapters.safetensors`, 21 Nov 2026; the same
       sha is recorded as the cycle-1 baseline adapter sha in
       `hami-nepali-sft/upgrade-history.jsonl`)
+      Re-verified independently by the Muse self-watch, 22 Nov 2026 10:24
+      +0545: sha256 of the on-disk file
+      `.../hami-nepali-sft/adapters/qwen3-4b-nepali-sft-clean-5000/adapters.safetensors`
+      (29,384,266 bytes) computed via the file channel (Full Disk Access)
+      + `sha256sum` = `a309e2290dd5cf098564fdb2557b3a3626dca9013063b52a2b345ea844001385`,
+      exact match. See `/tmp/hami-t5-sha-verified.md`. Note: probe 184's 21 Nov
+      `shasum` failed with TCC "Operation not permitted" from its shell —
+      the adapter file itself was never the problem; the T5 sha leg PASSES.
       recipe `sft-clean-retrain-config.yaml`
       (LoRA rank 8, scale 20, 16 layers, 2,500 iters, lr 1e-05,
       `mask_prompt: true`, seed 23)

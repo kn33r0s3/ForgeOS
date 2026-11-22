@@ -80,6 +80,7 @@ const (
 	maxNACKPairsPerRTCPPacket = math.MaxUint8 - 2
 	nackQueueSize             = 64
 	defaultNACKMaxQueueAge    = 500 * time.Millisecond
+	sfuProcessNACKBudget      = 2048
 	// Legacy name retained for the configurable max age of queued RTP
 	// media. The separate NACK feedback queue has no age limit here.
 	nackFeedbackMaxQueueAge = 10 * time.Second
@@ -5024,6 +5025,7 @@ type sfuSubscription struct {
 	key         sfuTrackKey
 	source      *sfuPublishedTrack
 	egressShard *sfuEgressShard
+	router      *sfuRouter
 	h264Video   bool
 	viewerPeer  *webrtc.PeerConnection
 	downTrack   *webrtc.TrackLocalStaticRTP
@@ -5075,6 +5077,8 @@ type sfuRouter struct {
 	rtpQueueWaitNanos              atomic.Uint64
 	rtpQueueWaitSamples            atomic.Uint64
 	rtpQueueWaitBuckets            [rtpForwardLatencyBucketCount]atomic.Uint64
+	nackPending                    atomic.Uint64
+	nackProcessDropped             atomic.Uint64
 }
 
 type queuedNACK struct {
@@ -5158,6 +5162,10 @@ func (shard *sfuEgressShard) enqueueNACK(subscription *sfuSubscription, feedback
 	if subscription == nil || feedback == nil {
 		return
 	}
+	if !shard.router.acquireNACKBudget() {
+		subscription.recordNACKDroppedQueueFull()
+		return
+	}
 	job := sfuEgressNACKJob{
 		subscription: subscription,
 		feedback:     feedback,
@@ -5169,12 +5177,14 @@ func (shard *sfuEgressShard) enqueueNACK(subscription *sfuSubscription, feedback
 	default:
 		select {
 		case <-shard.nackQueue:
+			shard.router.releaseNACKBudget()
 		default:
 		}
 		select {
 		case shard.nackQueue <- job:
 		default:
 			subscription.recordNACKDroppedStale()
+			shard.router.releaseNACKBudget()
 		}
 	}
 }
@@ -5198,6 +5208,7 @@ func (shard *sfuEgressShard) run() {
 				})
 			}
 		case job := <-shard.nackQueue:
+			shard.router.releaseNACKBudget()
 			if time.Since(job.enqueuedAt) > nackFeedbackMaxQueueAge {
 				job.subscription.recordNACKDroppedStale()
 				continue
@@ -5633,6 +5644,7 @@ func (r *sfuRouter) subscribe(viewerID string, key sfuTrackKey) error {
 		viewerID:        viewerID,
 		key:             key,
 		source:          source,
+		router:          r,
 		h264Video:       source.remote.Codec().MimeType == webrtc.MimeTypeH264,
 		viewerPeer:      viewer.peer,
 		downTrack:       downTrack,
@@ -7900,6 +7912,8 @@ func (r *sfuRouter) writePrometheusMetrics(w io.Writer) error {
 	fmt.Fprintf(&output, "# TYPE hami_sfu_nack_dropped_queue_full_total counter\nhami_sfu_nack_dropped_queue_full_total %d\n", feedback.NACKDroppedQueueFull)
 	fmt.Fprintf(&output, "# TYPE hami_sfu_nack_dropped_stale_total counter\nhami_sfu_nack_dropped_stale_total %d\n", feedback.NACKDroppedStale)
 	fmt.Fprintf(&output, "# TYPE hami_sfu_nack_queue_depth gauge\nhami_sfu_nack_queue_depth %d\n", feedback.NACKQueueDepth)
+	fmt.Fprintf(&output, "# TYPE hami_sfu_nack_process_pending gauge\nhami_sfu_nack_process_pending %d\n", r.nackPending.Load())
+	fmt.Fprintf(&output, "# TYPE hami_sfu_nack_process_dropped_total counter\nhami_sfu_nack_process_dropped_total %d\n", r.nackProcessDropped.Load())
 	fmt.Fprintf(&output, "# TYPE hami_sfu_pli_forwarded_total counter\nhami_sfu_pli_forwarded_total %d\n", feedback.PLIForwarded)
 	fmt.Fprintf(&output, "# TYPE hami_sfu_fir_forwarded_total counter\nhami_sfu_fir_forwarded_total %d\n", feedback.FIRForwarded)
 	fmt.Fprintf(&output, "# TYPE hami_process_cpu_seconds_total counter\nhami_process_cpu_seconds_total %g\n", cpuSeconds)
@@ -8259,6 +8273,31 @@ func (s *sfuSubscription) recordNACKDroppedStale() {
 	s.feedback.NACKDroppedStale++
 }
 
+func (r *sfuRouter) acquireNACKBudget() bool {
+	for {
+		current := r.nackPending.Load()
+		if current >= sfuProcessNACKBudget {
+			r.nackProcessDropped.Add(1)
+			return false
+		}
+		if r.nackPending.CompareAndSwap(current, current+1) {
+			return true
+		}
+	}
+}
+
+func (r *sfuRouter) releaseNACKBudget() {
+	for {
+		current := r.nackPending.Load()
+		if current == 0 {
+			return
+		}
+		if r.nackPending.CompareAndSwap(current, current-1) {
+			return
+		}
+	}
+}
+
 // enqueueNACK hands a NACK to the retransmission worker without ever
 // blocking the caller. Call only while holding s.mu (read or write):
 // stop() closes the queue under mu, so a send here cannot race the
@@ -8266,6 +8305,10 @@ func (s *sfuSubscription) recordNACKDroppedStale() {
 // counted, so the newest loss information is kept.
 func (s *sfuSubscription) enqueueNACK(nack *rtcp.TransportLayerNack) {
 	s.recordNACKReceived()
+	if s.router != nil && !s.router.acquireNACKBudget() {
+		s.recordNACKDroppedQueueFull()
+		return
+	}
 	entry := queuedNACK{feedback: nack, enqueuedAt: time.Now()}
 	select {
 	case s.nackQueue <- entry:
@@ -8274,6 +8317,9 @@ func (s *sfuSubscription) enqueueNACK(nack *rtcp.TransportLayerNack) {
 		select {
 		case <-s.nackQueue:
 			s.recordNACKDroppedQueueFull()
+			if s.router != nil {
+				s.router.releaseNACKBudget()
+			}
 		default:
 		}
 		select {
@@ -8281,6 +8327,9 @@ func (s *sfuSubscription) enqueueNACK(nack *rtcp.TransportLayerNack) {
 			s.recordNACKEnqueued()
 		default:
 			s.recordNACKDroppedQueueFull()
+			if s.router != nil {
+				s.router.releaseNACKBudget()
+			}
 		}
 	}
 }
@@ -8502,6 +8551,9 @@ func (r *sfuRouter) nackWorker(subscription *sfuSubscription) {
 			if !ok {
 				nackQueue = nil
 				continue
+			}
+			if subscription.router != nil {
+				subscription.router.releaseNACKBudget()
 			}
 			if !subscription.isActive() {
 				return

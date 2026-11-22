@@ -418,6 +418,32 @@ func TestLocalSFUCascadeRoutesRTCPAcrossWorkers(t *testing.T) {
 
 const webrtcConnected = "connected"
 
+func TestProcessNACKBudgetIsBoundedAndReleases(t *testing.T) {
+	router := &sfuRouter{}
+	acquired := 0
+	for acquired < sfuProcessNACKBudget {
+		if !router.acquireNACKBudget() {
+			t.Fatalf("budget rejected at %d of %d", acquired, sfuProcessNACKBudget)
+		}
+		acquired++
+	}
+	if router.acquireNACKBudget() {
+		t.Fatal("process NACK budget admitted work beyond its limit")
+	}
+	if got := router.nackPending.Load(); got != sfuProcessNACKBudget {
+		t.Fatalf("pending NACKs = %d, want %d", got, sfuProcessNACKBudget)
+	}
+	if got := router.nackProcessDropped.Load(); got == 0 {
+		t.Fatal("process NACK overflow did not record a drop")
+	}
+	for router.nackPending.Load() > 0 {
+		router.releaseNACKBudget()
+	}
+	if got := router.nackPending.Load(); got != 0 {
+		t.Fatalf("pending NACKs after release = %d, want 0", got)
+	}
+}
+
 func TestEgressShardDistributionIsStableAndBounded(t *testing.T) {
 	for _, count := range []int{1, 4, 32} {
 		indexes := make([]int, 0, 5000)
@@ -445,6 +471,7 @@ func TestEgressShardDistributionIsStableAndBounded(t *testing.T) {
 	shard := &sfuEgressShard{
 		subscriptions: make(map[string]*sfuSubscription),
 		queue:         make(chan sfuEgressJob, sfuEgressShardQueueSize),
+		router:        &sfuRouter{},
 		closed:        make(chan struct{}),
 	}
 	packet := &rtp.Packet{Header: rtp.Header{SequenceNumber: 42, Timestamp: 99}}

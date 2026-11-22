@@ -49,6 +49,13 @@ Reduce goroutines, queue count, and global locks before adding capacity:
 - PLI/FIR upstream writes are coalesced by publisher/layer.
 - NACK work has both per-viewer and process-wide budgets.
 
+As of 2026-11-22, the implementation adds a process-wide NACK budget of
+2,048 pending entries. The router refuses additional recovery jobs once the
+budget is full and exports `hami_sfu_nack_process_pending` plus
+`hami_sfu_nack_process_dropped_total`. This is a bounded-memory safety
+mechanism; it does not change PLI/FIR semantics or per-viewer exact feedback
+counts.
+
 ## First proof ladder
 
 The initial proof sequence is:

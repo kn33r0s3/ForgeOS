@@ -1,3 +1,61 @@
+## 2026-11-22 +0545 — pilot corpus divergence fixed; 20/20 verified
+
+- **Existing seam and cause:** `Downloads/hami-model/build-corpus.py` is the
+  existing builder. `PILOT_CHUNK_ROW_RANGES` had incorrect boundaries for
+  012–018: it assigned 97k rows to several chunks and only 85k to 018, while
+  the pinned manifest uses 94k–96k rows per chunk. The parquet SHA is
+  `c13a39db0b250277f90f8a7cc9e24340c038cacff833701d2297992c3616900b`; the
+  tokenizer SHA remains
+  `ef348a7fc0ead0e6a5a922878c5c28598526d2ca8b5869ebbbcbc5fe690e76be`.
+- **Change:** corrected only ranges 012–018. Added selected chunk numbers to
+  the same rebuild function/CLI so those seven could be regenerated without
+  moving or rewriting the other thirteen chunks. No second builder or corpus
+  representation was added.
+- **Rebuild evidence:** chunks 012–018 now have the pinned row ranges, byte
+  sizes, and SHA-256 values: 012 `a60d023d090ccf2806a1793c119f7aba37b1251d1320745c65df081d2f8854c6`
+  (281,181,410 B); 013 `497e0d9352f5ff848ed8fcd7a7184ea4457a7ceffd67d4b6315317ef7ff2870d`
+  (281,353,013 B); 014 `43fb6f7e5ae6da72b39da0bc2b4508e6583e110875d94ab69151fe94c74f51f0`
+  (279,600,077 B); 015 `5d956d6a36beeea9f8ed39c183232b656e1004c9880b6542587d657b70fac73c`
+  (279,378,553 B); 016 `4a73380bfcf90c78715e7b80c96f6ba4085c93926d06ecf77670b65324c58b9a`
+  (279,412,785 B); 017 `1b7c491a5a1c7ea4a37e972b18edec0f25e50546ab25ee8685062642f072ef75`
+  (280,007,428 B); 018 `3ad6cd5db9e8b70a8423364f2fabdc5c05c97ce8c95c0f32eb22f63e9ec6c1f5`
+  (279,591,817 B). Each of the seven also passed independent record/token
+  recount and source-boundary retokenization.
+- **Full verification:** all 20 chunks pass SHA-256 and exact byte-size checks;
+  1,871,000 records, 1,006,053,031 raw IDs, zero IDs outside `[0, 7999]`,
+  contiguous row ranges, and all 40 first/last row boundary checks pass.
+  Chunk 006's old order literal was malformed; re-tokenizing its 93,000
+  unchanged source rows produced `2e0fb3d665b15d8dba1d9b130f63c420b1f0c65539afb32be7f57de44b73e071`,
+  which matches its file. A first post-rebuild manual verifier also mistyped
+  expected digests for 008 and 013; the final verifier parsed the order files
+  directly. **Rule:** do not hand-transcribe long digests; parse the reference
+  manifest and independently hash the artifacts.
+- **Validation:** `py_compile` passed; `python -m unittest
+  test_corpus_pipeline` passed 9 tests; `npm test` passed 164 script and 295
+  TypeScript tests; `npm run gates` reported GREEN; `git diff --check` passed.
+- **Trainer increment:** modified the existing `Downloads/hami-model/
+  train-own-model.py` seam with environment-configurable 100M dimensions,
+  tokenizer and pilot-corpus paths, compact raw-ID loading, and document-safe
+  512-token windows with masked final tails. The corpus is pinned to all 20
+  chunk filenames and to the verified record/token totals; no holdout metric
+  is claimed for this corpus. The 250-step local MPS smoke passed: 91,593,216
+  parameters, step-1 loss 9.2063, final loss 7.1760, and measured 1,643.9
+  training tokens/s. Evidence is at `~/hami/pilot-smoke-100m/own-base/` and
+  `~/hami/logs/pilot-smoke-100m.log`.
+- **Full run:** one corpus pass is 364,635 steps. PID 9933 was launched with
+  `HAMI_MODEL_STEPS=364635`; the live log now records step 1 at loss 9.2063
+  and the process remains active.
+  At the smoke rate, one pass is estimated at 170.0 h (7.08 days), excluding
+  the 134.1 s corpus-index startup. Log:
+  `~/hami/logs/pilot-train-100m.log`; run output:
+  `~/hami/pilot-train-100m/own-base/`. The chunk-013 ledger SHA was parsed
+  and independently matched to the local file at 281,353,013 bytes.
+- **Scope/next:** monitor the launched run and verify its saved result before
+  claiming completion. The trainer directory has no Git repository or remote,
+  so step-8 commit/push is blocked; do not copy it into another repository.
+  This local work removes no owner action for a real transaction, so
+  `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+
 ## 2026-11-22 +0545 — native media path made exclusive
 
 - **Existing seam/history:** `services/hami-media/main.go` is the canonical

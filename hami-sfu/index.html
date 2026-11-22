@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hami SFU</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 1.5rem; max-width: 52rem; }
+  video { width: 100%; max-width: 480px; background: #000; border-radius: 6px; }
+  fieldset { margin: 1rem 0; }
+  input { padding: .3rem; }
+  pre { background: #f4f4f4; padding: .6rem; min-height: 2rem; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<h1>Hami SFU</h1>
+<p>
+  <label>Room <input id="room" value="demo"></label>
+  <label>Token <input id="token" type="password" placeholder="only if the server runs with -token"></label>
+</p>
+
+<fieldset>
+  <legend>Publish camera and microphone</legend>
+  <video id="local" autoplay muted playsinline></video><br>
+  <button id="publish">Start publishing</button>
+</fieldset>
+
+<fieldset>
+  <legend>Watch the room</legend>
+  <video id="remote" autoplay playsinline></video><br>
+  <button id="watch">Watch</button>
+</fieldset>
+
+<pre id="log"></pre>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const log = (msg) => { $('log').textContent += msg + '\n'; };
+const roomPath = () => encodeURIComponent($('room').value.trim());
+const headers = (type) => {
+  const h = { 'Authorization': 'Bearer ' + $('token').value };
+  if (type) h['Content-Type'] = type;
+  return h;
+};
+
+function waitForIce(pc) {
+  return new Promise((resolve) => {
+    if (pc.iceGatheringState === 'complete') return resolve();
+    const done = () => {
+      if (pc.iceGatheringState === 'complete') {
+        pc.removeEventListener('icegatheringstatechange', done);
+        resolve();
+      }
+    };
+    pc.addEventListener('icegatheringstatechange', done);
+    setTimeout(resolve, 5000);
+  });
+}
+
+$('publish').onclick = async () => {
+  const btn = $('publish');
+  btn.disabled = true;
+  let pc = null;
+  try {
+    if (!navigator.mediaDevices) throw new Error('camera and microphone need HTTPS or localhost');
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    $('local').srcObject = stream;
+    pc = new RTCPeerConnection();
+    stream.getTracks().forEach((t) => pc.addTrack(t, stream));
+    await pc.setLocalDescription(await pc.createOffer());
+    await waitForIce(pc);
+    const res = await fetch(`/api/publish/${roomPath()}`, {
+      method: 'POST',
+      headers: headers('application/sdp'),
+      body: pc.localDescription.sdp,
+    });
+    if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
+    await pc.setRemoteDescription({ type: 'answer', sdp: await res.text() });
+    log(`publishing to room "${$('room').value}" (reload the page to start over)`);
+  } catch (e) {
+    if (pc) pc.close();
+    log('publish failed: ' + e.message);
+    btn.disabled = false;
+  }
+};
+
+$('watch').onclick = async () => {
+  const btn = $('watch');
+  btn.disabled = true;
+  let pc = null;
+  try {
+    const listRes = await fetch(`/api/rooms/${roomPath()}`, { headers: headers() });
+    if (!listRes.ok) throw new Error(`${listRes.status} ${await listRes.text()}`);
+    const tracks = await listRes.json();
+    if (tracks.length === 0) throw new Error('room has no tracks yet; publish first');
+    pc = new RTCPeerConnection();
+    const remote = new MediaStream();
+    pc.ontrack = (e) => {
+      remote.addTrack(e.track);
+      $('remote').srcObject = remote;
+    };
+    for (const t of tracks) pc.addTransceiver(t.kind, { direction: 'recvonly' });
+    await pc.setLocalDescription(await pc.createOffer());
+    await waitForIce(pc);
+    const res = await fetch(`/api/subscribe/${roomPath()}`, {
+      method: 'POST',
+      headers: headers('application/sdp'),
+      body: pc.localDescription.sdp,
+    });
+    if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
+    await pc.setRemoteDescription({ type: 'answer', sdp: await res.text() });
+    log(`watching ${tracks.length} track(s) in room "${$('room').value}" (reload the page to start over)`);
+  } catch (e) {
+    if (pc) pc.close();
+    log('watch failed: ' + e.message);
+    btn.disabled = false;
+  }
+};
+</script>
+</body>
+</html>
