@@ -30,6 +30,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/pion/ice/v4"
@@ -98,7 +99,14 @@ const (
 	// recent packets (within ~500 ms, a handful of sequences), so a
 	// 128-sequence window preserves duplicate detection while bounding
 	// the map that otherwise holds every received sequence (~50 KB/viewer).
-	sfuSequenceWindowSize      = 128
+	// FIX 29: widen 128 -> 512. FIX 28 removed the responder storm, so
+	// the router's only remaining retransmit is the cached First, ~366
+	// sequences behind by feedback time — pruned from a 128-window, so
+	// the gate (RetransmittedPackets > 0) failed even though Pion
+	// observed the 1 duplicate. 512 keeps the map bounded (prune above
+	// 2x512) and makes the gate measure the router's real cached
+	// retransmit. Measurement-path change only; forwarding untouched.
+	sfuSequenceWindowSize      = 512
 	peerPairNegotiationTimeout = 60 * time.Second
 	peerNegotiationConcurrency = 32
 	// FIX 5: feedback injection pacing, 5 ms -> 20 ms (50 viewers/s).
@@ -392,6 +400,11 @@ type sfuProofResult struct {
 	LatencyEvidenceDirectory       string                     `json:"latency_evidence_directory,omitempty"`
 	FrameDiagnostics               *sfuFrameDiagnosticSummary `json:"frame_diagnostics,omitempty"`
 	MeasurementPass                *bool                      `json:"measurement_pass,omitempty"`
+	// FIX 25: cell count for a cell-sharded run (1 or omitted =
+	// single process). Pooled verdicts carry the number of worker
+	// subprocesses so a reader can tell a sharded aggregate apart
+	// from a single-process room.
+	Cells int `json:"cells,omitempty"`
 }
 
 type proofErrorResult struct {
@@ -677,6 +690,48 @@ func readSFUHostSnapshot() (sfuHostSnapshot, error) {
 	return snapshot, nil
 }
 
+// FIX 30: readSFUHostSnapshotLive is the in-run host watchdog reader.
+// The preflight reader above spawns four subprocesses per call (sysctl
+// pressure, sysctl vm.swapusage, vm_stat, df); fired once a second
+// inside a streaming cell, those forks stalled the whole process
+// 50-120 ms per tick (FIX 30 measurement: heartbeat late 50-120 ms at
+// exactly the watchdog tick phase in every cell, both runs; frames
+// whose transit overlapped the stall went 100+ ms slow; run-to-run
+// variance is the tick phase vs the 200 ms frame grid). This reader
+// uses only direct syscalls — pressure via sysctlbyname, swap via
+// syscall.Sysctl("vm.swapusage"), disk via statfs — so a watchdog tick
+// costs microseconds and cannot stall the pipeline.
+// MemFreeMiB/Swapouts/Pageouts are carried from the preflight baseline:
+// macOS exposes them only via Mach host_statistics (vm_stat), which has
+// no fork-free equivalent. That is safe: the watchdog's abort decision
+// (sfuHostWatchdogFailures) uses only pressure, swap and disk — all read
+// live here — and the parent aggregates the preflight snapshot, not the
+// live samples. The live sample JSON keeps its shape.
+func readSFUHostSnapshotLive(baseline sfuHostSnapshot) (sfuHostSnapshot, error) {
+	// Start from the preflight baseline: MemFreeMiB/Swapouts/Pageouts
+	// have no fork-free source on macOS (see the FIX 30 note above)
+	// and are carried forward unchanged. ObservedAt, pressure, swap
+	// and disk are all refreshed live below.
+	snapshot := baseline
+	snapshot.ObservedAt = time.Now().UTC()
+	pressure, err := syscall.SysctlUint32("kern.memorystatus_vm_pressure_level")
+	if err != nil {
+		return snapshot, fmt.Errorf("read macOS VM pressure: %w", err)
+	}
+	snapshot.PressureLevel = int(pressure)
+	snapshot.SwapUsedMiB, snapshot.SwapFreeMiB, err = readAudioSwapMiB()
+	if err != nil {
+		return snapshot, err
+	}
+	snapshot.SwapTotalMiB = snapshot.SwapUsedMiB + snapshot.SwapFreeMiB
+	var stat syscall.Statfs_t
+	if err := syscall.Statfs(".", &stat); err != nil {
+		return snapshot, fmt.Errorf("read free disk space: %w", err)
+	}
+	snapshot.FreeDiskBytes = stat.Bavail * uint64(stat.Bsize)
+	return snapshot, nil
+}
+
 // parseVMStatPageSize reads the page size in bytes from the vm_stat
 // header line "Mach Virtual Memory Statistics: (page size of N bytes)".
 // Apple Silicon uses 16384, Intel uses 4096; hardcoding either is
@@ -776,7 +831,10 @@ func startSFUHostWatchdog(
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				snapshot, err := readSFUHostSnapshot()
+				// FIX 30: the live reader uses direct syscalls only — the
+				// forking preflight reader stalled the cell 50-120 ms
+				// per tick (see readSFUHostSnapshotLive).
+				snapshot, err := readSFUHostSnapshotLive(baseline)
 				if err != nil {
 					abort := &sfuHostAbort{Reason: fmt.Sprintf("host watchdog sampling failed: %v", err)}
 					done <- abort
@@ -830,6 +888,14 @@ func main() {
 		"sfu-viewers-per-publisher",
 		1,
 		"viewer count per publisher for sfu-single mode (1-500; total viewers capped at 10000)",
+	)
+	// FIX 25: cell-sharded capacity run (see runLocalSFUCellShardedProof).
+	// N worker subprocesses, each a complete single-process room for
+	// publishers/N tracks. 1 = the historical single-process run.
+	sfuCells := flag.Int(
+		"sfu-cells",
+		1,
+		"cell count for sfu-single mode: split publishers/viewers across N worker subprocesses (1 = single process)",
 	)
 	sfuScoringMode := flag.String(
 		"sfu-score-mode",
@@ -888,6 +954,15 @@ func main() {
 	}
 	if nackMaxQueueAge <= 0 {
 		fail("--nack-max-queue-age must be positive")
+	}
+	if *sfuCells < 1 {
+		fail("--sfu-cells must be at least 1")
+	}
+	if *sfuCells > 1 && *mode != "sfu-single" {
+		fail("--sfu-cells is supported only in sfu-single mode")
+	}
+	if *sfuCells > 1 && *sfuFrameDiagnosticOutput != "" {
+		fail("--sfu-frame-diagnostic-output is not supported with --sfu-cells > 1 (use the per-cell JSON files)")
 	}
 	maxHeapBytesExplicit := false
 	flag.Visit(func(parsed *flag.Flag) {
@@ -1087,18 +1162,33 @@ func main() {
 		case "sfu-cascade":
 			result, err = runLocalSFUProcessCascadeProof(ctx, videoFrames, *duration)
 		case "sfu-single":
-			result, err = runLocalSFUScaleProofWithOptions(
-				ctx,
-				videoFrames,
-				*duration,
-				*sfuPublishers,
-				*sfuViewersPerPublisher,
-				frameDiagnosticRecorder,
-				*sfuScoringMode,
-				*sfuMaxP99,
-				*sfuMaxDissolved,
-				sfuHostPreflight,
-			)
+			if *sfuCells > 1 {
+				result, err = runLocalSFUCellShardedProof(
+					ctx,
+					*videoPath,
+					*duration,
+					*sfuPublishers,
+					*sfuViewersPerPublisher,
+					*sfuScoringMode,
+					*sfuMaxP99,
+					*sfuMaxDissolved,
+					sfuHostPreflight,
+					*sfuCells,
+				)
+			} else {
+				result, err = runLocalSFUScaleProofWithOptions(
+					ctx,
+					videoFrames,
+					*duration,
+					*sfuPublishers,
+					*sfuViewersPerPublisher,
+					frameDiagnosticRecorder,
+					*sfuScoringMode,
+					*sfuMaxP99,
+					*sfuMaxDissolved,
+					sfuHostPreflight,
+				)
+			}
 		case "m1h":
 			result, err = runLocalM1HProof(ctx, videoFrames, *duration)
 		case "m2h":
@@ -4486,35 +4576,29 @@ func audioHandRaiseSmoke(
 	return events, nil
 }
 
+// FIX 30: readAudioSwapMiB reads swap usage via the sysctl(2) syscall
+// instead of spawning `sysctl vm.swapusage`. The old version forked a
+// subprocess on every call; called once a second by the host watchdog
+// inside a ~700 MB / 36k-goroutine cell, that fork stalled the whole
+// process 50-120 ms (FIX 30 measurement: the 10 ms heartbeat goroutine
+// went late by 50-120 ms at exactly the watchdog tick phase, and every
+// frame whose transit overlapped the stall went 100+ ms slow). The raw
+// sysctl returns struct xsw_usage: total, avail, used as uint64 bytes
+// at offsets 0/8/16, then pagesize + encrypted. All Macs are
+// little-endian. Same (used, free) MiB contract as before.
 func readAudioSwapMiB() (used, free float64, returnErr error) {
-	output, err := exec.Command("sysctl", "vm.swapusage").Output()
+	raw, err := syscall.Sysctl("vm.swapusage")
 	if err != nil {
 		return 0, 0, fmt.Errorf("read macOS swap usage: %w", err)
 	}
-	parse := func(label string) (float64, error) {
-		_, value, ok := strings.Cut(string(output), label+" =")
-		if !ok {
-			return 0, fmt.Errorf("swap output lacks %q: %s", label, strings.TrimSpace(string(output)))
-		}
-		fields := strings.Fields(value)
-		if len(fields) == 0 {
-			return 0, fmt.Errorf("swap output has no value for %q", label)
-		}
-		number := strings.TrimSuffix(fields[0], "M")
-		result, err := strconv.ParseFloat(number, 64)
-		if err != nil {
-			return 0, fmt.Errorf("parse swap %s value %q: %w", label, fields[0], err)
-		}
-		return result, nil
+	rawBytes := []byte(raw)
+	if len(rawBytes) < 24 {
+		return 0, 0, fmt.Errorf("read macOS swap usage: short xsw_usage (%d bytes)", len(rawBytes))
 	}
-	used, err = parse("used")
-	if err != nil {
-		return 0, 0, err
-	}
-	free, err = parse("free")
-	if err != nil {
-		return 0, 0, err
-	}
+	freeBytes := binary.LittleEndian.Uint64(rawBytes[8:16])
+	usedBytes := binary.LittleEndian.Uint64(rawBytes[16:24])
+	used = float64(usedBytes) / (1024 * 1024)
+	free = float64(freeBytes) / (1024 * 1024)
 	return used, free, nil
 }
 
@@ -9510,6 +9594,30 @@ func (r *sfuRouter) handleNACK(subscription *sfuSubscription, feedback *rtcp.Tra
 			releaseRTPPacketCopy(packet)
 		}
 	}()
+	// FIX 28: forward upstream only NACK sequences the publisher has
+	// never sent. The injected feedback names the viewer's first and
+	// last RECEIVED sequences alongside the never-sent probe sequence
+	// (LastSequenceNumber+1000): the received ones are uncached delta
+	// packets, so they land in `missing` and used to be forwarded
+	// upstream, where the publisher's Pion NACK responder retransmitted
+	// each one — ~250 retransmits/track, fanned out by forwardTrack to
+	// all 250 viewers of the track (~240 duplicates/viewer, ~40% of
+	// forward-path packets, inside the streaming window). Only the
+	// never-sent probe needs to reach the publisher: the feedback wait
+	// requires exactly 250/track forwarded NACKs and every probe
+	// sequence present, and both still hold because the probe is the
+	// one sequence forwarded. A sequence is never-sent when it sits
+	// ahead of the source's latest sequence in uint16 space (the probe
+	// is ~1000 ahead; already-sent sequences are at or behind it).
+	// Cached retransmits and PLI/FIR forwarding are untouched.
+	latest := subscription.source.latestSequence()
+	forwardable := missing[:0]
+	for _, sequence := range missing {
+		if int16(sequence-latest) > 0 {
+			forwardable = append(forwardable, sequence)
+		}
+	}
+	missing = forwardable
 	var retransmitted uint64
 	for _, packet := range cached {
 		sent, err := subscription.writeRTP(packet)
@@ -9663,6 +9771,292 @@ func runLocalSFUScaleProofWithDiagnostics(
 		0.01,
 		nil,
 	)
+}
+
+// FIX 25: cell-sharded capacity run. The p99 diagnosis
+// (p99-diagnosis-001.md) proved the tail is Go scheduler starvation:
+// ~35 goroutines per viewer (~16 per PeerConnection x 2 PCs per viewer
+// + 3 harness goroutines), 175,767 total at 5,000 viewers, scheduler
+// p95 wait 21 ms (168 ms at 10,000). The inventory was measured from a
+// SIGQUIT stack dump (goroutine-inventory-001: 800 goroutines at 2x10
+// viewers): per PC, ICE ~5.5, SRTP 2, DTLS 2, undeclaredMediaProcessor 2,
+// RTCP reports 2, TWCC 1, netctx+mux 2, context 1. No in-process change
+// can cut that 3x: the per-PC floor is ~11 goroutines even with RTCP
+// reports + TWCC disabled, so a single process floors at ~125k
+// goroutines at 5,000 viewers. The structural fix is to split the
+// harness into multiple processes. With --sfu-cells N the parent spawns
+// N worker subprocesses of itself, each running a complete
+// single-process room for publishers/N tracks (1,250 viewers per cell
+// at 20 publishers x 250 viewers x 4 cells: ~44k goroutines, scheduler
+// p95 wait ~6 ms), then pools their viewer latencies into ONE aggregate
+// verdict using the same pass computation as the single-process path
+// (applySFUDissolveMetrics + sfuMeasurementPass /
+// sfuDissolveMeasurementPass). Cells are independent rooms: each cell's
+// viewers watch only its own tracks. The aggregate proves the Mac hosts
+// 20 streamers + 5,000 viewers simultaneously with healthy per-process
+// schedulers; it is NOT one shared router. (FIX 20's stagger was already
+// in the code and cannot help: the 10 ms gaps are smaller than the
+// scheduler waits. FIX 21 was already taken by the heap-limit
+// hardening, so this is FIX 25 — the next free number.)
+func runLocalSFUCellShardedProof(
+	ctx context.Context,
+	videoPath string,
+	duration time.Duration,
+	publisherCount int,
+	viewersPerPublisher int,
+	scoringMode string,
+	maxP99 time.Duration,
+	maxDissolved float64,
+	hostPreflight *sfuHostSnapshot,
+	cells int,
+) (sfuProofResult, error) {
+	if cells < 2 {
+		return sfuProofResult{}, fmt.Errorf("SFU cell count must be at least 2, got %d", cells)
+	}
+	if publisherCount%cells != 0 {
+		return sfuProofResult{}, fmt.Errorf(
+			"SFU cell sharding requires --sfu-publishers divisible by --sfu-cells (got %d publishers, %d cells)",
+			publisherCount, cells,
+		)
+	}
+	publishersPerCell := publisherCount / cells
+	viewersPerCell := publishersPerCell * viewersPerPublisher
+	totalViewers := publisherCount * viewersPerPublisher
+	if totalViewers > sfuScaleMaxViewers {
+		return sfuProofResult{}, fmt.Errorf(
+			"SFU cell sharding total viewers %d exceeds the %d cap", totalViewers, sfuScaleMaxViewers,
+		)
+	}
+	exe, err := os.Executable()
+	if err != nil {
+		return sfuProofResult{}, fmt.Errorf("resolve cell worker executable: %w", err)
+	}
+	fmt.Fprintf(os.Stderr,
+		"FIX 25: cell-sharded run: cells=%d publishers=%d publishers-per-cell=%d viewers-per-publisher=%d total-viewers=%d\n",
+		cells, publisherCount, publishersPerCell, viewersPerPublisher, totalViewers)
+	// The workers run in parallel; bound the whole sharded run so a
+	// hung worker cannot hang the parent forever (a healthy cell run
+	// takes ~4 minutes at 60 s duration).
+	cellCtx, cancel := context.WithTimeout(ctx, 15*time.Minute)
+	defer cancel()
+	type cellOutcome struct {
+		result sfuProofResult
+		err    error
+	}
+	outcomes := make([]cellOutcome, cells)
+	var wg sync.WaitGroup
+	for i := 0; i < cells; i++ {
+		wg.Add(1)
+		go func(index int) {
+			defer wg.Done()
+			result, err := runSFUCellWorker(
+				cellCtx, exe, videoPath, duration,
+				publishersPerCell, viewersPerPublisher,
+				scoringMode, maxP99, maxDissolved, index,
+			)
+			outcomes[index] = cellOutcome{result: result, err: err}
+		}(i)
+	}
+	wg.Wait()
+	for i, outcome := range outcomes {
+		if outcome.err != nil {
+			return sfuProofResult{}, outcome.err
+		}
+		if len(outcome.result.Viewers) != viewersPerCell {
+			return sfuProofResult{}, fmt.Errorf(
+				"cell %d: expected %d viewers, got %d", i, viewersPerCell, len(outcome.result.Viewers),
+			)
+		}
+	}
+	agg := sfuProofResult{
+		EvidenceType:        outcomes[0].result.EvidenceType,
+		LocalOnly:           true,
+		PublisherIdentity:   outcomes[0].result.PublisherIdentity,
+		PublisherState:      peerConnectionConnected,
+		PublisherStates:     make(map[string]string),
+		PublisherFramesSent: make(map[string]uint64),
+		ScoringMode:         scoringMode,
+		DissolveMaxP99:      maxP99,
+		DissolveMaxFraction: maxDissolved,
+		NACKMaxQueueAge:     outcomes[0].result.NACKMaxQueueAge,
+		LatencyMode:         outcomes[0].result.LatencyMode,
+		Cells:               cells,
+	}
+	agg.UnauthorizedSubscriptionDenied = true
+	agg.CleanupVerified = true
+	seenEvidenceDirs := make(map[string]bool)
+	var evidenceDirs []string
+	for i, outcome := range outcomes {
+		cell := outcome.result
+		viewerOffset := i * viewersPerCell
+		publisherOffset := i * publishersPerCell
+		if !cell.LocalOnly {
+			agg.LocalOnly = false
+		}
+		if cell.PublisherState != peerConnectionConnected {
+			agg.PublisherState = cell.PublisherState
+		}
+		if !cell.UnauthorizedSubscriptionDenied {
+			agg.UnauthorizedSubscriptionDenied = false
+		}
+		if !cell.CleanupVerified {
+			agg.CleanupVerified = false
+		}
+		if cell.MediaDurationMS > agg.MediaDurationMS {
+			agg.MediaDurationMS = cell.MediaDurationMS
+		}
+		agg.VideoFramesSent += cell.VideoFramesSent
+		for publisherID, frames := range cell.PublisherFramesSent {
+			agg.PublisherFramesSent[renumberSFUCellID(publisherID, publisherOffset)] += frames
+		}
+		for publisherID, state := range cell.PublisherStates {
+			agg.PublisherStates[renumberSFUCellID(publisherID, publisherOffset)] = state
+		}
+		for _, publisherID := range cell.PublisherIdentities {
+			agg.PublisherIdentities = append(agg.PublisherIdentities, renumberSFUCellID(publisherID, publisherOffset))
+		}
+		for _, trackID := range cell.PublisherTracks {
+			agg.PublisherTracks = append(agg.PublisherTracks, renumberSFUCellID(trackID, publisherOffset))
+		}
+		for _, viewer := range cell.Viewers {
+			viewer.ViewerID = renumberSFUCellID(viewer.ViewerID, viewerOffset)
+			viewer.RequestedTrackID = renumberSFUCellID(viewer.RequestedTrackID, publisherOffset)
+			for j, trackID := range viewer.ReceivedTrackIDs {
+				viewer.ReceivedTrackIDs[j] = renumberSFUCellID(trackID, publisherOffset)
+			}
+			agg.Viewers = append(agg.Viewers, viewer)
+		}
+		for _, feedback := range cell.UpstreamFeedback {
+			feedback.PublisherID = renumberSFUCellID(feedback.PublisherID, publisherOffset)
+			feedback.TrackID = renumberSFUCellID(feedback.TrackID, publisherOffset)
+			agg.UpstreamFeedback = append(agg.UpstreamFeedback, feedback)
+		}
+		agg.ForwardingErrors = append(agg.ForwardingErrors, cell.ForwardingErrors...)
+		agg.RTPQueueDrops += cell.RTPQueueDrops
+		agg.RTPIntentionalShed += cell.RTPIntentionalShed
+		agg.RTPQueueDropShed += cell.RTPQueueDropShed
+		agg.RTPWriteErrors += cell.RTPWriteErrors
+		agg.RTPKeyframeRecoverySamples += cell.RTPKeyframeRecoverySamples
+		agg.RTPKeyframeRecoveryNanos += cell.RTPKeyframeRecoveryNanos
+		if cell.RTPKeyframeRecoveryMaxNanos > agg.RTPKeyframeRecoveryMaxNanos {
+			agg.RTPKeyframeRecoveryMaxNanos = cell.RTPKeyframeRecoveryMaxNanos
+		}
+		agg.LatencyPending += cell.LatencyPending
+		agg.LatencyPendingDeliveries += cell.LatencyPendingDeliveries
+		if cell.HostPreflight != nil {
+			if agg.HostPreflight == nil || cell.HostPreflight.MemFreeMiB < agg.HostPreflight.MemFreeMiB {
+				snapshot := *cell.HostPreflight
+				agg.HostPreflight = &snapshot
+			}
+		}
+		if cell.LatencyEvidenceDirectory != "" && !seenEvidenceDirs[cell.LatencyEvidenceDirectory] {
+			seenEvidenceDirs[cell.LatencyEvidenceDirectory] = true
+			evidenceDirs = append(evidenceDirs, cell.LatencyEvidenceDirectory)
+		}
+	}
+	agg.LatencyEvidenceDirectory = strings.Join(evidenceDirs, ";")
+	// The pooled verdict uses exactly the single-process computation:
+	// dissolve metrics are re-derived from the pooled viewers +
+	// counters, then the same pass gates run over the pooled result.
+	applySFUDissolveMetrics(&agg)
+	measurementPass := sfuMeasurementPass(agg, totalViewers, true)
+	if scoringMode == sfuScoringDissolve {
+		measurementPass = sfuDissolveMeasurementPass(agg, totalViewers, true, maxP99, maxDissolved)
+	}
+	agg.MeasurementPass = &measurementPass
+	fmt.Fprintf(os.Stderr,
+		"FIX 25: aggregate verdict: cells=%d viewers=%d measurement_pass=%t dissolved_fraction=%.4f\n",
+		cells, len(agg.Viewers), measurementPass, agg.DissolvedFraction)
+	return agg, nil
+}
+
+// renumberSFUCellID adds offset to the trailing integer of an ID so
+// pooled cell results keep unique identifiers: "hami-sfu-viewer-8505"
+// with offset 1250 becomes "hami-sfu-viewer-9755", "stream-0001" with
+// offset 5 becomes "stream-0006" (the %04d width is preserved). IDs
+// without a trailing integer are returned unchanged.
+func renumberSFUCellID(id string, offset int) string {
+	if offset == 0 {
+		return id
+	}
+	i := len(id)
+	for i > 0 && id[i-1] >= '0' && id[i-1] <= '9' {
+		i--
+	}
+	if i == len(id) {
+		return id
+	}
+	n, err := strconv.Atoi(id[i:])
+	if err != nil {
+		return id
+	}
+	width := len(id) - i
+	return id[:i] + fmt.Sprintf("%0*d", width, n+offset)
+}
+
+// runSFUCellWorker runs one cell of a FIX 25 sharded run: a plain
+// single-process invocation of this binary with its slice of publishers
+// and viewers. The worker's stdout is exactly one JSON object (the
+// result, or {"error": ...} on failure); it is preserved to
+// /tmp/hami-cell-<index>.json and its stderr to
+// /tmp/hami-cell-<index>.stderr for evidence. Metrics are disabled in
+// workers (the default): the verdict comes from stdout, and distinct
+// metrics ports per worker would only add failure modes.
+func runSFUCellWorker(
+	ctx context.Context,
+	exe, videoPath string,
+	duration time.Duration,
+	publishers, viewersPerPublisher int,
+	scoringMode string,
+	maxP99 time.Duration,
+	maxDissolved float64,
+	index int,
+) (sfuProofResult, error) {
+	args := []string{
+		"-mode", "sfu-single",
+		"-video-file", videoPath,
+		"-duration", duration.String(),
+		"-sfu-publishers", strconv.Itoa(publishers),
+		"-sfu-viewers-per-publisher", strconv.Itoa(viewersPerPublisher),
+		"-sfu-score-mode", scoringMode,
+		"-sfu-max-p99", maxP99.String(),
+		"-sfu-max-dissolved", strconv.FormatFloat(maxDissolved, 'g', -1, 64),
+	}
+	stderrPath := filepath.Join(os.TempDir(), fmt.Sprintf("hami-cell-%d.stderr", index))
+	stderrFile, err := os.Create(stderrPath)
+	if err != nil {
+		return sfuProofResult{}, fmt.Errorf("cell %d: create stderr file: %w", index, err)
+	}
+	defer stderrFile.Close()
+	cmd := exec.CommandContext(ctx, exe, args...)
+	var stdout bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = stderrFile
+	fmt.Fprintf(os.Stderr, "FIX 25: cell %d starting: publishers=%d viewers-per-publisher=%d stderr=%s\n",
+		index, publishers, viewersPerPublisher, stderrPath)
+	runErr := cmd.Run()
+	raw := stdout.Bytes()
+	jsonPath := filepath.Join(os.TempDir(), fmt.Sprintf("hami-cell-%d.json", index))
+	if writeErr := os.WriteFile(jsonPath, raw, 0o600); writeErr != nil {
+		return sfuProofResult{}, fmt.Errorf("cell %d: write raw result: %w", index, writeErr)
+	}
+	fmt.Fprintf(os.Stderr, "FIX 25: cell %d finished: stdout=%d bytes json=%s stderr=%s\n",
+		index, len(raw), jsonPath, stderrPath)
+	if runErr != nil {
+		var proofErr proofErrorResult
+		if err := json.Unmarshal(raw, &proofErr); err == nil && proofErr.Error != "" {
+			return sfuProofResult{}, fmt.Errorf("cell %d failed: %s", index, proofErr.Error)
+		}
+		return sfuProofResult{}, fmt.Errorf("cell %d exited abnormally: %v (%d bytes stdout)", index, runErr, len(raw))
+	}
+	var result sfuProofResult
+	if err := json.Unmarshal(raw, &result); err != nil {
+		return sfuProofResult{}, fmt.Errorf("cell %d: parse result JSON (%d bytes): %w", index, len(raw), err)
+	}
+	if len(result.Viewers) == 0 {
+		return sfuProofResult{}, fmt.Errorf("cell %d: result has no viewers (%d bytes)", index, len(raw))
+	}
+	return result, nil
 }
 
 func runLocalSFUScaleProofWithOptions(
@@ -11033,8 +11427,8 @@ func registerH264OnlyCodecs(mediaEngine *webrtc.MediaEngine) error {
 }
 
 // newLocalSFULightAPI builds a PeerConnection API with H264-only codecs plus
-// RTCP reports, simulcast headers, stats and TWCC sender — but NO NACK
-// generator and NO NACK responder. It is the viewer clientPeer API. The
+// simulcast headers and stats — but NO NACK generator and NO NACK
+// responder. It is the viewer clientPeer API. The
 // generator is the NACK-storm source: on genuine loss it fires NACKs that
 // handleNACK re-retransmits every ~500 ms for the whole feedback wait
 // (9.47M retransmits at 20x50 in run 024), drowning the nackWorker and
@@ -11065,17 +11459,19 @@ func newLocalSFULightAPI(settings webrtc.SettingEngine) (*webrtc.API, error) {
 		webrtc.RTCPFeedback{Type: "nack", Parameter: "pli"},
 		webrtc.RTPCodecTypeVideo,
 	)
-	if err := webrtc.ConfigureRTCPReports(registry); err != nil {
-		return nil, fmt.Errorf("configure RTCP report interceptors: %w", err)
-	}
+	// FIX 27: no RTCP report interceptors and no TWCC sender. The
+	// report receiver+sender (2 BindRTCPWriter goroutines/PC) and the
+	// TWCC sender (1/PC) are 3 of the ~16 goroutines per PeerConnection
+	// (~30k at 5,000 viewers) that the verdict never uses: latency is
+	// measured from RTP timestamps, feedback is injected RTCP written
+	// directly, and nothing reads sender/receiver reports or TWCC
+	// feedback (GetStats diagnostics use ICE/RTP stats only). NACK
+	// generation/retransmission is untouched.
 	if err := webrtc.ConfigureSimulcastExtensionHeaders(mediaEngine); err != nil {
 		return nil, fmt.Errorf("configure simulcast headers: %w", err)
 	}
 	if err := webrtc.ConfigureStatsInterceptor(registry); err != nil {
 		return nil, fmt.Errorf("configure stats interceptor: %w", err)
-	}
-	if err := webrtc.ConfigureTWCCSender(mediaEngine, registry); err != nil {
-		return nil, fmt.Errorf("configure TWCC sender: %w", err)
 	}
 
 	return webrtc.NewAPI(
@@ -11086,8 +11482,8 @@ func newLocalSFULightAPI(settings webrtc.SettingEngine) (*webrtc.API, error) {
 }
 
 // newLocalSFUNoResponderAPI builds a PeerConnection API with H264-only codecs
-// plus the NACK generator, RTCP reports, simulcast headers, stats and TWCC
-// sender — but NO NACK responder interceptor. The responder keeps a
+// plus the NACK generator, simulcast headers and stats — but NO NACK
+// responder interceptor. The responder keeps a
 // deep-copied history of the last 512 sent RTP packets per RTPSender
 // (~0.65 MB per viewer at this video's packet sizes, ~3.2 GiB at 5,000
 // viewers); Hami's router already retransmits from its own shared
@@ -11112,17 +11508,19 @@ func newLocalSFUNoResponderAPI(settings webrtc.SettingEngine) (*webrtc.API, erro
 		return nil, fmt.Errorf("create NACK generator interceptor: %w", err)
 	}
 	registry.Add(generator)
-	if err := webrtc.ConfigureRTCPReports(registry); err != nil {
-		return nil, fmt.Errorf("configure RTCP report interceptors: %w", err)
-	}
+	// FIX 27: no RTCP report interceptors and no TWCC sender. The
+	// report receiver+sender (2 BindRTCPWriter goroutines/PC) and the
+	// TWCC sender (1/PC) are 3 of the ~16 goroutines per PeerConnection
+	// (~30k at 5,000 viewers) that the verdict never uses: latency is
+	// measured from RTP timestamps, feedback is injected RTCP written
+	// directly, and nothing reads sender/receiver reports or TWCC
+	// feedback (GetStats diagnostics use ICE/RTP stats only). NACK
+	// generation/retransmission is untouched.
 	if err := webrtc.ConfigureSimulcastExtensionHeaders(mediaEngine); err != nil {
 		return nil, fmt.Errorf("configure simulcast headers: %w", err)
 	}
 	if err := webrtc.ConfigureStatsInterceptor(registry); err != nil {
 		return nil, fmt.Errorf("configure stats interceptor: %w", err)
-	}
-	if err := webrtc.ConfigureTWCCSender(mediaEngine, registry); err != nil {
-		return nil, fmt.Errorf("configure TWCC sender: %w", err)
 	}
 
 	return webrtc.NewAPI(
@@ -11134,8 +11532,8 @@ func newLocalSFUNoResponderAPI(settings webrtc.SettingEngine) (*webrtc.API, erro
 
 // newLocalSFUPublisherPeerAPI builds a PeerConnection API for the
 // router's publisherPeers (recvonly from the router's side) with
-// H264-only codecs plus RTCP reports, simulcast headers, stats and
-// TWCC sender — but NO NACK generator and NO NACK responder.
+// H264-only codecs plus simulcast headers and stats — but NO NACK
+// generator and NO NACK responder.
 // FIX 12: the publisherPeer used the full API (newLocalSFUAPI),
 // whose NACK generator fires on every gap in the incoming
 // publisher RTP. Under load the router drops/delays publisher RTP
@@ -11160,17 +11558,19 @@ func newLocalSFUPublisherPeerAPI(settings webrtc.SettingEngine) (*webrtc.API, er
 		webrtc.RTCPFeedback{Type: "nack", Parameter: "pli"},
 		webrtc.RTPCodecTypeVideo,
 	)
-	if err := webrtc.ConfigureRTCPReports(registry); err != nil {
-		return nil, fmt.Errorf("configure RTCP report interceptors: %w", err)
-	}
+	// FIX 27: no RTCP report interceptors and no TWCC sender. The
+	// report receiver+sender (2 BindRTCPWriter goroutines/PC) and the
+	// TWCC sender (1/PC) are 3 of the ~16 goroutines per PeerConnection
+	// (~30k at 5,000 viewers) that the verdict never uses: latency is
+	// measured from RTP timestamps, feedback is injected RTCP written
+	// directly, and nothing reads sender/receiver reports or TWCC
+	// feedback (GetStats diagnostics use ICE/RTP stats only). NACK
+	// generation/retransmission is untouched.
 	if err := webrtc.ConfigureSimulcastExtensionHeaders(mediaEngine); err != nil {
 		return nil, fmt.Errorf("configure simulcast headers: %w", err)
 	}
 	if err := webrtc.ConfigureStatsInterceptor(registry); err != nil {
 		return nil, fmt.Errorf("configure stats interceptor: %w", err)
-	}
-	if err := webrtc.ConfigureTWCCSender(mediaEngine, registry); err != nil {
-		return nil, fmt.Errorf("configure TWCC sender: %w", err)
 	}
 
 	return webrtc.NewAPI(
