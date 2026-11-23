@@ -1,4 +1,4 @@
-# Active handoff — 2026-11-23 02:05 +0545 — media evidence and CI correction verified
+# Active handoff — 2026-11-23 02:05 +0545 — media evidence and CI correction verified (freshness-checked 2026-11-23 06:23)
 
 ## Current operation
 
@@ -32,6 +32,19 @@
   and real simulcast requires distinct encodings/signaling. Neural evaluation
   remains blocked on completed held-out network traces; do not train from the
   host-aborted result.
+- Freshness check 2026-11-23 06:23 NPT: `git pull --ff-only` fast-forwarded
+  cc4d09ee..80ebb082 (26 commits, 34 files, +11,203/−84). New commits since
+  the last freshness check are the D93 Setu-discovery and D93
+  time-label-correction series plus the media CI-state record; no new
+  D-number was added. Banked unknowns: 113 D-rows in docs/UNKNOWN_MAP.md
+  (unchanged).
+- Live health check 2026-11-23 06:23 NPT: both
+  https://haminp.vercel.app/api/health and
+  https://forge-os-ebon.vercel.app/api/health return HTTP 402
+  DEPLOYMENT_DISABLED (unchanged — production outage ongoing since 31
+  October). The forge-bot config endpoint also returns 402, so
+  intake_enabled was unreadable in this run; no intake-flag change is
+  asserted.
 
 ## 2026-11-23 04:50 +0545 — D93 NDRRMA time crosswalk and Setu road-operations boundary
 
