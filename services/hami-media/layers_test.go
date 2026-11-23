@@ -6,6 +6,7 @@ package main
 
 import (
 	"testing"
+	"time"
 
 	"github.com/pion/rtp"
 	"github.com/pion/webrtc/v4"
@@ -195,14 +196,14 @@ func TestEnqueueRTPDropsDeltaFirst(t *testing.T) {
 
 	// Fill the queue with two deltas.
 	for _, sequence := range []uint16{1, 2} {
-		if dropped, err := subscription.enqueueRTP(layerTestPacket(sequence, delta), layerDelta); dropped || err != nil {
+		if dropped, err := subscription.enqueueRTP(layerTestPacket(sequence, delta), layerDelta, time.Now()); dropped || err != nil {
 			t.Fatalf("enqueue delta %d: dropped=%v err=%v, want clean enqueue", sequence, dropped, err)
 		}
 	}
 	// A keyframe arriving at the full queue must get in by evicting the
 	// OLDEST delta — not by losing the keyframe, and not by dropping the
 	// newer delta.
-	dropped, err := subscription.enqueueRTP(layerTestPacket(3, key), layerKey)
+	dropped, err := subscription.enqueueRTP(layerTestPacket(3, key), layerKey, time.Now())
 	if err != nil {
 		t.Fatalf("enqueue keyframe: %v", err)
 	}
@@ -229,11 +230,11 @@ func TestEnqueueRTPDropsDeltaFirst(t *testing.T) {
 	// Refill with two deltas, then a delta arriving at the full queue
 	// is shed at once — the queue contents must not change.
 	for _, sequence := range []uint16{4, 5} {
-		if dropped, err := subscription.enqueueRTP(layerTestPacket(sequence, delta), layerDelta); dropped || err != nil {
+		if dropped, err := subscription.enqueueRTP(layerTestPacket(sequence, delta), layerDelta, time.Now()); dropped || err != nil {
 			t.Fatalf("enqueue delta %d: dropped=%v err=%v, want clean enqueue", sequence, dropped, err)
 		}
 	}
-	dropped, err = subscription.enqueueRTP(layerTestPacket(6, delta), layerDelta)
+	dropped, err = subscription.enqueueRTP(layerTestPacket(6, delta), layerDelta, time.Now())
 	if err != nil {
 		t.Fatalf("enqueue delta at full queue: %v", err)
 	}
@@ -261,11 +262,11 @@ func TestEnqueueRTPFallsBackToOldestWhenNoDelta(t *testing.T) {
 	// A queue with no delta in it keeps the old behaviour exactly:
 	// the oldest packet is dropped so the new base packet gets in.
 	for _, sequence := range []uint16{1, 2} {
-		if dropped, err := subscription.enqueueRTP(layerTestPacket(sequence, []byte{0x67}), layerBase); dropped || err != nil {
+		if dropped, err := subscription.enqueueRTP(layerTestPacket(sequence, []byte{0x67}), layerBase, time.Now()); dropped || err != nil {
 			t.Fatalf("enqueue base %d: dropped=%v err=%v, want clean enqueue", sequence, dropped, err)
 		}
 	}
-	dropped, err := subscription.enqueueRTP(layerTestPacket(3, []byte{0x67}), layerBase)
+	dropped, err := subscription.enqueueRTP(layerTestPacket(3, []byte{0x67}), layerBase, time.Now())
 	if err != nil {
 		t.Fatalf("enqueue base at full queue: %v", err)
 	}
@@ -292,13 +293,13 @@ func TestShardEnqueueDropsDeltaFirst(t *testing.T) {
 	key := []byte{0x65, 0x88}
 
 	for _, sequence := range []uint16{1, 2} {
-		shard.enqueue(layerTestPacket(sequence, delta), layerDelta)
+		shard.enqueue(layerTestPacket(sequence, delta), layerDelta, time.Now())
 	}
 	if got := len(shard.queue); got != 2 {
 		t.Fatalf("shard queue depth = %d, want 2", got)
 	}
 	// A keyframe job at the full shard queue evicts the oldest delta.
-	shard.enqueue(layerTestPacket(3, key), layerKey)
+	shard.enqueue(layerTestPacket(3, key), layerKey, time.Now())
 	if got := len(shard.queue); got != 2 {
 		t.Fatalf("shard queue depth = %d, want 2", got)
 	}
@@ -315,10 +316,10 @@ func TestShardEnqueueDropsDeltaFirst(t *testing.T) {
 	// Refill with deltas; an incoming delta at the full shard queue is
 	// shed and never reaches a subscriber.
 	for _, sequence := range []uint16{4, 5} {
-		shard.enqueue(layerTestPacket(sequence, delta), layerDelta)
+		shard.enqueue(layerTestPacket(sequence, delta), layerDelta, time.Now())
 	}
 	before := router.rtpQueueDropped.Load()
-	shard.enqueue(layerTestPacket(6, delta), layerDelta)
+	shard.enqueue(layerTestPacket(6, delta), layerDelta, time.Now())
 	if got := router.rtpQueueDropped.Load(); got != before+1 {
 		t.Fatalf("router drop count = %d, want %d (incoming delta shed)", got, before+1)
 	}
@@ -362,7 +363,7 @@ func TestLayeredStreamStaysInOrder(t *testing.T) {
 		{6, []byte{0x41, 0x9a}, layerDelta},
 	}
 	for _, packet := range packets {
-		if dropped, err := subscription.enqueueRTP(layerTestPacket(packet.sequence, packet.payload), packet.layer); dropped || err != nil {
+		if dropped, err := subscription.enqueueRTP(layerTestPacket(packet.sequence, packet.payload), packet.layer, time.Now()); dropped || err != nil {
 			t.Fatalf("enqueue %d: dropped=%v err=%v, want clean enqueue", packet.sequence, dropped, err)
 		}
 	}

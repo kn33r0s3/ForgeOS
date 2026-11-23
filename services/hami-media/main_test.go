@@ -475,7 +475,7 @@ func TestEgressShardDistributionIsStableAndBounded(t *testing.T) {
 		closed:        make(chan struct{}),
 	}
 	packet := &rtp.Packet{Header: rtp.Header{SequenceNumber: 42, Timestamp: 99}}
-	shard.enqueue(packet, layerBase)
+	shard.enqueue(packet, layerBase, time.Now())
 	job := <-shard.queue
 	if job.packet.SequenceNumber != packet.SequenceNumber {
 		t.Fatalf("egress queue changed sequence: got %d want %d", job.packet.SequenceNumber, packet.SequenceNumber)
@@ -721,7 +721,7 @@ func TestRTPQueueDropsOldestPacketWithoutBlocking(t *testing.T) {
 	for sequence := uint16(1); sequence <= 3; sequence++ {
 		dropped, err := subscription.enqueueRTP(&rtp.Packet{
 			Header: rtp.Header{SequenceNumber: sequence},
-		}, layerBase)
+		}, layerBase, time.Now())
 		if err != nil {
 			t.Fatalf("enqueue RTP sequence %d: %v", sequence, err)
 		}
@@ -768,7 +768,7 @@ func TestRTPQueueSharesPayloadAndCopiesMutableHeader(t *testing.T) {
 	}
 	queued := make([]*rtp.Packet, len(subscriptions))
 	for index, subscription := range subscriptions {
-		if _, err := subscription.enqueueRTP(packet, layerBase); err != nil {
+		if _, err := subscription.enqueueRTP(packet, layerBase, time.Now()); err != nil {
 			t.Fatalf("enqueue packet for subscription %d: %v", index, err)
 		}
 		queued[index] = (<-subscription.rtpQueue).packet
@@ -1071,7 +1071,9 @@ func TestSFUHostPreflightParsesCountersAndEnforcesStops(t *testing.T) {
 
 	safe := sfuHostSnapshot{
 		PressureLevel: sfuHostNormalPressureLevel,
+		SwapUsedMiB:   sfuHostMinFreeSwapMiB,
 		SwapFreeMiB:   sfuHostMinFreeSwapMiB,
+		SwapTotalMiB:  2 * sfuHostMinFreeSwapMiB,
 		FreeDiskBytes: sfuHostMinFreeDiskBytes,
 	}
 	if failures := sfuHostPreflightFailures(safe); len(failures) != 0 {
@@ -1082,6 +1084,45 @@ func TestSFUHostPreflightParsesCountersAndEnforcesStops(t *testing.T) {
 	safe.FreeDiskBytes--
 	if failures := sfuHostPreflightFailures(safe); len(failures) != 3 {
 		t.Fatalf("unsafe host sample failures = %v, want pressure/swap/disk", failures)
+	}
+	// No swap pool (total 0, as after a reboot): free swap is always 0
+	// and can never pass, so the preflight uses free memory instead.
+	noPool := sfuHostSnapshot{
+		PressureLevel: sfuHostNormalPressureLevel,
+		SwapTotalMiB:  0,
+		MemFreeMiB:    sfuHostMinFreeMemNoSwapMiB,
+		FreeDiskBytes: sfuHostMinFreeDiskBytes,
+	}
+	if failures := sfuHostPreflightFailures(noPool); len(failures) != 0 {
+		t.Fatalf("no-pool host sample with enough free memory failed preflight: %v", failures)
+	}
+	noPool.MemFreeMiB--
+	if failures := sfuHostPreflightFailures(noPool); len(failures) != 1 {
+		t.Fatalf("no-pool host sample low on memory failures = %v, want one memory failure", failures)
+	}
+	// The watchdog must NOT fail a no-pool run for low free memory:
+	// the run itself consumes RAM, so free memory falls as the test
+	// allocates; pressure level is the during-run signal.
+	if failures := sfuHostWatchdogFailures(noPool); len(failures) != 0 {
+		t.Fatalf("no-pool host sample failed the watchdog on free memory: %v", failures)
+	}
+	noPool.PressureLevel++
+	if failures := sfuHostWatchdogFailures(noPool); len(failures) != 1 {
+		t.Fatalf("no-pool host sample under pressure failures = %v, want one pressure failure", failures)
+	}
+}
+
+func TestParseVMStatFreeMiBUsesHeaderPageSize(t *testing.T) {
+	// Apple Silicon vm_stat: 16384-byte pages. A hardcoded 4096
+	// under-reports free memory 4x and fails the no-pool gate.
+	vmStat := "Mach Virtual Memory Statistics: (page size of 16384 bytes)\nPages free: 467112.\nPages inactive: 292595.\nPages speculative: 26336.\n"
+	got, err := parseVMStatFreeMiB(vmStat)
+	if err != nil {
+		t.Fatalf("parseVMStatFreeMiB: %v", err)
+	}
+	want := float64(467112+292595+26336) * 16384 / (1024 * 1024)
+	if got != want {
+		t.Fatalf("parseVMStatFreeMiB = %v, want %v", got, want)
 	}
 }
 

@@ -66,6 +66,12 @@ const (
 	sfuEgressShardQueueSize       = 64
 	sfuHostNormalPressureLevel    = 1
 	sfuHostMinFreeSwapMiB         = 2048
+	// sfuHostMinFreeMemNoSwapMiB is the free-memory headroom required
+	// when macOS holds no swap pool (total swap 0, as after a reboot):
+	// free swap is always 0 there and can never pass the swap rule,
+	// so reclaimable free memory (free + inactive + speculative) is
+	// the health signal instead. 8 GiB is the bar for a 20x10000 run.
+	sfuHostMinFreeMemNoSwapMiB = 8192
 	sfuHostMinFreeDiskBytes       = 10 << 30
 	sfuHostPreflightRetryInterval = 10 * time.Minute
 	// NACK aggregation (M6-H attempt 8): a viewer NACKs the same lost
@@ -115,7 +121,7 @@ const (
 	// M7-H attempt 9: the parallel injection worker pool. 32 matches the
 	// negotiation concurrency; the serial loop's worst single blocking
 	// WriteRTCP was 42.6 s, so 32 workers keep the dispatch wall time far
-	// inside the 395 s pacing budget.
+	// inside the pacing budget (FIX 19: the budget scales with viewers).
 	injectionWorkerCount                = 32
 	sfuFeedbackCompletionGrace          = 30 * time.Second
 	sfuFeedbackWaitLimit                = 5 * time.Minute
@@ -400,6 +406,8 @@ type sfuHostSnapshot struct {
 	PressureLevel int       `json:"pressure_level"`
 	SwapUsedMiB   float64   `json:"swap_used_mib"`
 	SwapFreeMiB   float64   `json:"swap_free_mib"`
+	SwapTotalMiB  float64   `json:"swap_total_mib"`
+	MemFreeMiB    float64   `json:"mem_free_mib"`
 	Swapouts      uint64    `json:"swapouts"`
 	Pageouts      uint64    `json:"pageouts"`
 	FreeDiskBytes uint64    `json:"free_disk_bytes"`
@@ -528,13 +536,7 @@ func sfuHostPreflightFailures(snapshot sfuHostSnapshot) []string {
 			sfuHostNormalPressureLevel,
 		))
 	}
-	if snapshot.SwapFreeMiB < sfuHostMinFreeSwapMiB {
-		failures = append(failures, fmt.Sprintf(
-			"free swap %.2f MiB is below %d MiB",
-			snapshot.SwapFreeMiB,
-			sfuHostMinFreeSwapMiB,
-		))
-	}
+	failures = append(failures, sfuHostMemoryFailures(snapshot, false)...)
 	if snapshot.FreeDiskBytes < sfuHostMinFreeDiskBytes {
 		failures = append(failures, fmt.Sprintf(
 			"free disk %d bytes is below %d bytes",
@@ -543,6 +545,62 @@ func sfuHostPreflightFailures(snapshot sfuHostSnapshot) []string {
 		))
 	}
 	return failures
+}
+
+// sfuHostWatchdogFailures is the during-run gate. It is the preflight
+// minus the free-memory check: the run itself consumes RAM, so free
+// memory falls as the test allocates and would abort a healthy run.
+// Memory pressure (which rises only when the system is actually
+// struggling) is the correct during-run signal.
+func sfuHostWatchdogFailures(snapshot sfuHostSnapshot) []string {
+	var failures []string
+	if snapshot.PressureLevel != sfuHostNormalPressureLevel {
+		failures = append(failures, fmt.Sprintf(
+			"memory pressure level %d is not NORMAL (%d)",
+			snapshot.PressureLevel,
+			sfuHostNormalPressureLevel,
+		))
+	}
+	failures = append(failures, sfuHostMemoryFailures(snapshot, true)...)
+	if snapshot.FreeDiskBytes < sfuHostMinFreeDiskBytes {
+		failures = append(failures, fmt.Sprintf(
+			"free disk %d bytes is below %d bytes",
+			snapshot.FreeDiskBytes,
+			sfuHostMinFreeDiskBytes,
+		))
+	}
+	return failures
+}
+
+// sfuHostMemoryFailures checks the memory headroom. When macOS holds a
+// swap pool, free swap is the signal. When it holds no pool (total swap
+// 0, as after a reboot), free swap is always 0 and can never pass, so
+// reclaimable free memory (free + inactive + speculative) is the signal
+// instead — but only for the pre-run gate (forWatchdog=false). During a
+// run the test itself consumes RAM, so the watchdog skips the memory
+// check and relies on pressure level.
+func sfuHostMemoryFailures(snapshot sfuHostSnapshot, forWatchdog bool) []string {
+	if snapshot.SwapTotalMiB > 0 {
+		if snapshot.SwapFreeMiB < sfuHostMinFreeSwapMiB {
+			return []string{fmt.Sprintf(
+				"free swap %.2f MiB is below %d MiB",
+				snapshot.SwapFreeMiB,
+				sfuHostMinFreeSwapMiB,
+			)}
+		}
+		return nil
+	}
+	if forWatchdog {
+		return nil
+	}
+	if snapshot.MemFreeMiB < sfuHostMinFreeMemNoSwapMiB {
+		return []string{fmt.Sprintf(
+			"no swap pool; free memory %.2f MiB is below %d MiB",
+			snapshot.MemFreeMiB,
+			sfuHostMinFreeMemNoSwapMiB,
+		)}
+	}
+	return nil
 }
 
 func waitForSFUHostPreflight() (sfuHostSnapshot, error) {
@@ -591,9 +649,14 @@ func readSFUHostSnapshot() (sfuHostSnapshot, error) {
 	if err != nil {
 		return snapshot, err
 	}
+	snapshot.SwapTotalMiB = snapshot.SwapUsedMiB + snapshot.SwapFreeMiB
 	vmStatOutput, err := exec.Command("vm_stat").Output()
 	if err != nil {
 		return snapshot, fmt.Errorf("read macOS VM counters: %w", err)
+	}
+	snapshot.MemFreeMiB, err = parseVMStatFreeMiB(string(vmStatOutput))
+	if err != nil {
+		return snapshot, err
 	}
 	snapshot.Swapouts, err = parseVMStatCounter(string(vmStatOutput), "Swapouts")
 	if err != nil {
@@ -612,6 +675,55 @@ func readSFUHostSnapshot() (sfuHostSnapshot, error) {
 		return snapshot, err
 	}
 	return snapshot, nil
+}
+
+// parseVMStatPageSize reads the page size in bytes from the vm_stat
+// header line "Mach Virtual Memory Statistics: (page size of N bytes)".
+// Apple Silicon uses 16384, Intel uses 4096; hardcoding either is
+// wrong on the other, and the free-memory gate would be off by 4x.
+// (A first draft of parseVMStatFreeMiB hardcoded 4096 and under-reported
+// this Mac's free memory as ~3 GiB instead of ~12 GiB.)
+func parseVMStatPageSize(output string) (uint64, error) {
+	const prefix = "(page size of "
+	start := strings.Index(output, prefix)
+	if start < 0 {
+		return 0, errors.New("vm_stat output has no page size header")
+	}
+	rest := output[start+len(prefix):]
+	end := strings.Index(rest, " bytes)")
+	if end < 0 {
+		return 0, errors.New("vm_stat page size header is malformed")
+	}
+	size, err := strconv.ParseUint(strings.TrimSpace(rest[:end]), 10, 64)
+	if err != nil || size == 0 {
+		return 0, fmt.Errorf("parse vm_stat page size: %w", err)
+	}
+	return size, nil
+}
+
+// parseVMStatFreeMiB returns reclaimable free memory in MiB from vm_stat
+// output: free + inactive + speculative pages, each pageSize bytes. Used as
+// the health signal when macOS holds no swap pool (total swap 0), where
+// the free-swap check can never pass.
+func parseVMStatFreeMiB(output string) (float64, error) {
+	pageSize, err := parseVMStatPageSize(output)
+	if err != nil {
+		return 0, err
+	}
+	free, err := parseVMStatCounter(output, "Pages free")
+	if err != nil {
+		return 0, err
+	}
+	inactive, err := parseVMStatCounter(output, "Pages inactive")
+	if err != nil {
+		return 0, err
+	}
+	speculative, err := parseVMStatCounter(output, "Pages speculative")
+	if err != nil {
+		// Older vm_stat output omits speculative pages; treat as 0.
+		speculative = 0
+	}
+	return float64(free+inactive+speculative) * float64(pageSize) / (1024 * 1024), nil
 }
 
 func parseVMStatCounter(output, label string) (uint64, error) {
@@ -684,7 +796,7 @@ func startSFUHostWatchdog(
 					return
 				}
 				fmt.Fprintf(os.Stderr, "host_watchdog_sample=%s\n", encoded)
-				if failures := sfuHostPreflightFailures(snapshot); len(failures) != 0 {
+				if failures := sfuHostWatchdogFailures(snapshot); len(failures) != 0 {
 					done <- &sfuHostAbort{
 						Reason:        strings.Join(failures, "; "),
 						Snapshot:      &snapshot,
@@ -940,6 +1052,22 @@ func main() {
 		setupAllowance = 2 * time.Hour
 	} else if *mode == "audio-rung1" {
 		setupAllowance = 30 * time.Minute
+	}
+	// FIX: scale the setup allowance with the feedback-injection time
+	// for scale proofs. The feedback pacer dispatches one viewer per
+	// 30 ms, so injection alone takes totalViewers x 30 ms (300 s at
+	// 10,000 viewers) after setup + media + settle. The old flat 5 min
+	// allowance gave a 360 s ctx for a 60 s run, but the phases sum to
+	// ~490 s at 20x10000, so the ctx expired before the last feedbacks
+	// arrived. Add the injection time + 1 min of slack. This is a
+	// harness time budget, not a verdict gate.
+	if isScaleProof {
+		totalViewers := *sfuPublishers * *sfuViewersPerPublisher
+		if *mode == "m9h" {
+			totalViewers = m9HViewerCount
+		}
+		injectionTime := time.Duration(totalViewers) * sfuFeedbackPacingInterval
+		setupAllowance += injectionTime + time.Minute
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), *duration+setupAllowance)
 	defer cancel()
@@ -5008,11 +5136,16 @@ type upstreamFeedback struct {
 }
 
 type sfuPublishedTrack struct {
-	key             sfuTrackKey
-	remote          *webrtc.TrackRemote
-	publisherPeer   *webrtc.PeerConnection
-	subscribers     map[string]*sfuSubscription
-	egressShards    []*sfuEgressShard
+	key         sfuTrackKey
+	remote      *webrtc.TrackRemote
+	publisherPeer *webrtc.PeerConnection
+	subscribers map[string]*sfuSubscription
+	// subscribersVersion bumps on every subscribe/unsubscribe so
+	// forwardTrack can cache the subscriber snapshot and rebuild it
+	// only when the set changes, instead of iterating the map and
+	// taking the router RLock on every packet.
+	subscribersVersion atomic.Uint64
+	egressShards       []*sfuEgressShard
 	m7hReceiveStats *m7hPublisherReceiveStats
 	// FIX 24b: the publisher's frame clock (set after the latency clocks
 	// are built, before the send starts). atomic.Pointer: the forwardTrack
@@ -5137,12 +5270,17 @@ type sfuEgressNACKJob struct {
 type sfuEgressShard struct {
 	mu            sync.RWMutex
 	subscriptions map[string]*sfuSubscription
-	queue         chan sfuEgressJob
-	nackQueue     chan sfuEgressNACKJob
-	router        *sfuRouter
-	source        *sfuPublishedTrack
-	closeOnce     sync.Once
-	closed        chan struct{}
+	// subscriptionsVersion bumps on every add/remove so run() can
+	// cache the subscriber snapshot and rebuild it only when the set
+	// changes, instead of allocating a slice + iterating the map +
+	// taking the shard RLock on every egress job.
+	subscriptionsVersion atomic.Uint64
+	queue                chan sfuEgressJob
+	nackQueue            chan sfuEgressNACKJob
+	router               *sfuRouter
+	source               *sfuPublishedTrack
+	closeOnce            sync.Once
+	closed               chan struct{}
 }
 
 func egressShardIndex(viewerID string, shardCount int) int {
@@ -5157,12 +5295,14 @@ func egressShardIndex(viewerID string, shardCount int) int {
 func (shard *sfuEgressShard) add(subscription *sfuSubscription) {
 	shard.mu.Lock()
 	shard.subscriptions[subscription.viewerID] = subscription
+	shard.subscriptionsVersion.Add(1)
 	shard.mu.Unlock()
 }
 
 func (shard *sfuEgressShard) remove(viewerID string) {
 	shard.mu.Lock()
 	delete(shard.subscriptions, viewerID)
+	shard.subscriptionsVersion.Add(1)
 	shard.mu.Unlock()
 }
 
@@ -5192,13 +5332,13 @@ func (shard *sfuEgressShard) recordQueueDrop() {
 	}
 }
 
-func (shard *sfuEgressShard) enqueue(packet *rtp.Packet, l packetLayer) {
+func (shard *sfuEgressShard) enqueue(packet *rtp.Packet, l packetLayer, enqueuedAt time.Time) {
 	if packet == nil {
 		return
 	}
 	job := sfuEgressJob{
 		packet:     copyRTPPacketWithSharedPayload(packet),
-		enqueuedAt: time.Now(),
+		enqueuedAt: enqueuedAt,
 		layer:      l,
 	}
 	select {
@@ -5209,6 +5349,7 @@ func (shard *sfuEgressShard) enqueue(packet *rtp.Packet, l packetLayer) {
 	// Queue is full. Layer 2 goes first: a delta arriving at a full
 	// queue is shed at once — it never evicts a base/keyframe job.
 	if l == layerDelta {
+		releaseRTPPacketCopy(job.packet)
 		shard.recordQueueDrop()
 		return
 	}
@@ -5219,8 +5360,9 @@ func (shard *sfuEgressShard) enqueue(packet *rtp.Packet, l packetLayer) {
 	droppedOldest := false
 	if !evictedDelta {
 		select {
-		case <-shard.queue:
+		case dropped := <-shard.queue:
 			droppedOldest = true
+			releaseRTPPacketCopy(dropped.packet)
 		default:
 		}
 	}
@@ -5230,6 +5372,7 @@ func (shard *sfuEgressShard) enqueue(packet *rtp.Packet, l packetLayer) {
 	select {
 	case shard.queue <- job:
 	default:
+		releaseRTPPacketCopy(job.packet)
 		shard.recordQueueDrop()
 	}
 }
@@ -5266,17 +5409,31 @@ func (shard *sfuEgressShard) enqueueNACK(subscription *sfuSubscription, feedback
 }
 
 func (shard *sfuEgressShard) run() {
+	subscriptions := make([]*sfuSubscription, 0)
+	// cachedVersion starts at the all-ones sentinel so the first job
+	// always builds the snapshot (the counter starts at 0).
+	cachedVersion := ^uint64(0)
 	for {
 		select {
 		case <-shard.closed:
 			return
 		case job := <-shard.queue:
-			shard.mu.RLock()
-			subscriptions := make([]*sfuSubscription, 0, len(shard.subscriptions))
-			for _, subscription := range shard.subscriptions {
-				subscriptions = append(subscriptions, subscription)
+			// Version-gated subscriber snapshot (see forwardTrack):
+			// rebuild only when the set changes, not per job.
+			if version := shard.subscriptionsVersion.Load(); version != cachedVersion {
+				shard.mu.RLock()
+				clear(subscriptions)
+				if cap(subscriptions) < len(shard.subscriptions) {
+					subscriptions = make([]*sfuSubscription, 0, len(shard.subscriptions))
+				} else {
+					subscriptions = subscriptions[:0]
+				}
+				for _, subscription := range shard.subscriptions {
+					subscriptions = append(subscriptions, subscription)
+				}
+				shard.mu.RUnlock()
+				cachedVersion = version
 			}
-			shard.mu.RUnlock()
 			for _, subscription := range subscriptions {
 				shard.router.forwardQueuedRTP(subscription, queuedRTP{
 					packet:     job.packet,
@@ -5284,6 +5441,9 @@ func (shard *sfuEgressShard) run() {
 					layer:      job.layer,
 				})
 			}
+			// One copy is shared across all subscriptions in the
+			// shard; release it once, after the fan-out loop.
+			releaseRTPPacketCopy(job.packet)
 		case job := <-shard.nackQueue:
 			shard.router.releaseNACKBudget()
 			if time.Since(job.enqueuedAt) > nackFeedbackMaxQueueAge {
@@ -5738,6 +5898,7 @@ func (r *sfuRouter) subscribe(viewerID string, key sfuTrackKey) error {
 	}
 	viewer.subscriptions[key] = subscription
 	source.subscribers[viewerID] = subscription
+	source.subscribersVersion.Add(1)
 	r.mu.Unlock()
 
 	go r.forwardFeedback(subscription)
@@ -5762,6 +5923,7 @@ func (r *sfuRouter) unsubscribe(viewerID string, key sfuTrackKey) error {
 	delete(viewer.subscriptions, key)
 	if source := r.tracks[key]; source != nil {
 		delete(source.subscribers, viewerID)
+		source.subscribersVersion.Add(1)
 		if subscription.egressShard != nil {
 			subscription.egressShard.remove(viewerID)
 		}
@@ -5798,6 +5960,7 @@ func (r *sfuRouter) unregisterTrackIfCurrent(key sfuTrackKey, expected *sfuPubli
 		}
 	}
 	source.subscribers = make(map[string]*sfuSubscription)
+	source.subscribersVersion.Add(1)
 	r.mu.Unlock()
 	for _, shard := range source.egressShards {
 		shard.stop()
@@ -5829,6 +5992,7 @@ func (r *sfuRouter) removeViewer(viewerID string) error {
 		subscriptions = append(subscriptions, subscription)
 		if source := r.tracks[key]; source != nil {
 			delete(source.subscribers, viewerID)
+			source.subscribersVersion.Add(1)
 		}
 	}
 	viewer.subscriptions = make(map[sfuTrackKey]*sfuSubscription)
@@ -8251,10 +8415,12 @@ drain:
 		}
 	}
 	evicted := false
+	var evictedPacket *rtp.Packet
 	for i, entry := range drained {
 		if entry.layer != layerDelta {
 			continue
 		}
+		evictedPacket = entry.packet
 		drained = append(drained[:i], drained[i+1:]...)
 		evicted = true
 		break
@@ -8264,6 +8430,9 @@ drain:
 		case queue <- entry:
 		default:
 		}
+	}
+	if evictedPacket != nil {
+		releaseRTPPacketCopy(evictedPacket)
 	}
 	return evicted
 }
@@ -8282,10 +8451,12 @@ drain:
 		}
 	}
 	evicted := false
+	var evictedPacket *rtp.Packet
 	for i, entry := range drained {
 		if entry.layer != layerDelta {
 			continue
 		}
+		evictedPacket = entry.packet
 		drained = append(drained[:i], drained[i+1:]...)
 		evicted = true
 		break
@@ -8296,6 +8467,9 @@ drain:
 		default:
 		}
 	}
+	if evictedPacket != nil {
+		releaseRTPPacketCopy(evictedPacket)
+	}
 	return evicted
 }
 
@@ -8304,6 +8478,9 @@ func (r *sfuRouter) forwardTrack(source *sfuPublishedTrack) {
 	codec := source.remote.Codec().RTPCodecCapability.MimeType
 	var layerClassifier packetLayerClassifier
 	subscriptions := make([]*sfuSubscription, 0)
+	// cachedVersion starts at the all-ones sentinel so the first
+	// packet always builds the snapshot (the counter starts at 0).
+	cachedVersion := ^uint64(0)
 	for {
 		packet, _, err := source.remote.ReadRTP()
 		if err != nil {
@@ -8352,27 +8529,44 @@ func (r *sfuRouter) forwardTrack(source *sfuPublishedTrack) {
 		if packet.Marker {
 			source.firstFrameOnce.Do(func() { close(source.firstFrameReady) })
 		}
-		r.mu.RLock()
-		if r.closed || r.tracks[source.key] != source {
-			r.mu.RUnlock()
-			return
-		}
-		if cap(subscriptions) < len(source.subscribers) {
-			subscriptions = make([]*sfuSubscription, 0, len(source.subscribers))
-		} else {
-			subscriptions = subscriptions[:0]
-		}
-		for _, subscription := range source.subscribers {
-			subscriptions = append(subscriptions, subscription)
-		}
-		r.mu.RUnlock()
+		// One timestamp per packet: enqueueRTP, shard.enqueue and
+		// forwardQueuedRTP all need the same enqueue instant. Capturing
+		// it once here replaces a time.Now() per viewer per packet
+		// (10,000 clock reads per packet at 20x10000).
+		now := time.Now()
 		if len(source.egressShards) > 0 {
 			for _, shard := range source.egressShards {
-				shard.enqueue(packet, l)
+				shard.enqueue(packet, l, now)
 			}
 		} else {
+			// Version-gated subscriber snapshot: the subscriber set
+			// only changes on subscribe/unsubscribe, so rebuild the
+			// snapshot only then. Rebuilding it per packet costs a
+			// router RLock + a full map iteration per packet (6M/s
+			// at 20x10000) for a set that is constant in the steady
+			// state. A version bump after the set changes makes the
+			// next packet re-snapshot; a subscriber added mid-stream
+			// waits at most one packet.
+			if version := source.subscribersVersion.Load(); version != cachedVersion {
+				r.mu.RLock()
+				if r.closed || r.tracks[source.key] != source {
+					r.mu.RUnlock()
+					return
+				}
+				clear(subscriptions)
+				if cap(subscriptions) < len(source.subscribers) {
+					subscriptions = make([]*sfuSubscription, 0, len(source.subscribers))
+				} else {
+					subscriptions = subscriptions[:0]
+				}
+				for _, subscription := range source.subscribers {
+					subscriptions = append(subscriptions, subscription)
+				}
+				r.mu.RUnlock()
+				cachedVersion = version
+			}
 			for _, subscription := range subscriptions {
-				dropped, err := subscription.enqueueRTP(packet, l)
+				dropped, err := subscription.enqueueRTP(packet, l, now)
 				if dropped {
 					r.rtpQueueDropped.Add(1)
 					r.rtpQueueDropShed.Add(1)
@@ -8386,7 +8580,6 @@ func (r *sfuRouter) forwardTrack(source *sfuPublishedTrack) {
 				}
 			}
 		}
-		clear(subscriptions)
 	}
 }
 
@@ -8454,12 +8647,43 @@ func (t *sfuPublishedTrack) cachedPackets(sequences []uint16) ([]*rtp.Packet, []
 	return packets, missing
 }
 
+// rtpPacketCopyPool reuses the packet structs handed to each viewer.
+// At 20x10000 a single RTP packet fans out to 10,000 copies; allocating
+// a fresh struct per copy is 10,000 heap allocs per packet. The pool
+// returns the struct to the free list once the consumer is done with it
+// (after the write, or on a drop path). The payload slice is shared,
+// never mutated, and never pooled — only the struct and its cloned
+// header are recycled. Ownership: the caller that receives a copy owns
+// it and must release it exactly once. The egress shard shares ONE copy
+// across its subscriptions, so the shard releases it after the fan-out
+// loop; the per-subscription queue owns its own copy and releases it
+// after forwardQueuedRTP returns.
+var rtpPacketCopyPool = sync.Pool{
+	New: func() any { return new(rtp.Packet) },
+}
+
 // Pion copies the packet struct before mutating the per-binding RTP header.
 func copyRTPPacketWithSharedPayload(packet *rtp.Packet) *rtp.Packet {
-	packetCopy := *packet
+	packetCopy := rtpPacketCopyPool.Get().(*rtp.Packet)
+	*packetCopy = *packet
 	packetCopy.Header = packet.Header.Clone()
 	packetCopy.Raw = nil
-	return &packetCopy
+	return packetCopy
+}
+
+// releaseRTPPacketCopy returns a packet struct to the pool. The caller
+// must guarantee the packet is no longer referenced anywhere (not in a
+// queue, not in a NACK cache, not mid-write) and must release it exactly
+// once — a double release returns the same struct to two consumers.
+func releaseRTPPacketCopy(packet *rtp.Packet) {
+	if packet == nil {
+		return
+	}
+	// Zero the struct so a pooled copy does not retain the payload or
+	// header slices for the next user. The next Get overwrites the
+	// whole struct anyway; this only releases references early.
+	*packet = rtp.Packet{}
+	rtpPacketCopyPool.Put(packet)
 }
 
 func (t *sfuPublishedTrack) latestSequence() uint16 {
@@ -8481,7 +8705,7 @@ func (s *sfuSubscription) writeRTP(packet *rtp.Packet) (bool, error) {
 	return true, nil
 }
 
-func (s *sfuSubscription) enqueueRTP(packet *rtp.Packet, l packetLayer) (bool, error) {
+func (s *sfuSubscription) enqueueRTP(packet *rtp.Packet, l packetLayer, enqueuedAt time.Time) (bool, error) {
 	if packet == nil {
 		return false, errors.New("RTP packet is required")
 	}
@@ -8496,7 +8720,7 @@ func (s *sfuSubscription) enqueueRTP(packet *rtp.Packet, l packetLayer) (bool, e
 
 	queued := queuedRTP{
 		packet:     copyRTPPacketWithSharedPayload(packet),
-		enqueuedAt: time.Now(),
+		enqueuedAt: enqueuedAt,
 		layer:      l,
 	}
 	select {
@@ -8510,6 +8734,7 @@ func (s *sfuSubscription) enqueueRTP(packet *rtp.Packet, l packetLayer) (bool, e
 	// The loss still breaks the P-frame chain, so the keyframe recovery
 	// flag is set exactly as for any other shed packet.
 	if l == layerDelta {
+		releaseRTPPacketCopy(queued.packet)
 		s.rtpQueueDropped.Add(1)
 		s.markNeedsKeyframe()
 		return true, nil
@@ -8521,8 +8746,9 @@ func (s *sfuSubscription) enqueueRTP(packet *rtp.Packet, l packetLayer) (bool, e
 	droppedOldest := false
 	if !evictedDelta {
 		select {
-		case <-s.rtpQueue:
+		case dropped := <-s.rtpQueue:
 			droppedOldest = true
+			releaseRTPPacketCopy(dropped.packet)
 		default:
 		}
 	}
@@ -8537,6 +8763,7 @@ func (s *sfuSubscription) enqueueRTP(packet *rtp.Packet, l packetLayer) (bool, e
 		}
 		return evictedDelta || droppedOldest, nil
 	default:
+		releaseRTPPacketCopy(queued.packet)
 		s.rtpQueueDropped.Add(1)
 		if evictedDelta {
 			return true, errors.New("RTP queue remained full after dropping its oldest delta packet")
@@ -8972,6 +9199,11 @@ func (r *sfuRouter) nackWorker(subscription *sfuSubscription) {
 				return
 			}
 			r.forwardQueuedRTP(subscription, queued)
+			// The per-subscription queue owns this copy; release it
+			// once forwardQueuedRTP is done. (The shard path shares
+			// one copy across subscriptions and releases it in
+			// shard.run instead — never release here.)
+			releaseRTPPacketCopy(queued.packet)
 			continue
 		default:
 		}
@@ -8986,6 +9218,7 @@ func (r *sfuRouter) nackWorker(subscription *sfuSubscription) {
 				return
 			}
 			r.forwardQueuedRTP(subscription, queued)
+			releaseRTPPacketCopy(queued.packet)
 		case entry, ok := <-nackQueue:
 			if !ok {
 				nackQueue = nil
@@ -9032,7 +9265,7 @@ func (r *sfuRouter) forwardQueuedRTP(subscription *sfuSubscription, queued queue
 			subscription.key.TrackID, subscription.viewerID))
 		return
 	}
-	if time.Since(queued.enqueuedAt) > nackMaxQueueAge {
+	if queueWait > nackMaxQueueAge {
 		subscription.markNeedsKeyframe()
 		subscription.rtpQueueDropped.Add(1)
 		r.rtpQueueDropped.Add(1)
@@ -9270,6 +9503,13 @@ func (r *sfuRouter) handleNACK(subscription *sfuSubscription, feedback *rtcp.Tra
 		now,
 	)
 	cached, missing := subscription.source.cachedPackets(fresh)
+	// cached holds pool copies; release them all when this function
+	// returns, on every path (including the early error return below).
+	defer func() {
+		for _, packet := range cached {
+			releaseRTPPacketCopy(packet)
+		}
+	}()
 	var retransmitted uint64
 	for _, packet := range cached {
 		sent, err := subscription.writeRTP(packet)
@@ -9288,17 +9528,24 @@ func (r *sfuRouter) handleNACK(subscription *sfuSubscription, feedback *rtcp.Tra
 			uint32(subscription.source.remote.SSRC()),
 			missing,
 		)
+		// Read the active flag under RLock, then release it BEFORE
+		// the synchronous upstream WriteRTCP: the write can block
+		// for up to 10s under memory pressure, and holding the
+		// subscription lock across it stalls this viewer's nackWorker
+		// and blocks stop() for the same viewer. A stop racing the
+		// write just makes WriteRTCP fail, which is the correct
+		// outcome for a viewer that is gone.
 		subscription.mu.RLock()
-		if subscription.active {
+		active := subscription.active
+		subscription.mu.RUnlock()
+		if active {
 			for _, packet := range packets {
 				if err := subscription.source.publisherPeer.WriteRTCP([]rtcp.Packet{packet}); err != nil {
-					subscription.mu.RUnlock()
 					return fmt.Errorf("forward uncached NACK upstream: %w", err)
 				}
 			}
 			forwarded = 1
 		}
-		subscription.mu.RUnlock()
 	}
 	subscription.recordNACK(retransmitted, forwarded, duplicates, capped)
 	return nil
@@ -9327,22 +9574,6 @@ func (r *sfuRouter) translateFeedback(
 	case *rtcp.FullIntraRequest:
 		if len(feedback.FIR) == 0 {
 			return nil, "", errors.New("FIR contains no target entries")
-		}
-		if subscription.source.key.TrackID == "stream-0253" {
-			for _, entry := range feedback.FIR {
-				fmt.Fprintf(
-					os.Stderr,
-					"FIR SSRC mapping: viewer=%s publisher=%s track=%s carriedMediaSSRC=%d carriedTargetSSRC=%d expectedViewerSSRC=%d mappedPublisherSSRC=%d mappingSource=publisher TrackRemote.SSRC trackRemoteID=%s\n",
-					subscription.viewerID,
-					subscription.source.key.PublisherID,
-					subscription.source.key.TrackID,
-					feedback.MediaSSRC,
-					entry.SSRC,
-					viewerSSRC,
-					publisherSSRC,
-					subscription.source.remote.ID(),
-				)
-			}
 		}
 		entries := make([]rtcp.FIREntry, 0, len(feedback.FIR))
 		for _, entry := range feedback.FIR {
@@ -11868,16 +12099,28 @@ func runLocalSFUProofWithConfig(
 
 	var upstreamCounts map[string]sfuFeedbackCounts
 	if config.exerciseRTCP {
-		feedbackContext, cancelFeedback := context.WithTimeout(
-			ctx,
-			duration+sfuFeedbackCompletionGrace+sfuFeedbackWaitLimit,
-		)
+		// FIX 19: scale the feedback deadline with the feedback-injection
+		// time. The pacer dispatches one viewer per 30 ms, so injection
+		// alone takes len(viewers) x 30 ms (300 s at 10,000 viewers) after
+		// the 60 s settle + readiness gate, all inside this ctx. The old
+		// flat duration+grace+waitLimit (390 s) expired while pacing
+		// viewer 8,505 of 10,000 (run 399.91 s; measured dispatch
+		// 38.4 ms/viewer, poolWall 326.9 s for 8,504 dispatches — the
+		// ticker plus scheduler lateness under ~350k goroutines; the
+		// workers themselves did only 2.6 s of send work). This is a
+		// harness time budget, not a verdict gate; the outer run ctx
+		// already scales the same way (setup allowance, FIX 8).
+		feedbackTimeout := duration + sfuFeedbackCompletionGrace + sfuFeedbackWaitLimit
+		if totalViewers := len(viewers); totalViewers > 0 {
+			feedbackTimeout += time.Duration(totalViewers) * sfuFeedbackPacingInterval
+		}
+		feedbackContext, cancelFeedback := context.WithTimeout(ctx, feedbackTimeout)
 		defer cancelFeedback()
 
 		feedbackPacer := time.NewTicker(sfuFeedbackPacingInterval)
 		defer feedbackPacer.Stop()
 		// M7-H attempt 8: send-phase STUN/dest snapshot (the send is running
-		// by now) + time the readiness gate, which shares the 395 s feedback
+		// by now) + time the readiness gate, which shares the feedback
 		// deadline with the injection loop.
 		snapshotSTUNStats("send-start")
 		snapshotDestStats("send-start")
@@ -11904,7 +12147,7 @@ func runLocalSFUProofWithConfig(
 			}
 		}
 		// M7-H attempt 8: the gate is done — record how long it took (it
-		// shares the 395 s feedback deadline with the injection loop).
+		// shares the feedback deadline with the injection loop).
 		readinessGateNanos.Store(uint64(time.Since(readinessGateStart).Nanoseconds()))
 		snapshotSTUNStats("send-mid")
 		snapshotDestStats("send-mid")

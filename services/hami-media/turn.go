@@ -64,9 +64,12 @@ const sfuTURNDefaultRealm = "hami"
 const sfuTURNDefaultListen = "127.0.0.1:3478"
 
 // sfuTURNRelayMinPort / sfuTURNRelayMaxPort bound relay allocations.
+// 10,000 ports (49152-59152): one relay port per concurrent
+// TURN-relayed client, so the 20x10000 target is not capped at 1,000
+// relayed clients by the port range.
 const (
 	sfuTURNRelayMinPort = 49152
-	sfuTURNRelayMaxPort = 50152
+	sfuTURNRelayMaxPort = 59152
 )
 
 // sfuTURNConfig is everything a client (or the standalone server) needs
