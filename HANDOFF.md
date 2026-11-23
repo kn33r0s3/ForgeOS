@@ -1,6 +1,19 @@
-# Active handoff — 2026-11-23 02:05 +0545 — media evidence and CI correction verified (freshness-checked 2026-11-23 06:23)
+# Active handoff — 2026-11-24 05:28 +0545 — D95 public agricultural investment and banana post-harvest crosswalk; LiveKit priority preserved
 
-## Current operation
+## Current operation — 2026-11-24 05:28 +0545
+
+- **Canonical repository:** kn33r0s3/ForgeOS, branch main, exact SHA e4257b4f7ed7b083ebf1cddbe275bf27c062a31d. Recent history after the previous handoff includes the 2026-11-23 Hami Media/SFU code-and-test commits 6ce9969c and e4257b4f, plus the handoff freshness commit 3dc4a4c7; the earlier 80ebb082 records the D93 page-date correction. The latest source changes are in the media/SFU path, not this D95 research.
+- **Exact-head verification on e4257b4f7ed7b083ebf1cddbe275bf27c062a31d:** ForgeOS CI run 45222039985 passed all 9 jobs; secret scan 45222040469 passed. Independent deploy verification 45222039790 failed at “Fetch production content” (HTTP 402); no protected read or production-content verification followed. The Vercel hami project has a READY production deployment for this SHA. Its 30-minute grouped runtime sample contained 24 info events and no warning/error groups; this is not a health or capacity proof. The GitHub forge-os Vercel check remains account/deployment-blocked.
+- **Priority preserved:** LiveKit capacity/reliability remains the first active engineering priority. No load test or capacity measurement was performed in this discovery run; the prior host-pressure guard and NOT MEASURABLE status are not changed by this research.
+- **D95 evidence increment:** the Lumbini OAG eighth annual report (published 8 Oct, page updated 11 Nov 2026; audit period FY2081/82) records three completed/950MT cold stores not operating continuously, two/1,000MT long under construction and planned local-government handover not completed. The same audit records 153 agricultural farms receiving interest subsidy without return analysis and says grant use/duplicate-benefit/target-benefit/contribution/sustainability monitoring and public disclosure were not done; its three-year grant table reports 57,169 beneficiaries and NPR 1.176933bn.
+- **Chitwan chain:** a G9 tissue-culture advance-deposit notice issued 17 Nov 2026 has a 1 Dec deadline. A blank ripening-chamber form requests road, market, electricity, land, beneficiary, production/output and storage-duration data. The FY2082/83 specification is for one 6.5MT chamber and includes IoT monitoring and witnessed testing/commissioning/handover. The historical banana booklet mentions earlier ripening-chamber subprojects. These are separate from the Lumbini audit; no shared beneficiaries/assets or current facility operation were established.
+- **D95 remains UNKNOWN:** no stable cross-programme asset IDs, current operator/handover status, throughput, energy cost, spoilage reduction, buyer/offtake or realized farmer outcome was retrieved. No independent corroboration of the OAG findings was found in this run.
+- **Rights and action boundary:** OAG, NAMP and Chitwan PIU sources remain manual-only / NOT CLEARED for automated collection, body persistence, Signal/Evidence writes or provider transmission. Robots/terms routes were inaccessible and no exact reuse grant was found. No source registry change, code write, contact, application, deposit, payment, publication or external action occurred. No new D-number or ResearchQuestion; UNKNOWN_MAP/projections unchanged.
+- **Next:** retrieve the listed Chitwan FY2082/83 achievements/learning, FY2081/82 annual-progress and FY2082/83 cost-benefit report bodies; inspect NAMP's cold-store operations booklet and grant-details book; crosswalk only with stable facility/project IDs. Do not change source rights or bypass the blocked planner source write.
+
+
+
+## Previous media/CI snapshot — 2026-11-23
 
 - Latest verified implementation commit `d13841326f602a9a992f2cb4812a65a2d9f10c2f`
   is on `main` and matches `origin/main`. Exact-head CI `45065383087` passed

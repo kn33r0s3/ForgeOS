@@ -1,4 +1,13 @@
-## Current queue — 2026-11-23 20:20Z — verify media HLS seam; keep capacity blocked
+## Current queue — 2026-11-24 05:28 +0545 — preserve LiveKit priority; advance D95 outcome trace
+
+1. **Current main and checks:** e4257b4f7ed7b083ebf1cddbe275bf27c062a31d is the exact remote main head. ForgeOS CI 45222039985 passed 9/9 jobs; secret scan 45222040469 passed. Independent deploy verifier 45222039790 failed at production-content fetch (HTTP 402). Hami Vercel deployment is READY for this SHA; grouped 30-minute runtime logs show 24 info events and no warning/error groups, not a health proof. ForgeOS Vercel remains account/deployment-blocked.
+2. **Priority 1 — LiveKit capacity/reliability:** preserve the current capacity objective and host safety guards. No load test or new capacity measurement was performed in this run. Resume only from the latest verified host/runtime state; do not infer capacity from the current Vercel or CI checks.
+3. **Parallel Hami-wide discovery — D93:** #01–#03 page dates/cutoffs remain separately reconciled; official #02 and #04 PDF bodies remain unread; #04's 16 Oct cutoff is not current service status. Continue only with exact dated Gorkha/Chumnubri/NEA/road restoration records. Do not create duplicate dispatch or emergency alerting.
+4. **Parallel Hami-wide discovery — D95 public agricultural investment:** the Lumbini OAG eighth report records 3 completed/950MT cold stores not continuously operating, 2/1,000MT under construction and local-government handover not completed; the same audit records subsidy outcome-monitoring gaps. Chitwan PIU's 17 Nov G9 notice has a 1 Dec deadline; its ripening-chamber form/spec reveal proposal, access, production and commissioning variables. Next retrieve the listed Chitwan FY2082/83/2081/82 report bodies and NAMP cold-store operations/grant books; match only stable facility/project IDs. D95 remains UNKNOWN.
+5. **Existing source-time capability:** do not bypass the blocked source-write path. Keep page date, source publication/update, effective period/cutoff and retrieval time distinct. Reuse existing Signal/Evidence provenance and tests only if the authorized source-edit path is restored; no new schema or collector.
+6. **Rights and gates:** OAG, NAMP and Chitwan PIU material remains manual-only / NOT CLEARED. No source ingestion, body persistence, provider transmission, contact, application, deposit, payment, publishing or external action. Do not mass-clear government domains.
+
+## Previous queue — 2026-11-23 20:20Z — verify media HLS seam; keep capacity blocked
 
 1. Latest verified implementation commit `d13841326f602a9a992f2cb4812a65a2d9f10c2f`
    is on `main` and matches `origin/main`. Exact-head CI `45065383087`
