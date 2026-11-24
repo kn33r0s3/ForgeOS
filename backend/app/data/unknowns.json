@@ -993,11 +993,11 @@
   {
    "id": "D95",
    "category": "D",
-   "question": "During weather shocks, where is the largest avoidable loss of agricultural and livelihood value: decision information, planting timing, harvest, storage, transport, or market coordination? (cross-domain scan, 2026-10-12: the World Bank reports FY26 agricultural growth slowed to 1.6% and paddy production contracted 4.2%, affected by drought and excessive rainfall)",
+   "question": "During weather shocks, where is the largest avoidable loss of agricultural and livelihood value: decision information, planting timing, harvest, storage, transport, or market coordination? (cross-domain scan, 2026-10-12)",
    "state": "UNKNOWN",
-   "state_note": "UNKNOWN (new official evidence: Lumbini OAG FY2080/81 reports 17 completed cold stores with 11,425MT capacity, 1,200MT used and 3 non-operating; FY2081/82 reports 3 completed/950MT not continuous and 2 under construction/1,000MT. No stable asset IDs or current November 2026 operating status. Separate from national PMAMP/NAMP counts; do not aggregate programme totals.)",
-   "cheapest_test": "Crosswalk official Lumbini facility/project IDs, commissioning, operator, handover and utilization across OAG reports; separately inspect current NAMP/PIU FY2082/83 publications and preserve programme identity and source-time scope. Manual-only until source rights are reviewed.",
-   "stake": "Could identify public assets that may be repaired, commissioned, transferred or matched to crop/logistics demand; aggregate capacity alone is not live supply or proof of market demand."
+   "state_note": "UNKNOWN (public-source evidence only; no firsthand outcome. Lumbini OAG FY2081/82 reports three completed/950MT provincial cold stores not continuously operating, two/1,000MT under construction and incomplete local-government handover; this is a separate provincial programme, not PMAMP/NAMP. PMAMP FY2081/82 study surveys 25 units but uses 87/86/25 as unresolved inventory/installed/survey denominators; seven sampled rooms at full capacity, others partial/unused, one non-functional due to no business model; self-reporting, non-digitized records and seasonal limits. Later NAMP FY2082/83 booklet says most cold stores partial/closed without denominator. NAMP FY2081/82 grant book lists Syangja orange coldstore/coldroom support for 25 beneficiaries but no asset ID or measured result. Farmer Registry dashboard 2083-08-08 03:17 shows 2,681,048 registered, 871,867 verified (33%), 81,270 classified, 753/753 local bodies listed, 126 grant records/NPR8,190,198 recorded; national migration remains incomplete. Circulars #70/#71 and PIU Rupandehi notice #27 show farmer-ID requirements in policy and one office, not nationwide compliance or OAG-to-registry linkage. Chitwan forms show organization PAN/registration and beneficiary/production fields but no visible farmer ID; not proof of non-compliance. No stable asset IDs, current operation, throughput, energy/maintenance cost, buyer/offtake, verified loss reduction or farmer outcome is established.)",
+   "cheapest_test": "Retrieve Chitwan FY2082/83 achievement/learning, FY2081/82 annual progress and FY2082/83 cost-benefit report bodies only if official file URLs surface; continue NAMP FY2082/83 progress and dated asset-level commissioning/handover/operator/throughput/market evidence. Crosswalk only stable programme/facility IDs. Keep source rights manual-only until exact-source review; no individual Farmer Registry data access.",
+   "stake": "Could identify public cold-chain capacity that may be repaired, commissioned, transferred or matched to seasonal crop/logistics demand, and use farmer IDs to improve grant traceability if lawful access exists. This is not evidence of current supply, market demand, realized revenue or loss reduction."
   },
   {
    "id": "D96",
@@ -1162,5 +1162,5 @@
    "stake": "If the state's own counters are cash-only, cash demand has a government-set floor — digital adoption stalls at the state's door, not the shop's"
   }
  ],
- "last_loop": "2026-11-18"
+ "last_loop": "2026-11-24"
 }

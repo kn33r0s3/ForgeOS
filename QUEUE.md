@@ -1,4 +1,40 @@
-## Current queue — 2026-11-23 20:20Z — verify media HLS seam; keep capacity blocked
+## Current queue — 2026-11-24 06:20 +0545 — preserve event boundaries and projection sync
+
+1. **Priority 1 — LiveKit capacity/reliability:** unchanged and first. No load/capacity measurement in this discovery run.
+2. **D93 — Gorkha–Budhi Gandaki:** keep separate from Rasuwa–Bhotekoshi. NDRRMA #02/#04 PDFs remain unread; 24 Nov search did not surface #05 or a newer Gorkha restoration notice, but absence is not proved.
+3. **Separate Bhotekoshi–Trishuli event:** Nuwakot DAO update effective through 2083 Mangsir 6 (22 Nov) and NEA tenders for Upper Trishuli 3A, Trishuli HPS and Devighat provide new public recovery/procurement evidence. Verify awards, clearance completion and generation status; reconcile 631 missing / 17 identified deaths against the local table and earlier 2,723 / 205 only after definitions are established. Do not access the linked individual missing-person list.
+4. **D95 — cold-chain/farmer-ID traceability:** continue Chitwan report-body retrieval only if official URLs surface; NAMP progress and dated asset-level operation/handover evidence remain next. D95 stays UNKNOWN.
+5. **Rights and gates:** Nuwakot DAO/NEA, NAMP/PMAMP, Chitwan PIU and Farmer Registry remain manual-only / NOT CLEARED. No automated ingestion, body persistence, provider transmission, individual data access, contact, application, payment, publishing or source-write bypass.
+6. **Continuity:** no new D-number or architecture. Any UNKNOWN_MAP change must regenerate backend/app/data/unknowns.json and src/lib/unknowns.ts with scripts/sync-unknowns-json.mjs before commit.
+
+## Current queue — 2026-11-24 05:56 +0545 — D95 evidence crosswalk; preserve LiveKit priority
+
+1. **Priority 1 — LiveKit capacity/reliability:** unchanged and first. No load test or capacity measurement in this discovery run.
+2. **D93:** continue the exact dated Gorkha/Chumnubri/NEA/road restoration search; official #02 and #04 PDF bodies remain unread and October cutoffs are not current service status.
+3. **D95 — cold-chain and farmer-ID traceability:** new evidence from the NAMP grant book, NAMP cold-store booklet, PMAMP cold-room study, Farmer Registry dashboard, circulars #70/#71 and PIU Rupandehi notice #27. Keep Lumbini provincial OAG cold stores separate from PMAMP/NAMP. D95 remains UNKNOWN.
+4. **Next evidence:** retrieve Chitwan FY2082/83 achievement/learning, FY2081/82 annual progress and FY2082/83 cost-benefit report bodies only if official file URLs surface; continue NAMP FY2082/83 progress and facility-level records; crosswalk only stable project/asset IDs and dated operation/handover evidence.
+5. **Rights and gates:** NAMP/PMAMP/Chitwan/Farmer Registry remain manual-only / NOT CLEARED. No automated ingestion, individual data access, provider transmission, contact, application, deposit, payment, publishing or external action. No source-write bypass.
+6. **Continuity:** no new D-number or new architecture; update D95 in the existing UNKNOWN_MAP and capability ledger only. Keep six canonical primitives and existing Signal/Evidence seam.
+
+## Current queue — 2026-11-24 follow-up — identity-linked public-grant evidence; preserve LiveKit priority
+
+1. **Run-start main and checks:** ae87e88e39224ee96b818e6d424bd17033bb90a5 (documentation-only commit); last code-bearing commit e4257b4f7ed7b083ebf1cddbe275bf27c062a31d. CI 45293329973 passed 9/9 jobs; secret scan 45293329793 passed. Independent deploy verification 45293329754 failed at Fetch production content; no production-content/health proof. Vercel hami deployment READY; forge-os Vercel account/deployment-blocked.
+2. **Priority 1 — LiveKit capacity/reliability:** unchanged and first. No load test or capacity measurement in this discovery run.
+3. **D93:** continue exact dated Gorkha/Chumnubri/NEA/road restoration evidence; official #02 and #04 PDF bodies remain unread; do not create emergency alerting or infer current service from historical reports.
+4. **D95 — identity-linked grant traceability:** OAG FY2081/82 audit identifies missing duplicate-grant/outcome monitoring; Farmer Registry Directive 2081 and circulars #70/#71 (2083-06-08) provide a farmer-ID and grant-record mechanism for local/provincial programmes. Dashboard (2083-08-05 10:47) shows 2.68m registered, 870k ward-verified (32%), 79k classified, 120 grant records, migration/unit caveats. Next inspect NAMP grant-details book and Chitwan PIU forms for ID usage; do not access individual data or infer compliance. D95 remains UNKNOWN.
+5. **NAMP/ARMIS:** homepage counters have no effective date; public ARMIS host is suspended, not proof of internal data loss. Do not duplicate the government system or attempt login. No API/authorized integration established.
+6. **Rights and gates:** Farmer Registry, NAMP, ARMIS, OAG and PIU material remain manual-only / NOT CLEARED. No automated ingestion, personal data access, provider transmission, contact, application, deposit, payment or publication.
+
+## Previous queue — 2026-11-24 05:28 +0545 — run-start e425; continuity commit ae87
+
+1. **Current main and checks:** e4257b4f7ed7b083ebf1cddbe275bf27c062a31d is the exact remote main head. ForgeOS CI 45222039985 passed 9/9 jobs; secret scan 45222040469 passed. Independent deploy verifier 45222039790 failed at production-content fetch (HTTP 402). Hami Vercel deployment is READY for this SHA; grouped 30-minute runtime logs show 24 info events and no warning/error groups, not a health proof. ForgeOS Vercel remains account/deployment-blocked.
+2. **Priority 1 — LiveKit capacity/reliability:** preserve the current capacity objective and host safety guards. No load test or new capacity measurement was performed in this run. Resume only from the latest verified host/runtime state; do not infer capacity from the current Vercel or CI checks.
+3. **Parallel Hami-wide discovery — D93:** #01–#03 page dates/cutoffs remain separately reconciled; official #02 and #04 PDF bodies remain unread; #04's 16 Oct cutoff is not current service status. Continue only with exact dated Gorkha/Chumnubri/NEA/road restoration records. Do not create duplicate dispatch or emergency alerting.
+4. **Parallel Hami-wide discovery — D95 public agricultural investment:** the Lumbini OAG eighth report records 3 completed/950MT cold stores not continuously operating, 2/1,000MT under construction and local-government handover not completed; the same audit records subsidy outcome-monitoring gaps. Chitwan PIU's 17 Nov G9 notice has a 1 Dec deadline; its ripening-chamber form/spec reveal proposal, access, production and commissioning variables. Next retrieve the listed Chitwan FY2082/83/2081/82 report bodies and NAMP cold-store operations/grant books; match only stable facility/project IDs. D95 remains UNKNOWN.
+5. **Existing source-time capability:** do not bypass the blocked source-write path. Keep page date, source publication/update, effective period/cutoff and retrieval time distinct. Reuse existing Signal/Evidence provenance and tests only if the authorized source-edit path is restored; no new schema or collector.
+6. **Rights and gates:** OAG, NAMP and Chitwan PIU material remains manual-only / NOT CLEARED. No source ingestion, body persistence, provider transmission, contact, application, deposit, payment, publishing or external action. Do not mass-clear government domains.
+
+## Previous queue — 2026-11-23 20:20Z — verify media HLS seam; keep capacity blocked
 
 1. Latest verified implementation commit `d13841326f602a9a992f2cb4812a65a2d9f10c2f`
    is on `main` and matches `origin/main`. Exact-head CI `45065383087`
