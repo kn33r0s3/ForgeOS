@@ -1,7 +1,7 @@
 # Hami unknowns map
 **Last evidence refresh:** 2026-11-24 (D95 evidence update; no new D-number).
 
-**Date:** 2026-11-18 (D109–D113 added from round 24, the buyer's side of QR vs cash)
+**Date:** 2026-11-24 (D95 evidence refresh; no new D-number; D109–D113 remain the last newly added IDs from 2026-11-18).
 **Status:** living document — update when an unknown changes state, never to
 fill a queue
 **States:** UNKNOWN / HYPOTHESIZED / TESTED / SUPPORTED / CONTRADICTED /

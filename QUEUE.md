@@ -1,3 +1,12 @@
+## Current queue — 2026-11-24 06:20 +0545 — preserve event boundaries and projection sync
+
+1. **Priority 1 — LiveKit capacity/reliability:** unchanged and first. No load/capacity measurement in this discovery run.
+2. **D93 — Gorkha–Budhi Gandaki:** keep separate from Rasuwa–Bhotekoshi. NDRRMA #02/#04 PDFs remain unread; 24 Nov search did not surface #05 or a newer Gorkha restoration notice, but absence is not proved.
+3. **Separate Bhotekoshi–Trishuli event:** Nuwakot DAO update effective through 2083 Mangsir 6 (22 Nov) and NEA tenders for Upper Trishuli 3A, Trishuli HPS and Devighat provide new public recovery/procurement evidence. Verify awards, clearance completion and generation status; reconcile 631 missing / 17 identified deaths against the local table and earlier 2,723 / 205 only after definitions are established. Do not access the linked individual missing-person list.
+4. **D95 — cold-chain/farmer-ID traceability:** continue Chitwan report-body retrieval only if official URLs surface; NAMP progress and dated asset-level operation/handover evidence remain next. D95 stays UNKNOWN.
+5. **Rights and gates:** Nuwakot DAO/NEA, NAMP/PMAMP, Chitwan PIU and Farmer Registry remain manual-only / NOT CLEARED. No automated ingestion, body persistence, provider transmission, individual data access, contact, application, payment, publishing or source-write bypass.
+6. **Continuity:** no new D-number or architecture. Any UNKNOWN_MAP change must regenerate backend/app/data/unknowns.json and src/lib/unknowns.ts with scripts/sync-unknowns-json.mjs before commit.
+
 ## Current queue — 2026-11-24 05:56 +0545 — D95 evidence crosswalk; preserve LiveKit priority
 
 1. **Priority 1 — LiveKit capacity/reliability:** unchanged and first. No load test or capacity measurement in this discovery run.

@@ -1997,3 +1997,11 @@ This is the Nuwakot view of the 26 Aug Bhotekoshi–Trishuli event, distinct fro
 - Source-time/entity gap confirmed in existing code: metadata-only effective cutoffs can be lost before Signal/Evidence provenance, dedup may preserve old timestamps/provenance, assessment compares publication to retrieval only, synthesis citation omits publication/effective cutoff, and prompt memory omits registry identity/cutoff/body. No code edit or source-write bypass.
 - All new public sources remain manual-only / NOT CLEARED; no individual farmer data, body persistence, ingestion, provider transmission, contact, application, deposit, payment or publication. No contact details from annexes copied.
 
+## 2026-11-24 06:20 +0545 — Bhotekoshi–Trishuli update and UNKNOWN_MAP projection repair
+
+- Rechecked current official Nuwakot DAO homepage (updated 2083-08-07 12:54) and retrieved its latest Bhotekoshi–Trishuli status PDF, effective through 2083 Mangsir 6 / 22 Nov. It adds preliminary affected-population, infrastructure, health, relief and bridge/zip-line restoration details. Missing/death/body categories do not reconcile internally or with October #30/#31; no individual missing-person records were accessed.
+- Checked Nuwakot DAO decision text: local verification and RMIS entry, NPR20 crore request and six-month support are described, but the body date 2083/09/10 is future relative to the page date; date and funding status remain UNKNOWN.
+- Checked NEA tenders for three HPS. THPS financial opening moved to 19 Nov; Devighat cancellation attachment carries a new CST-06 invitation dated 18 Nov; Upper Trishuli 3A cancellation reason not established. No award/completion/generation status.
+- Kept Bhotekoshi–Trishuli separate from D93 Gorkha–Budhi and from MoF source scope; no new D-number.
+- The previous bdcc head CI caught stale generated projections after the D95 map update. This commit updates UNKNOWN_MAP Date and regenerates backend/app/data/unknowns.json and src/lib/unknowns.ts using scripts/sync-unknowns-json.mjs. Exact-head validation pending.
+- No code edits, source registration, ingestion, individual data access, provider transmission, contact, payment or publication. LiveKit priority unchanged; no capacity test.
