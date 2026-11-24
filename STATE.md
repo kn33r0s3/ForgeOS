@@ -1,4 +1,14 @@
-## Current continuation — 2026-11-24 05:28 +0545 — D95 public agricultural investment and post-harvest crosswalk
+## Current continuation — 2026-11-24 follow-up — Farmer Registry and subsidy traceability
+
+- Run-start main was ae87e88e39224ee96b818e6d424bd17033bb90a5 (documentation-only continuity commit); last code-bearing main commit remains e4257b4f7ed7b083ebf1cddbe275bf27c062a31d. This follow-up is documentation-only.
+- Exact-head CI 45293329973 passed 9/9 jobs and secret scan 45293329793 passed on ae87e88e39224ee96b818e6d424bd17033bb90a5. Independent deploy verification 45293329754 failed at “Fetch production content”; no production-content or health proof. Vercel hami deployment is READY for this head; forge-os Vercel remains account/deployment-blocked.
+- New D95 connection: OAG FY2081/82 audit identifies grant outcome and duplicate-beneficiary monitoring gaps. Farmer Registration System Directive 2081 provides a 13-digit geographic farmer ID, grant-detail fields and required local/provincial updates; circulars #70/#71 dated 2083-06-08 require that ID in annual-approved and conditional local/provincial agriculture programmes. This is a policy mechanism, not evidence of implementation.
+- Public dashboard data updated 2083-08-05 10:47 (21 Nov 2026): 2,679,981 registered households; 870,030 ward-verified (32%); 79,015 classified; 753/753 local bodies listed but national aggregation incomplete pending data migration. It shows 120 grant records and NPR8,015,198 recorded as received by farmers, not verified disbursement; default no-FY view mixes each farmer's latest year; 237,559 crop entries and 3,889,028 animal counts are excluded for incompatible units.
+- NAMP homepage counters are undated; the ARMIS public hostname returns Account Suspended. This is not proof of internal data loss. No API, shared IDs or integration between NAMP/ARMIS and Farmer Registry was demonstrated.
+- D95 remains UNKNOWN: no OAG-to-registry grant linkage, circular compliance, Chitwan G9 ID usage, current facility operation, throughput, buyer/offtake or realized farmer outcome proved. No new D-number or UNKNOWN_MAP/projection change.
+- Reuse the six primitives and existing Signal/Evidence path only. No new model/table/collector. No individual data access, automated ingestion, provider transmission, contact, payment, application or publication. Source rights remain NOT CLEARED.
+
+## Previous continuation — 2026-11-24 05:28 +0545 — run-start e425; continuity commit ae87
 
 - Current main is e4257b4f7ed7b083ebf1cddbe275bf27c062a31d. Exact-head ForgeOS CI 45222039985 passed 9/9 jobs; secret scan 45222040469 passed. Independent deploy verification 45222039790 failed at production-content fetch (HTTP 402). The Vercel hami project is READY for this SHA; a 30-minute grouped runtime sample showed 24 info events and no warning/error groups, which is not a health proof. The forge-os Vercel check remains account/deployment-blocked.
 - LiveKit capacity/reliability remains the first active engineering priority; this run did not run a load test or change its NOT MEASURABLE status.
