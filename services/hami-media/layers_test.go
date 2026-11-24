@@ -132,17 +132,17 @@ func TestRememberPacketCachesEveryH264IDRFragment(t *testing.T) {
 	}
 }
 
-// TestRememberPacketSkipsDeltaLayer measures the NACK-cache reduction
-// from a real run: the same 100-packet stream (10 audio + 10 keyframes +
-// 80 deltas) is remembered once the old way (everything cached) and once
-// the layered way (layers 0-1 only). The numbers are asserted exactly.
-func TestRememberPacketSkipsDeltaLayer(t *testing.T) {
+// TestRememberPacketCachesDeltaLayer: FIX 31 — layer 2 (video delta)
+// packets are cached like every other layer, so a NACK for a
+// single-packet P-frame can be honoured. The same 100-packet stream
+// (10 audio + 10 keyframes + 80 deltas) is remembered with the real
+// layer classification; all 100 packets must be cached.
+func TestRememberPacketCachesDeltaLayer(t *testing.T) {
 	audioPayload := make([]byte, 100)
 	keyPayload := append([]byte{0x65, 0x88}, make([]byte, 1198)...)
 	deltaPayload := append([]byte{0x41, 0x9a}, make([]byte, 1198)...)
 
-	before := &sfuPublishedTrack{packetCache: make(map[uint16]*rtp.Packet)}
-	after := &sfuPublishedTrack{packetCache: make(map[uint16]*rtp.Packet)}
+	track := &sfuPublishedTrack{packetCache: make(map[uint16]*rtp.Packet)}
 	for sequence := uint16(1); sequence <= 100; sequence++ {
 		var codec string
 		var payload []byte
@@ -155,37 +155,28 @@ func TestRememberPacketSkipsDeltaLayer(t *testing.T) {
 			codec, payload = webrtc.MimeTypeH264, deltaPayload
 		}
 		packet := layerTestPacket(sequence, payload)
-		before.rememberPacket(packet, layerBase)
-		after.rememberPacket(packet, classifyPacketLayer(codec, packet))
+		track.rememberPacket(packet, classifyPacketLayer(codec, packet))
 	}
 
-	if got := before.packetCachePackets.Load(); got != 100 {
-		t.Fatalf("before: cached packets = %d, want 100", got)
+	if got := track.packetCachePackets.Load(); got != 100 {
+		t.Fatalf("cached packets = %d, want 100 (10 audio + 10 keyframes + 80 deltas)", got)
 	}
-	if got, want := before.packetCachePayloadBytes.Load(), int64(10*100+90*1200); got != want {
-		t.Fatalf("before: cached payload bytes = %d, want %d", got, want)
+	if got, want := track.packetCachePayloadBytes.Load(), int64(10*100+90*1200); got != want {
+		t.Fatalf("cached payload bytes = %d, want %d", got, want)
 	}
-	if got := after.packetCachePackets.Load(); got != 20 {
-		t.Fatalf("after: cached packets = %d, want 20 (10 audio + 10 keyframes)", got)
+	if got := track.latestSequence(); got != 100 {
+		t.Fatalf("latest sequence = %d, want 100 (sequence still advances through deltas)", got)
 	}
-	if got, want := after.packetCachePayloadBytes.Load(), int64(10*100+10*1200); got != want {
-		t.Fatalf("after: cached payload bytes = %d, want %d", got, want)
+	// A NACK for a delta sequence is now served from the cache (FIX 31:
+	// a single-packet P-frame is recoverable); a NACK for a keyframe
+	// sequence is served too.
+	if packets, missing := track.cachedPackets([]uint16{3}); len(missing) != 0 || len(packets) != 1 {
+		t.Fatalf("cachedPackets([3]) = %d packets, missing %v, want 1 packet and no missing", len(packets), missing)
 	}
-	if got := after.layerDeltaCacheSkipped.Load(); got != 80 {
-		t.Fatalf("after: skipped deltas = %d, want 80", got)
-	}
-	if got := after.latestSequence(); got != 100 {
-		t.Fatalf("after: latest sequence = %d, want 100 (sequence still advances through deltas)", got)
-	}
-	// A NACK for a delta sequence comes back missing (the existing miss
-	// path); a NACK for a keyframe sequence is served from the cache.
-	if _, missing := after.cachedPackets([]uint16{3}); len(missing) != 1 || missing[0] != 3 {
-		t.Fatalf("cachedPackets([3]) missing = %v, want [3]", missing)
-	}
-	if packets, missing := after.cachedPackets([]uint16{2}); len(missing) != 0 || len(packets) != 1 {
+	if packets, missing := track.cachedPackets([]uint16{2}); len(missing) != 0 || len(packets) != 1 {
 		t.Fatalf("cachedPackets([2]) = %d packets, missing %v, want 1 packet and no missing", len(packets), missing)
 	}
-	t.Logf("NACK cache: before 100 packets / 109000 bytes, after 20 packets / 13000 bytes (80%% fewer packets, 88%% fewer bytes)")
+	t.Logf("NACK cache: 100 packets / 109000 bytes (all layers cached, FIX 31)")
 }
 
 func TestEnqueueRTPDropsDeltaFirst(t *testing.T) {

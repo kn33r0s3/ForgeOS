@@ -90,16 +90,26 @@ const (
 	// NACKs the actually-missing sequences; the router retransmits
 	// them from its per-track cache (handleNACK, unchanged). A NACK
 	// is retried at most nackGapMaxAttempts times, nackGapRetryInterval
-	// apart — 600 ms clears the router's 500 ms retransmit dedup
-	// window (selectNACKSequences), so a retry after a genuinely lost
-	// retransmit is honoured instead of skipped as a duplicate.
+	// apart. LADDER FIX 5: attempts is 1 (no retries). The retry was
+	// designed so 600 ms clears the router's 500 ms retransmit dedup
+	// window (selectNACKSequences) and a retry after a genuinely lost
+	// retransmit is honoured — at 20x10,000 that design IS the storm:
+	// run 2 sent 7.55M NACK sequences and the router retransmitted
+	// 12.5M packets (3.4x the originals), 98.5% of which never arrived
+	// (77% kernel/receive loss), collapsing delivery to 22.6%. A retry
+	// fires 600 ms after the first NACK, but a frame dissolves ~400 ms
+	// after its first packet, so a retry retransmit can never complete
+	// its frame; the P-chain it might unblock is already shed by the
+	// keyframe-recovery gate until the next IDR. One attempt only: the
+	// first retransmit (the only one that can arrive in time) is kept,
+	// the retries (pure load) are gone.
 	// nackGapMaxJump bounds the gap a single arrival can open (a
 	// larger jump is a sequence restart, not loss). The assembler
 	// retains the most recent incomplete frame span (lateSpanMaxSequences
 	// bounds it) so a retransmit arriving after the next frame started
 	// can still complete its frame (videoFrameAssembler.push).
 	nackGapRetryInterval = 600 * time.Millisecond
-	nackGapMaxAttempts   = 3
+	nackGapMaxAttempts   = 1
 	nackGapMaxBatch       = 256
 	nackGapMaxJump        = 1024
 	lateSpanMaxSequences  = 1024
@@ -183,6 +193,11 @@ var routerSocketWriteMode = "disabled"
 
 // clientSocketReadMode enables per-viewer raw UDP read counts for diagnostics.
 var clientSocketReadMode = "disabled"
+
+// sfuCellIndex is the 0-based cell index of this worker process, bound to
+// the -sfu-cell-index flag in main (0 = the single-process run). LADDER
+// FIX 3 reads it to derive each publisher's global IDR phase offset.
+var sfuCellIndex = 0
 
 var clientSocketReadBufferSize = "0"
 
@@ -921,6 +936,14 @@ func main() {
 		1,
 		"cell count for sfu-single mode: split publishers/viewers across N worker subprocesses (1 = single process)",
 	)
+	// LADDER FIX 3: cell index for the IDR phase stagger. The parent
+	// passes each worker its index; 0 = the single-process run.
+	flag.IntVar(
+		&sfuCellIndex,
+		"sfu-cell-index",
+		0,
+		"cell index for sfu-single mode: 0-based worker number, used to derive each publisher's global IDR phase (0 = single process)",
+	)
 	sfuScoringMode := flag.String(
 		"sfu-score-mode",
 		sfuScoringStrict,
@@ -988,6 +1011,12 @@ func main() {
 	if *sfuCells > 1 && *sfuFrameDiagnosticOutput != "" {
 		fail("--sfu-frame-diagnostic-output is not supported with --sfu-cells > 1 (use the per-cell JSON files)")
 	}
+	// LADDER FIX 3: the upper bound is enforced by the parent (it only
+	// passes indexes below --sfu-cells); the child cannot know the cell
+	// count, so only the lower bound is checked here.
+	if sfuCellIndex < 0 {
+		fail("--sfu-cell-index must not be negative, got %d", sfuCellIndex)
+	}
 	maxHeapBytesExplicit := false
 	flag.Visit(func(parsed *flag.Flag) {
 		if parsed.Name == "max-heap-bytes" {
@@ -1042,13 +1071,22 @@ func main() {
 		fmt.Fprintf(os.Stderr, "heap memory limit: hardened to 4000000000 bytes (no GOMEMLIMIT env)\n")
 	}
 	if *mode == "m7h-sfu" {
-		if *m7hSFUToken == "" {
-			fail("--m7h-sfu-token is required in m7h-sfu mode")
+		// POLISH-001: the harness passes the bearer token on fd 4
+		// (inherited token pipe), never on argv — argv is visible via
+		// ps to any same-user process and ps output is captured into
+		// logs. The flag stays for manual invocation.
+		token := *m7hSFUToken
+		if token == "" {
+			fdToken, err := readM7HSFUTokenFromFD()
+			if err != nil {
+				fail("--m7h-sfu-token is required in m7h-sfu mode (or pass it on fd 4): %v", err)
+			}
+			token = fdToken
 		}
 		if err := checkGoHeapBudget(*maxHeapBytes); err != nil {
 			fail("start local M7-H SFU process: %v", err)
 		}
-		if err := runM7HSFUServer(*m7hSFUToken, *maxHeapBytes); err != nil {
+		if err := runM7HSFUServer(token, *maxHeapBytes); err != nil {
 			fail("run local M7-H SFU process: %v", err)
 		}
 		return
@@ -1167,6 +1205,12 @@ func main() {
 		}
 		injectionTime := time.Duration(totalViewers) * sfuFeedbackPacingInterval
 		setupAllowance += injectionTime + time.Minute
+		// LADDER FIX 4: one publisher-side feedback retry round (see
+		// feedbackTimeout). Budget a full re-injection + fresh wait on
+		// top of the first pass, so the outer run ctx cannot kill the
+		// retry. Total-based, hence conservative (cells run in
+		// parallel). Harness time budget, not a verdict gate.
+		setupAllowance += injectionTime + sfuFeedbackWaitLimit
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), *duration+setupAllowance)
 	defer cancel()
@@ -5277,9 +5321,16 @@ type sfuPublishedTrack struct {
 	lastSequence            uint16
 	packetCachePackets      atomic.Int64
 	packetCachePayloadBytes atomic.Int64
-	// layerDeltaCacheSkipped counts video delta packets that were never
-	// cached because layer 2 is not retained (see rememberPacket).
-	layerDeltaCacheSkipped atomic.Uint64
+	// upstreamForwardedAt records, per RTP sequence number, when this
+	// track last forwarded a NACK for it upstream (LADDER FIX 2).
+	// Guarded by packetMu; shared by all subscriptions of the track
+	// so 375 viewers NACKing the same upstream-lost packet forward it
+	// once per nackAggregationWindow, not 375 times. Without this,
+	// the publisher retransmits once per forwarded NACK and each
+	// retransmit fans out to all 375 viewers — the 20x7500 run 2
+	// storm (26,281 upstream forwards, 147,485 router retransmits,
+	// p99 med 344 ms, 4,431 viewers short).
+	upstreamForwardedAt map[uint16]time.Time
 }
 
 type sfuViewer struct {
@@ -5489,6 +5540,16 @@ func (shard *sfuEgressShard) enqueueNACK(subscription *sfuSubscription, feedback
 	if subscription == nil || feedback == nil {
 		return
 	}
+	// LADDER FIX 7: count NACK receipt/enqueue here, mirroring
+	// subscription.enqueueNACK. The shard path never called
+	// recordNACKReceived, so with egress shards on every viewer's
+	// NACKReceived stayed 0 even though the feedback flowed (the
+	// publisher got nack 2013 / pli 500 / fir 500 per track in run 5
+	// and the wait passed) — the final verdict check requires
+	// NACKReceived > 0, so run 5 failed on viewer-1. The missing
+	// count also made the FIX 8 retry think all 2,500 viewers were
+	// missing feedback and run 3 useless full passes (+225 s wall).
+	subscription.recordNACKReceived()
 	if !shard.router.acquireNACKBudget() {
 		subscription.recordNACKDroppedQueueFull()
 		return
@@ -5500,6 +5561,7 @@ func (shard *sfuEgressShard) enqueueNACK(subscription *sfuSubscription, feedback
 	}
 	select {
 	case shard.nackQueue <- job:
+		subscription.recordNACKEnqueued()
 		return
 	default:
 		select {
@@ -5509,6 +5571,7 @@ func (shard *sfuEgressShard) enqueueNACK(subscription *sfuSubscription, feedback
 		}
 		select {
 		case shard.nackQueue <- job:
+			subscription.recordNACKEnqueued()
 		default:
 			subscription.recordNACKDroppedStale()
 			shard.router.releaseNACKBudget()
@@ -5596,9 +5659,12 @@ type sfuProofConfig struct {
 	// Small proofs use 1s; scale proofs give the RTP backlog 60s to drain.
 	feedbackSettleDelay time.Duration
 	videoInterval       time.Duration
-	logRTPPath          bool
-	frameDiagnostics    *sfuFrameDiagnosticRecorder
-	remoteSFU           *m7hRemoteSFUClient
+	// LADDER FIX 3: 0-based cell index (see sfuCellIndex); a publisher's
+	// global IDR phase offset is cellIndex*publishersPerCell + local index.
+	cellIndex        int
+	logRTPPath       bool
+	frameDiagnostics *sfuFrameDiagnosticRecorder
+	remoteSFU        *m7hRemoteSFUClient
 }
 
 type sfuSendResult struct {
@@ -6298,6 +6364,80 @@ type m7hRemoteViewerPair struct {
 	checkUnauthorizedAccess bool
 }
 
+// m7hSFUTokenFD is the inherited file descriptor the harness passes the
+// SFU bearer token on: ExtraFiles[1] (fd 4; fd 3 is the listener).
+const m7hSFUTokenFD = 4
+
+// m7hSFUTokenMaxBytes bounds a token read from the inherited descriptor;
+// the harness token is 64 hex chars.
+const m7hSFUTokenMaxBytes = 256
+
+// newM7HSFUTokenPipe returns the read end of a pipe carrying token. The
+// token is written and the write end closed before the child starts, so
+// the child reads it then sees EOF; nothing blocks on the pipe.
+func newM7HSFUTokenPipe(token string) (*os.File, error) {
+	readEnd, writeEnd, err := os.Pipe()
+	if err != nil {
+		return nil, fmt.Errorf("create M7-H SFU token pipe: %w", err)
+	}
+	if _, err := io.WriteString(writeEnd, token); err != nil {
+		_ = readEnd.Close()
+		_ = writeEnd.Close()
+		return nil, fmt.Errorf("write M7-H SFU token pipe: %w", err)
+	}
+	if err := writeEnd.Close(); err != nil {
+		_ = readEnd.Close()
+		return nil, fmt.Errorf("close M7-H SFU token pipe: %w", err)
+	}
+	return readEnd, nil
+}
+
+// readM7HSFUTokenFile reads the bearer token from tokenFile, failing
+// closed on a missing file, a read error, an overlong token, or an
+// empty token.
+func readM7HSFUTokenFile(tokenFile *os.File) (string, error) {
+	if tokenFile == nil {
+		return "", errors.New("M7-H SFU token file is missing")
+	}
+	defer tokenFile.Close()
+	raw, err := io.ReadAll(io.LimitReader(tokenFile, m7hSFUTokenMaxBytes+1))
+	if err != nil {
+		return "", fmt.Errorf("read M7-H SFU token: %w", err)
+	}
+	if len(raw) > m7hSFUTokenMaxBytes {
+		return "", errors.New("M7-H SFU token is too long")
+	}
+	token := strings.TrimSpace(string(raw))
+	if token == "" {
+		return "", errors.New("M7-H SFU token is empty")
+	}
+	return token, nil
+}
+
+// readM7HSFUTokenFromFD reads the bearer token from the inherited
+// descriptor (fd 4).
+func readM7HSFUTokenFromFD() (string, error) {
+	return readM7HSFUTokenFile(os.NewFile(m7hSFUTokenFD, "m7h-sfu-token"))
+}
+
+// newM7HRemoteSFUCommand builds the child SFU process command. The
+// bearer token is NEVER in Args: it travels on the inherited token
+// pipe (fd 4). The HMAC key travels in the child environment, as
+// before — see the backlog note in polish-001.md.
+func newM7HRemoteSFUCommand(ctx context.Context, executable string, maxHeapBytes uint64, keyText string, listenerFile, tokenPipe *os.File) *exec.Cmd {
+	command := exec.CommandContext(
+		ctx,
+		executable,
+		"-mode=m7h-sfu",
+		"-max-heap-bytes="+strconv.FormatUint(maxHeapBytes, 10),
+	)
+	// Part 3: pass the fresh HMAC key to the child SFU server through
+	// its environment (never through a file or a log line).
+	command.Env = sfuChildEnv(keyText)
+	command.ExtraFiles = []*os.File{listenerFile, tokenPipe}
+	return command
+}
+
 func startM7HRemoteSFU(ctx context.Context) (*m7hRemoteSFUClient, error) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -6340,17 +6480,15 @@ func startM7HRemoteSFU(ctx context.Context) (*m7hRemoteSFUClient, error) {
 		return nil, fmt.Errorf("locate M7-H harness executable: %w", err)
 	}
 	token := fmt.Sprintf("%x", tokenBytes[:])
-	command := exec.CommandContext(
-		ctx,
-		executable,
-		"-mode=m7h-sfu",
-		"-m7h-sfu-token="+token,
-		"-max-heap-bytes="+strconv.FormatUint(*maxHeapBytes, 10),
-	)
-	// Part 3: pass the fresh HMAC key to the child SFU server through
-	// its environment (never through a file or a log line).
-	command.Env = sfuChildEnv(keyText)
-	command.ExtraFiles = []*os.File{listenerFile}
+	// POLISH-001: the bearer token travels to the child on an inherited
+	// pipe (fd 4), never on argv — argv is visible via ps to any
+	// same-user process and ps output is captured into logs.
+	tokenPipe, err := newM7HSFUTokenPipe(token)
+	if err != nil {
+		_ = listenerFile.Close()
+		return nil, err
+	}
+	command := newM7HRemoteSFUCommand(ctx, executable, *maxHeapBytes, keyText, listenerFile, tokenPipe)
 	command.Stdout = io.Discard
 	var sfuLog *os.File
 	if logPath := os.Getenv("M7H_SFU_LOG"); logPath != "" {
@@ -6365,12 +6503,14 @@ func startM7HRemoteSFU(ctx context.Context) (*m7hRemoteSFUClient, error) {
 	}
 	if err := command.Start(); err != nil {
 		_ = listenerFile.Close()
+		_ = tokenPipe.Close()
 		if sfuLog != nil {
 			_ = sfuLog.Close()
 		}
 		return nil, fmt.Errorf("start separate M7-H SFU process: %w", err)
 	}
 	_ = listenerFile.Close()
+	_ = tokenPipe.Close()
 	if sfuLog != nil {
 		_ = sfuLog.Close()
 	}
@@ -8246,25 +8386,11 @@ func (r *sfuRouter) metricsHandler() http.Handler {
 			fmt.Fprintf(os.Stderr, "write Prometheus metrics: %v\n", err)
 		}
 	})
-	mux.HandleFunc("/debug/pprof/heap", func(w http.ResponseWriter, request *http.Request) {
-		if request.Method != http.MethodGet {
-			w.Header().Set("Allow", http.MethodGet)
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		if request.URL.Query().Get("gc") == "1" {
-			runtime.GC()
-		}
-		profile := pprof.Lookup("heap")
-		if profile == nil {
-			http.Error(w, "heap profile is unavailable", http.StatusInternalServerError)
-			return
-		}
-		w.Header().Set("Content-Type", "application/octet-stream")
-		if err := profile.WriteTo(w, 0); err != nil {
-			fmt.Fprintf(os.Stderr, "write heap profile: %v\n", err)
-		}
-	})
+	// POLISH-001: no /debug/pprof/heap here. The metrics server is
+	// unauthenticated (loopback-only), and a heap dump can hold the
+	// bearer token / HMAC key in memory — any local process could take
+	// one. The bearer-protected /heap-profile on the signalling server
+	// is the only heap endpoint.
 	return mux
 }
 
@@ -8736,16 +8862,14 @@ func (t *sfuPublishedTrack) rememberPacket(packet *rtp.Packet, l packetLayer) {
 	defer t.packetMu.Unlock()
 	sequence := packet.SequenceNumber
 	// The sequence always advances so latestSequence() tracks the live
-	// stream position — but layer 2 (video delta) packets are never
-	// cached: a lost delta is repaired by the next keyframe, not by
-	// retransmission, so holding 512 of them per track buys nothing.
-	// A NACK for a delta sequence simply comes back missing, which the
-	// existing cachedPackets miss path already handles.
+	// stream position. FIX 31: layer 2 (video delta) packets ARE
+	// cached, like every other layer — a lost delta is repaired by
+	// retransmission, not by the next keyframe. Without this, a
+	// single-packet P-frame is unrecoverable (its NACK comes back
+	// missing) and its missing marker blocks late completion of the
+	// frames after it. The layer argument is retained for the caller's
+	// classification; it no longer gates caching.
 	t.lastSequence = sequence
-	if l == layerDelta {
-		t.layerDeltaCacheSkipped.Add(1)
-		return
-	}
 	// TrackRemote.ReadRTP returns an owned packet; forwarding and retransmission
 	// paths clone before writing, so retain it directly instead of duplicating its payload.
 	if _, exists := t.packetCache[sequence]; exists {
@@ -8793,6 +8917,42 @@ func (t *sfuPublishedTrack) cachedPackets(sequences []uint16) ([]*rtp.Packet, []
 		packets[index] = copyRTPPacketWithSharedPayload(packet)
 	}
 	return packets, missing
+}
+
+// filterUpstreamForwardable returns the subset of sequences not forwarded
+// upstream within nackAggregationWindow, recording this forward for the
+// returned ones. LADDER FIX 2: the missing sequences of one track are a
+// per-track fact — every viewer NACKs the same upstream-lost packets —
+// so one upstream request per sequence per window suffices. Without
+// this, 375 viewers forward the same sequences and the publisher
+// retransmits each one ~375 times; every retransmit fans out to all
+// 375 viewers, which is the 20x7500 run 2 storm. Probes (never-sent
+// sequences ahead of latest) are NOT passed through here — handleNACK
+// forwards those from every subscription, preserving the feedback
+// wait's "exactly 250/track forwarded NACKs, every probe present".
+// Guarded by packetMu; prunes stale entries like selectNACKSequences
+// prunes retransmittedAt. The map is created lazily: tracks built
+// before this change (and unit-test tracks) start with a nil map.
+func (t *sfuPublishedTrack) filterUpstreamForwardable(sequences []uint16, now time.Time) []uint16 {
+	t.packetMu.Lock()
+	defer t.packetMu.Unlock()
+	if t.upstreamForwardedAt == nil {
+		t.upstreamForwardedAt = make(map[uint16]time.Time)
+	}
+	for sequence, forwarded := range t.upstreamForwardedAt {
+		if now.Sub(forwarded) > nackAggregationWindow {
+			delete(t.upstreamForwardedAt, sequence)
+		}
+	}
+	out := sequences[:0]
+	for _, sequence := range sequences {
+		if forwarded, exists := t.upstreamForwardedAt[sequence]; exists && now.Sub(forwarded) <= nackAggregationWindow {
+			continue
+		}
+		t.upstreamForwardedAt[sequence] = now
+		out = append(out, sequence)
+	}
+	return out
 }
 
 // rtpPacketCopyPool reuses the packet structs handed to each viewer.
@@ -9259,6 +9419,39 @@ func (r *sfuRouter) feedbackReceivedByRouter(viewerID string, key sfuTrackKey) (
 	return sub.hasReceivedFeedback("pli"), sub.hasReceivedFeedback("fir"), sub.hasReceivedFeedback("nack")
 }
 
+// resetFeedbackReceived clears the per-subscription PLI/FIR received flags
+// (LADDER FIX 4). The publisher-side feedback retry uses it so a re-sent
+// feedback is forwarded upstream instead of dropped as a duplicate by
+// forwardFeedback. Only the PLI/FIR flags are cleared: NACKs are not
+// deduped by hasReceivedFeedback (they go through the NACK worker), and
+// the NACK receipt counters stay intact for the diagnosis. Safe only
+// after the wait has timed out: a 300 s wait means the originals are
+// lost, not delayed, so no duplicate can reach the publisher and break
+// the wait's exact-equality check.
+func (r *sfuRouter) resetFeedbackReceived() {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	for _, track := range r.tracks {
+		if track == nil {
+			continue
+		}
+		for _, sub := range track.subscribers {
+			if sub == nil {
+				continue
+			}
+			sub.resetFeedbackReceived()
+		}
+	}
+}
+
+// resetFeedbackReceived clears this subscription's PLI/FIR received flags.
+func (s *sfuSubscription) resetFeedbackReceived() {
+	s.statsMu.Lock()
+	defer s.statsMu.Unlock()
+	s.feedback.PLIReceived = 0
+	s.feedback.FIRReceived = 0
+}
+
 func (r *sfuRouter) forwardFeedback(subscription *sfuSubscription) {
 	for {
 		packets, _, err := subscription.sender.ReadRTCP()
@@ -9658,30 +9851,38 @@ func (r *sfuRouter) handleNACK(subscription *sfuSubscription, feedback *rtcp.Tra
 			releaseRTPPacketCopy(packet)
 		}
 	}()
-	// FIX 28: forward upstream only NACK sequences the publisher has
-	// never sent. The injected feedback names the viewer's first and
-	// last RECEIVED sequences alongside the never-sent probe sequence
-	// (LastSequenceNumber+1000): the received ones are uncached delta
-	// packets, so they land in `missing` and used to be forwarded
-	// upstream, where the publisher's Pion NACK responder retransmitted
-	// each one — ~250 retransmits/track, fanned out by forwardTrack to
-	// all 250 viewers of the track (~240 duplicates/viewer, ~40% of
-	// forward-path packets, inside the streaming window). Only the
-	// never-sent probe needs to reach the publisher: the feedback wait
-	// requires exactly 250/track forwarded NACKs and every probe
-	// sequence present, and both still hold because the probe is the
-	// one sequence forwarded. A sequence is never-sent when it sits
-	// ahead of the source's latest sequence in uint16 space (the probe
-	// is ~1000 ahead; already-sent sequences are at or behind it).
-	// Cached retransmits and PLI/FIR forwarding are untouched.
+	// LADDER FIX 1: forward upstream every NACK sequence missing from
+	// the router's ring. FIX 31 caches every packet the router reads
+	// (base and delta alike), so a sequence missing here was never
+	// received — upstream loss — not an uncached delta. The old FIX 28
+	// filter forwarded only never-sent probes (ahead of latest) and
+	// silently dropped behind-latest missing sequences; at 20x7500
+	// that dropped the 21 upstream-lost packets of stream-0014
+	// (frames 90/91, 180/181, 240/241), leaving all 375 viewers at
+	// 296 frames with no recovery possible. The probe still forwards
+	// (it is missing and ahead of latest), so the feedback wait's
+	// "exactly 250/track forwarded NACKs, every probe present" still
+	// holds. Cached retransmits and PLI/FIR forwarding are untouched.
+	// LADDER FIX 2 (below) dedups the genuinely-lost sequences per
+	// track; run 2 without it stormed (26,281 upstream forwards,
+	// 147,485 router retransmits, p99 med 344 ms).
+	// LADDER FIX 2: split `missing` into never-sent probes (ahead of
+	// latest) and genuinely-lost sequences (behind latest). Probes
+	// forward from every subscription — the feedback wait counts
+	// per-viewer probe forwards. Lost sequences are a per-track fact:
+	// dedup them per track within nackAggregationWindow so the
+	// publisher retransmits each one once, not once per viewer.
 	latest := subscription.source.latestSequence()
-	forwardable := missing[:0]
+	probes := missing[:0]
+	lost := make([]uint16, 0, len(missing))
 	for _, sequence := range missing {
 		if int16(sequence-latest) > 0 {
-			forwardable = append(forwardable, sequence)
+			probes = append(probes, sequence)
+		} else {
+			lost = append(lost, sequence)
 		}
 	}
-	missing = forwardable
+	missing = append(probes, subscription.source.filterUpstreamForwardable(lost, now)...)
 	var retransmitted uint64
 	for _, packet := range cached {
 		sent, err := subscription.writeRTP(packet)
@@ -10085,6 +10286,7 @@ func runSFUCellWorker(
 		"-sfu-score-mode", scoringMode,
 		"-sfu-max-p99", maxP99.String(),
 		"-sfu-max-dissolved", strconv.FormatFloat(maxDissolved, 'g', -1, 64),
+		"-sfu-cell-index", strconv.Itoa(index),
 	}
 	stderrPath := filepath.Join(os.TempDir(), fmt.Sprintf("hami-cell-%d.stderr", index))
 	stderrFile, err := os.Create(stderrPath)
@@ -10147,6 +10349,7 @@ func runLocalSFUScaleProofWithOptions(
 	config.maxP99 = maxP99
 	config.maxDissolved = maxDissolved
 	config.hostPreflight = hostPreflight
+	config.cellIndex = sfuCellIndex
 	return runLocalSFUProofWithConfig(ctx, videoFrames, duration, config)
 }
 
@@ -11437,8 +11640,18 @@ sendFrames:
 	}
 }
 
-func newM7HPublisherAPIWithoutNACKResponder(settings webrtc.SettingEngine) (*webrtc.API, error) {
-	return newLocalSFUNoResponderAPI(settings)
+// newM7HPublisherAPIWithNACKResponder builds the harness publisher API:
+// H264-only codecs plus the NACK generator and the NACK responder.
+// LADDER FIX 1: the publisher is the only peer that can retransmit a
+// packet the router never received (upstream loss). The responder was
+// bypassed pre-FIX-31 because uncached deltas flooded it (FIX 28);
+// FIX 31 caches every packet, so the only sequences forwarded upstream
+// now are genuinely missing ones, and the responder retransmits just
+// those. Cost is a 512-packet history per publisher (20 publishers,
+// ~5 MB total) — the router serverPeers keep the NoResponder API, so
+// the 3.2 GiB saving at 5,000 viewers stands.
+func newM7HPublisherAPIWithNACKResponder(settings webrtc.SettingEngine) (*webrtc.API, error) {
+	return newLocalSFUNoResponderAPIWithResponder(settings, true)
 }
 
 // newSharedDTLSCertificate generates ONE DTLS certificate shared by every
@@ -11556,6 +11769,16 @@ func newLocalSFULightAPI(settings webrtc.SettingEngine) (*webrtc.API, error) {
 // Router serverPeers (sendonly) use this API; every other PeerConnection
 // keeps the default API with the responder.
 func newLocalSFUNoResponderAPI(settings webrtc.SettingEngine) (*webrtc.API, error) {
+	return newLocalSFUNoResponderAPIWithResponder(settings, false)
+}
+
+// newLocalSFUNoResponderAPIWithResponder is newLocalSFUNoResponderAPI with
+// an optional NACK responder. LADDER FIX 1: harness publishers pass true
+// (see newM7HPublisherAPIWithNACKResponder) — the publisher is the only
+// peer that can retransmit upstream-lost packets, and at 20 publishers
+// the 512-packet history costs ~5 MB total. Router serverPeers pass
+// false: their downstream loss is covered by the router's packet ring.
+func newLocalSFUNoResponderAPIWithResponder(settings webrtc.SettingEngine, withResponder bool) (*webrtc.API, error) {
 	mediaEngine := &webrtc.MediaEngine{}
 	if err := registerH264OnlyCodecs(mediaEngine); err != nil {
 		return nil, fmt.Errorf("register H264-only publisher codecs: %w", err)
@@ -11572,6 +11795,13 @@ func newLocalSFUNoResponderAPI(settings webrtc.SettingEngine) (*webrtc.API, erro
 		return nil, fmt.Errorf("create NACK generator interceptor: %w", err)
 	}
 	registry.Add(generator)
+	if withResponder {
+		responder, err := nack.NewResponderInterceptor(nack.ResponderSize(sfuNACKHistoryPackets))
+		if err != nil {
+			return nil, fmt.Errorf("create NACK responder interceptor: %w", err)
+		}
+		registry.Add(responder)
+	}
 	// FIX 27: no RTCP report interceptors and no TWCC sender. The
 	// report receiver+sender (2 BindRTCPWriter goroutines/PC) and the
 	// TWCC sender (1/PC) are 3 of the ~16 goroutines per PeerConnection
@@ -11808,8 +12038,9 @@ func runLocalSFUProofWithConfig(
 	}
 	publisherClientAPI := clientAPI
 	if config.proofID == "m7h" {
-		// Diagnostic only: bypass Pion's NACK responder on harness publishers.
-		publisherClientAPI, err = newM7HPublisherAPIWithoutNACKResponder(clientSettings)
+		// LADDER FIX 1: harness publishers keep the NACK responder so
+		// upstream loss is recoverable (see newM7HPublisherAPIWithNACKResponder).
+		publisherClientAPI, err = newM7HPublisherAPIWithNACKResponder(clientSettings)
 		if err != nil {
 			return sfuProofResult{}, err
 		}
@@ -11854,8 +12085,9 @@ func runLocalSFUProofWithConfig(
 	// Viewer clientPeers keep the light API (no NACK generator, so no
 	// storm) but go back to one UDP socket per PC, as in 023/024.
 	// Only built when the client socket read counter is disabled; the
-	// counting branch builds a per-viewer mux + API per viewer when
-	// enabled.
+	// counting branch builds a per-viewer mux + light API per viewer
+	// when enabled (LADDER FIX 6 — it used to build the default API,
+	// whose NACK generator was the second NACK source in run 3).
 	var clientViewerLightAPI *webrtc.API
 	routerSettingsByShard := make([]webrtc.SettingEngine, routerMuxCount)
 	routerShardByPublisher := make(map[string]int, len(publishers))
@@ -12145,7 +12377,23 @@ func runLocalSFUProofWithConfig(
 				}
 				viewerClientSettings := clientSettings
 				viewerClientSettings.SetICEUDPMux(socketMux)
-				viewerClientAPI = webrtc.NewAPI(webrtc.WithSettingEngine(viewerClientSettings))
+				// LADDER FIX 6: build the per-viewer counting API from the
+				// light API (no NACK generator, no responder, no RTCP/TWCC
+				// interceptors), not the default API. The default API's
+				// NACK generator fires on every gap independently of the
+				// gap tracker (FIX 5) — run 3: the router received 1.66M
+				// NACK packets while the viewers' gap trackers sent only
+				// 196k, and retransmits barely moved (11.39M vs 12.51M).
+				// The counting branch overrode FIX 2c's light API exactly
+				// when the socket diagnostic is on. The mux + counting
+				// still come from viewerClientSettings; the light API also
+				// disables SRTP replay protection (FIX 2d), which the
+				// diagnostic path had silently re-enabled.
+				lightAPI, lightErr := newLocalSFULightAPI(viewerClientSettings)
+				if lightErr != nil {
+					return sfuProofResult{}, fmt.Errorf("create viewer light API for %s: %w", viewerID, lightErr)
+				}
+				viewerClientAPI = lightAPI
 				socketConn = socketMux.conn
 				socketConn.pcKey = "viewer-client:" + viewerID
 			}
@@ -12250,9 +12498,10 @@ func runLocalSFUProofWithConfig(
 		attachPCStateLogging(serverPeer, "router-serverPeer", viewerID)
 		viewerClientAPI := clientAPI
 		// FIX 2c: viewer clientPeers use the light API (no NACK
-		// generator) built above, on per-PC UDP sockets. The counting
-		// branch below still overrides this per viewer when
-		// clientSocketReadMode is enabled.
+		// generator) built above, on per-PC UDP sockets. LADDER FIX 6:
+		// the counting branch below builds a per-viewer light API too
+		// (it used to override with the default API, whose NACK
+		// generator was the second NACK source in run 3).
 		if clientViewerLightAPI != nil {
 			viewerClientAPI = clientViewerLightAPI
 		}
@@ -12286,7 +12535,19 @@ func runLocalSFUProofWithConfig(
 			}
 			viewerClientSettings := clientSettings
 			viewerClientSettings.SetICEUDPMux(socketMux)
-			viewerClientAPI = webrtc.NewAPI(webrtc.WithSettingEngine(viewerClientSettings))
+			// LADDER FIX 6: build the per-viewer counting API from the
+			// light API (no NACK generator, no responder, no RTCP/TWCC
+			// interceptors), not the default API. See the remote-SFU
+			// branch above for the full note: the default API's NACK
+			// generator is a second NACK source the gap tracker never
+			// sees (run 3: 1.66M NACKs received vs 196k gap-tracker
+			// sends), and the counting branch overrode FIX 2c's light
+			// API exactly when the socket diagnostic is on.
+			lightAPI, lightErr := newLocalSFULightAPI(viewerClientSettings)
+			if lightErr != nil {
+				return sfuProofResult{}, fmt.Errorf("create viewer light API for %s: %w", viewerID, lightErr)
+			}
+			viewerClientAPI = lightAPI
 			socketConn = socketMux.conn
 			// M7-H attempt 7: owning PC key for close-initiator attribution.
 			socketConn.pcKey = "viewer-client:" + viewerID
@@ -12549,6 +12810,7 @@ func runLocalSFUProofWithConfig(
 			firstMeasurementTimestamp,
 			config.videoInterval,
 			publisherSendStats,
+			config.cellIndex,
 		)
 		var framesSent uint64
 		for _, frames := range framesByPublisher {
@@ -12577,6 +12839,12 @@ func runLocalSFUProofWithConfig(
 		feedbackTimeout := duration + sfuFeedbackCompletionGrace + sfuFeedbackWaitLimit
 		if totalViewers := len(viewers); totalViewers > 0 {
 			feedbackTimeout += time.Duration(totalViewers) * sfuFeedbackPacingInterval
+			// LADDER FIX 4: one publisher-side feedback retry round. If the
+			// wait times out, the retry re-sends every viewer's feedback
+			// and waits again. Budget one full re-injection + one fresh
+			// wait here; the outer run ctx gets the same allowance (setup
+			// allowance). Harness time budgets, not verdict gates.
+			feedbackTimeout += time.Duration(totalViewers)*sfuFeedbackPacingInterval + sfuFeedbackWaitLimit
 		}
 		feedbackContext, cancelFeedback := context.WithTimeout(ctx, feedbackTimeout)
 		defer cancelFeedback()
@@ -12871,6 +13139,94 @@ func runLocalSFUProofWithConfig(
 			expectedNACKs,
 			expectedCounts,
 		)
+		// LADDER FIX 4: publisher-side feedback retry. The FIX 8 retry only
+		// covers viewer→router loss (it checks router receipt); run 1 at
+		// 20x10,000 showed the loss can sit on the router→publisher hop
+		// instead — the router forwarded all 2,500 PLI/FIR, the publisher
+		// received only ~2,401, all of the shortfall on the first track of
+		// every cell, and the wait timed out after 5m0s with 4/5 tracks
+		// complete. A re-send is the fix, but the router dedupes re-sends
+		// (forwardFeedback drops a PLI/FIR already received), so reset the
+		// router's per-viewer received flags first; a 300 s wait means the
+		// originals are lost, not delayed, so no duplicate can reach the
+		// publisher and break the wait's exact-equality check. One retry
+		// round: re-send every viewer's feedback from the first-pass
+		// snapshots (same NACK sequences, already in expectedNACKs) and
+		// wait again from zero. Only on a wait timeout — hard errors
+		// (wrong SSRC, malformed NACK) fail immediately, as before.
+		if err != nil && router != nil && strings.Contains(err.Error(), "feedback wait timed out after") {
+			fmt.Fprintf(os.Stderr, "publisher feedback retry: wait timed out (%v); resetting router receipt flags and re-sending all %d viewers\n", err, len(viewers))
+			router.resetFeedbackReceived()
+			// Re-dispatch every viewer's feedback from the first-pass
+			// snapshots (mirrors the FIX 8 retry dispatch: 8 workers,
+			// pacer-gated, dead PCs skipped).
+			retryJobs := make(chan injectionJob, len(viewers))
+			retryResults := make(chan injectionResult, len(viewers))
+			var retryWG sync.WaitGroup
+			for w := 0; w < 8; w++ {
+				retryWG.Add(1)
+				go func() {
+					defer retryWG.Done()
+					for job := range retryJobs {
+						sentMissingSequence, sendErr := sendViewerFeedback(job.client, job.snapshot)
+						retryResults <- injectionResult{viewerID: job.viewerID, missingSequence: job.missingSequence, sentMissing: sentMissingSequence, err: sendErr}
+					}
+				}()
+			}
+			retryDispatched := 0
+			for _, viewer := range viewers {
+				snapshot, ok := injectionSnapshots[viewer.id]
+				if !ok {
+					continue
+				}
+				if v, ok := pcLifetimes.Load("viewer-client:" + viewer.id); ok {
+					if lt, ok2 := v.(*pcLifetime); ok2 && lt != nil {
+						if iceState, _ := lt.lastICEState.Load().(string); iceState == "failed" || iceState == "disconnected" {
+							continue
+						}
+					}
+				}
+				if retryDispatched > 0 {
+					select {
+					case <-feedbackContext.Done():
+						break
+					case <-feedbackPacer.C:
+					}
+				}
+				if feedbackContext.Err() != nil {
+					break
+				}
+				retryJobs <- injectionJob{viewerID: viewer.id, client: viewer.client, snapshot: snapshot, missingSequence: snapshot.LastSequenceNumber + 1000}
+				retryDispatched++
+			}
+			close(retryJobs)
+			retryWG.Wait()
+			var retryErr error
+			for i := 0; i < retryDispatched; i++ {
+				res := <-retryResults
+				if res.err != nil {
+					retryErr = fmt.Errorf("publisher feedback retry send RTCP feedback from %s: %w", res.viewerID, res.err)
+					break
+				}
+				if res.sentMissing != res.missingSequence {
+					retryErr = fmt.Errorf("publisher feedback retry viewer %s NACK sequence changed: sent %d, expected %d", res.viewerID, res.sentMissing, res.missingSequence)
+					break
+				}
+			}
+			if retryErr != nil {
+				cancelSend()
+				<-sendDone
+				return sfuProofResult{}, retryErr
+			}
+			setRunPhase("wait-start")
+			upstreamCounts, err = waitForSFUFeedback(
+				feedbackContext,
+				feedbackEvents,
+				sources,
+				expectedNACKs,
+				expectedCounts,
+			)
+		}
 		// M7-H attempt 6: phase snapshot — the feedback wait ended here
 		// (on both the pass and the timeout paths).
 		setRunPhase("wait-end")
@@ -13423,29 +13779,46 @@ func newSFUViewerCapture(
 				if capture.latencyRecorder != nil && capture.latencyClock != nil ||
 					capture.frameDiagnostics != nil {
 					before := snapshotSFUFrameAssembler(assembler)
-					frameID, complete := assembler.push(packet)
+					frameIDs := assembler.push(packet)
 					after := snapshotSFUFrameAssembler(assembler)
 					if capture.frameDiagnostics != nil {
-						if diagnosticErr := capture.frameDiagnostics.record(
-							capture.viewerID,
-							track.ID(),
-							packet,
-							before,
-							after,
-							frameID,
-							complete,
-						); diagnosticErr != nil {
-							capture.reportError(fmt.Errorf(
-								"write selected-frame diagnostics for viewer %s track %s: %w",
+						// FIX 31 latency: push now reports every frame
+						// this packet completed. Diagnostics keeps one
+						// record per completed frame; when none completed
+						// it keeps the single complete=false record, as
+						// before. (complete is decided by whether any
+						// frame completed, not by the frame ID, so a
+						// real frame ID of 0 is still recorded as
+						// complete.)
+						framesToRecord := frameIDs
+						if len(framesToRecord) == 0 {
+							framesToRecord = []uint64{0}
+						}
+						for _, frameID := range framesToRecord {
+							complete := len(frameIDs) > 0
+							if diagnosticErr := capture.frameDiagnostics.record(
 								capture.viewerID,
 								track.ID(),
-								diagnosticErr,
-							))
-							return
+								packet,
+								before,
+								after,
+								frameID,
+								complete,
+							); diagnosticErr != nil {
+								capture.reportError(fmt.Errorf(
+									"write selected-frame diagnostics for viewer %s track %s: %w",
+									capture.viewerID,
+									track.ID(),
+									diagnosticErr,
+								))
+								return
+							}
 						}
 					}
-					if complete && capture.latencyRecorder != nil && capture.latencyClock != nil {
-						capture.latencyRecorder.RecordNow(frameID, capture.latencyClock)
+					if capture.latencyRecorder != nil && capture.latencyClock != nil {
+						for _, frameID := range frameIDs {
+							capture.latencyRecorder.RecordNow(frameID, capture.latencyClock)
+						}
 					}
 				}
 				select {
@@ -13630,22 +14003,28 @@ func (r *sfuFrameDiagnosticRecorder) summary() *sfuFrameDiagnosticSummary {
 	}
 }
 
-// push feeds one RTP packet to the assembler and reports one completed
-// frame, if any. A packet can complete more than one frame at once (a
-// late retransmit may complete its own frame while the next frame in
-// the span was already whole behind it), so completions queue in
-// completedQueue and push reports them one per call; a frame reported
-// on a later call was completed by an earlier packet, and its recorded
-// latency therefore includes up to one frame interval of queue delay.
-// The frame count — what the gates check — is exact either way.
-func (a *videoFrameAssembler) push(packet *rtp.Packet) (uint64, bool) {
+// push feeds one RTP packet to the assembler and reports every frame
+// that packet completed, in completion order. A packet can complete
+// more than one frame at once (a late retransmit may complete its own
+// frame while the next frame in the span was already whole behind
+// it). The old code reported one frame per call and left the rest
+// queued for later packets; a frame reported on a later call was
+// completed by an earlier packet, and its recorded latency therefore
+// included up to one frame interval of queue delay — and, once a
+// recovery left the queue one frame deep, EVERY following frame was
+// reported one interval late until a multi-packet keyframe drained
+// it (f31fixi11: 31 frames at ~200 ms). Draining the queue here
+// reports each frame at the moment it completes, so recorded latency
+// reflects actual completion time. Returns nil when nothing
+// completed.
+func (a *videoFrameAssembler) push(packet *rtp.Packet) []uint64 {
 	a.processPacket(packet)
 	if len(a.completedQueue) == 0 {
-		return 0, false
+		return nil
 	}
-	frameID := a.completedQueue[0]
-	a.completedQueue = a.completedQueue[1:]
-	return frameID, true
+	completed := a.completedQueue
+	a.completedQueue = nil
+	return completed
 }
 
 func (a *videoFrameAssembler) processPacket(packet *rtp.Packet) {
@@ -13673,9 +14052,17 @@ func (a *videoFrameAssembler) processPacket(packet *rtp.Packet) {
 		if a.lateMarkers == nil {
 			a.lateMarkers = make(map[uint16]struct{})
 		}
+		// FIX 31 latency: a duplicate marker packet must not re-add
+		// its marker. A sequence already in the span had its marker
+		// processed when it first arrived (or when its frame
+		// merged); re-adding it lets the rescue scan complete the
+		// same frame a second time and report it twice — a second,
+		// late latency sample for one frame. A first-time marker
+		// packet is never already in the span, so it still adds.
+		_, alreadyKnown := a.lateSequences[packet.SequenceNumber]
 		a.lateSequences[packet.SequenceNumber] = struct{}{}
 		a.lateTimestamps[packet.SequenceNumber] = packet.Timestamp
-		if packet.Marker {
+		if packet.Marker && !alreadyKnown {
 			a.lateMarkers[packet.SequenceNumber] = struct{}{}
 		}
 		a.lateComplete()
@@ -13717,6 +14104,11 @@ func (a *videoFrameAssembler) processPacket(packet *rtp.Packet) {
 		// the arriving packet starts the next frame, whose packets
 		// must not match the span.
 		a.mergeLateSpan(frameStart, packet.SequenceNumber-1, prevFinalized, a.timestamp, a.frameSequences, a.timestamp, a.markerSequence, a.markerSeen)
+		// FIX 31: a frame merged into the late span may already be
+		// completable — or may make an earlier frame completable —
+		// and no later packet is guaranteed to arrive to scan it.
+		// Re-scan now, while the merge's evidence is fresh.
+		a.lateComplete()
 	}
 	if !a.active {
 		// FIX 31: a sequence gap at a new frame means whole frames
@@ -13763,6 +14155,11 @@ func (a *videoFrameAssembler) processPacket(packet *rtp.Packet) {
 		if a.lateActive {
 			a.mergeLateSpan(a.nextFrameFirstSequence, a.markerSequence, a.lateLowTimestamp, a.timestamp, a.frameSequences, a.timestamp, a.markerSequence, true)
 		}
+		// FIX 31: a frame merged into the late span may already be
+		// completable — or may make an earlier frame completable —
+		// and no later packet is guaranteed to arrive to scan it.
+		// Re-scan now, while the merge's evidence is fresh.
+		a.lateComplete()
 		a.lastFinalizedTimestamp = a.timestamp
 		a.hasFinalizedTimestamp = true
 		a.nextFrameFirstSequence = a.markerSequence + 1
@@ -13791,14 +14188,34 @@ func (a *videoFrameAssembler) completeActiveFrameIfReady() {
 	}
 	frameStart := a.nextFrameFirstSequence
 	packetSpan := int(uint16(a.markerSequence-frameStart)) + 1
-	if len(a.frameSequences) < packetSpan {
+	// FIX 31 latency: the frame's start may still point at
+	// predecessors that completed late through the span, so the
+	// length shortcut below only applies when no late span exists:
+	// with a span, the predecessors' sequences live in
+	// lateSequences, not frameSequences.
+	if !a.lateActive && len(a.frameSequences) < packetSpan {
 		return
 	}
 	for offset := 0; offset < packetSpan; offset++ {
 		sequence := frameStart + uint16(offset)
-		if _, exists := a.frameSequences[sequence]; !exists {
-			return
+		if _, exists := a.frameSequences[sequence]; exists {
+			continue
 		}
+		// FIX 31 latency: a sequence in the retained late span
+		// belongs to an earlier frame that already arrived
+		// (original or retransmit); it is present evidence, not a
+		// missing packet of this frame. Without this, a frame
+		// whose predecessors completed late can never complete
+		// until the next frame merges it — one frame interval late
+		// — and the queued report then leaves every following
+		// frame one interval late too. A genuinely missing packet
+		// is in neither map, so the frame still waits for it.
+		if a.lateActive {
+			if _, inSpan := a.lateSequences[sequence]; inSpan {
+				continue
+			}
+		}
+		return
 	}
 	frameID := a.timestamp
 	markerSequence := a.markerSequence
@@ -13936,6 +14353,24 @@ func (a *videoFrameAssembler) lateCompleteOne() bool {
 			}
 		}
 		if !complete {
+			// FIX 31: the missing sequence may belong to an earlier,
+			// markerless frame (its marker never arrived), not to
+			// this marker's frame. If every sequence from the first
+			// sequence carrying this marker's timestamp through the
+			// marker is present, the marker's frame is whole:
+			// complete it and drop its marker, leaving
+			// lateFirstSequence where it is so the earlier frame
+			// can still complete if its retransmit arrives late.
+			// Without this, one unrecoverable packet costs the
+			// frames after it too. The frame must have at least
+			// one non-marker packet observed (frameStart < marker);
+			// a lone marker proves nothing about the frame before
+			// it, so it never rescues on its own.
+			if _, ok := a.lateMarkerFrameStart(marker, prev); ok {
+				a.completedQueue = append(a.completedQueue, uint64(a.lateTimestamps[marker]))
+				delete(a.lateMarkers, marker)
+				return true
+			}
 			prev = marker + 1
 			continue
 		}
@@ -13961,6 +14396,52 @@ func (a *videoFrameAssembler) lateCompleteOne() bool {
 		return true
 	}
 	return false
+}
+
+// lateMarkerFrameStart returns the first sequence in [prev, marker]
+// carrying the marker's timestamp, and whether every sequence from
+// there through the marker is present in the late span. It is false
+// when the marker's own frame is incomplete, when the frame has no
+// non-marker packet observed (frameStart == marker), or when a
+// present sequence carries no timestamp (which must not happen —
+// every sequence enters the span with one — so the scan refuses to
+// guess rather than completing on incomplete evidence).
+func (a *videoFrameAssembler) lateMarkerFrameStart(marker, prev uint16) (uint16, bool) {
+	markerTs, ok := a.lateTimestamps[marker]
+	if !ok {
+		return 0, false
+	}
+	frameStart := uint16(0)
+	found := false
+	for offset := 0; ; offset++ {
+		sequence := prev + uint16(offset)
+		if _, exists := a.lateSequences[sequence]; exists {
+			ts, hasTs := a.lateTimestamps[sequence]
+			if !hasTs {
+				return 0, false
+			}
+			if ts == markerTs && !found {
+				frameStart = sequence
+				found = true
+			}
+		}
+		if sequence == marker {
+			break
+		}
+	}
+	if !found || frameStart == marker {
+		return 0, false
+	}
+	for offset := 0; ; offset++ {
+		sequence := frameStart + uint16(offset)
+		if _, exists := a.lateSequences[sequence]; !exists {
+			return 0, false
+		}
+		if sequence == marker {
+			break
+		}
+	}
+	return frameStart, true
 }
 
 // nackMissingEntry is one sequence a viewer has not received yet, with
@@ -14166,6 +14647,25 @@ func (r *sfuRouter) publisherPeer(publisherID string) *webrtc.PeerConnection {
 	return r.publishers[publisherID]
 }
 
+// LADDER FIX 3: frameIndexForSend returns the video-file frame a publisher
+// sends at send index k, rotating the file by the publisher's global phase
+// offset. All publishers play the same file from the same start, so without
+// the rotation every publisher's IDR lands on the same tick and the 20 IDRs
+// fan out as one ~45,000-packet synchronized burst (run 3: 307 short
+// viewers, all downstream of the router's successful write). With the
+// rotation, publisher g's first IDR is at send index (30-g)%30, so the 20
+// IDRs spread across the 6 s IDR period in 200 ms steps (see
+// TestIDRPhaseStaggerSpreadsFirstIDR). The rotation changes no timestamp
+// (frameTimestamp still advances 5,400 ticks/frame) and no frame count —
+// every publisher still sends the same 302 frames, just starting at a
+// different point in the file.
+func frameIndexForSend(sendIndex, phaseOffset uint64, frameCount int) uint64 {
+	if frameCount <= 0 {
+		return sendIndex
+	}
+	return (sendIndex + phaseOffset) % uint64(frameCount)
+}
+
 func sendSFUVideo(
 	ctx context.Context,
 	sources []sfuMediaSource,
@@ -14174,6 +14674,7 @@ func sendSFUVideo(
 	firstFrameTimestamp uint32,
 	videoInterval time.Duration,
 	publisherSendStats map[string]*m7hPublisherSendStats,
+	cellIndex int,
 ) (map[string]uint64, error) {
 	if videoInterval <= 0 {
 		videoInterval = videoFrameDuration
@@ -14199,7 +14700,12 @@ func sendSFUVideo(
 	results := make(chan sendResult, len(publisherIDs))
 	for publisherIndex, publisherID := range publisherIDs {
 		startOffset := time.Duration(publisherIndex) * videoInterval / time.Duration(len(publisherIDs))
-		go func(publisherID string, startOffset time.Duration) {
+		// LADDER FIX 3: rotate the video file by the publisher's GLOBAL
+		// phase offset (cellIndex*publishersPerCell + local index) so the
+		// 20 IDRs spread across the 6 s IDR period instead of aligning
+		// on the same tick. See frameIndexForSend.
+		phaseOffset := uint64(cellIndex*len(publisherIDs) + publisherIndex)
+		go func(publisherID string, startOffset time.Duration, phaseOffset uint64) {
 			sent, err := sendPublisherVideo(
 				sendContext,
 				sourcesByPublisher[publisherID],
@@ -14209,9 +14715,10 @@ func sendSFUVideo(
 				startOffset,
 				videoInterval,
 				publisherSendStats[publisherID],
+				phaseOffset,
 			)
 			results <- sendResult{publisherID: publisherID, frames: sent, err: err}
-		}(publisherID, startOffset)
+		}(publisherID, startOffset, phaseOffset)
 	}
 
 	framesByPublisher := make(map[string]uint64, len(publisherIDs))
@@ -14236,6 +14743,7 @@ func sendPublisherVideo(
 	startOffset time.Duration,
 	videoInterval time.Duration,
 	sendStats *m7hPublisherSendStats,
+	framePhaseOffset uint64,
 ) (uint64, error) {
 	timer := time.NewTimer(startOffset)
 	defer timer.Stop()
@@ -14260,7 +14768,9 @@ func sendPublisherVideo(
 	// the window; the send ctx is extended by two ticks (see the
 	// sendContext creation) so the span reaches ~60.2 s.
 	sendFrame := func(scheduledAt time.Time) error {
-		frame := frames[frameIndex%uint64(len(frames))]
+		// LADDER FIX 3: rotate the file by the publisher's phase offset
+		// (see frameIndexForSend) so IDRs spread across the IDR period.
+		frame := frames[frameIndexForSend(frameIndex, framePhaseOffset, len(frames))]
 		ticks := sampleRTPTicks(frame, 90000)
 		if ticks == 0 {
 			return errors.New("video frame duration produces no RTP timestamp ticks")

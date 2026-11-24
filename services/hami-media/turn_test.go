@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -46,6 +47,39 @@ func TestSFUTURNConfigFromEnv(t *testing.T) {
 		t.Fatalf("sfuTURNConfigFromEnv without username: %v", err)
 	} else if configured {
 		t.Fatal("TURN config reported configured without a username")
+	}
+}
+
+func TestLoadSFUTURNPasswordRejectsGroupReadableFile(t *testing.T) {
+	// POLISH-001: the TURN password file must be readable only by its
+	// owner. A 0600 file is accepted; a 0644 file is refused.
+	dir := t.TempDir()
+	good := filepath.Join(dir, "turn-password-0600")
+	if err := os.WriteFile(good, []byte("s3cret-turn-password\n"), 0o600); err != nil {
+		t.Fatalf("write 0600 password file: %v", err)
+	}
+	if err := os.Chmod(good, 0o600); err != nil {
+		t.Fatalf("chmod 0600 password file: %v", err)
+	}
+	t.Setenv("HAMI_SFU_TURN_PASSWORD_FILE", good)
+	t.Setenv("HAMI_SFU_TURN_PASSWORD", "")
+	password, err := loadSFUTURNPassword()
+	if err != nil {
+		t.Fatalf("loadSFUTURNPassword from 0600 file: %v", err)
+	}
+	if password != "s3cret-turn-password" {
+		t.Fatalf("password = %q, want %q", password, "s3cret-turn-password")
+	}
+	bad := filepath.Join(dir, "turn-password-0644")
+	if err := os.WriteFile(bad, []byte("s3cret-turn-password\n"), 0o644); err != nil {
+		t.Fatalf("write 0644 password file: %v", err)
+	}
+	if err := os.Chmod(bad, 0o644); err != nil {
+		t.Fatalf("chmod 0644 password file: %v", err)
+	}
+	t.Setenv("HAMI_SFU_TURN_PASSWORD_FILE", bad)
+	if _, err := loadSFUTURNPassword(); err == nil {
+		t.Fatal("loadSFUTURNPassword accepted a group-readable password file")
 	}
 }
 

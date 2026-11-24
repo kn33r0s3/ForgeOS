@@ -17,7 +17,7 @@
 // event to the same identity.
 //
 // Acceptance (Task 017 metric plan): p95 <= 100 ms (primary), p99 <=
-// 150 ms (guardrail), >= 300 frames per subscriber, >= 60 s, EVERY
+// 150 ms (guardrail), >= 302 frames per subscriber, >= 60 s, EVERY
 // subscriber passes independently. No averaging — p95 is the gate.
 package main
 
@@ -34,7 +34,7 @@ import (
 const (
 	LatencyP95Max = 100 * time.Millisecond // primary gate
 	LatencyP99Max = 150 * time.Millisecond // guardrail
-	MinFrames     = 300                    // >= 300 rendered frames per subscriber
+	MinFrames     = 302                    // >= 302 rendered frames per subscriber
 	MinDuration   = 60 * time.Second       // >= 60 s measurement
 )
 
@@ -329,6 +329,6 @@ func (r *LatencyRecorder) SamplesJSONL() ([]byte, error) {
 
 // String renders the result in one human-readable block.
 func (s Summary) String() string {
-	return fmt.Sprintf("mode=%s frames=%d unmatched=%d duration=%s p50=%s p95=%s p99=%s max=%s pass=%v (p95<=100ms:%v p99<=150ms:%v frames>=300:%v duration>=60s:%v)",
+	return fmt.Sprintf("mode=%s frames=%d unmatched=%d duration=%s p50=%s p95=%s p99=%s max=%s pass=%v (p95<=100ms:%v p99<=150ms:%v frames>=302:%v duration>=60s:%v)",
 		s.Mode, s.Frames, s.Unmatched, s.Duration, s.P50, s.P95, s.P99, s.Max, s.Pass, s.PassP95, s.PassP99, s.PassFrames, s.PassDuration)
 }

@@ -496,7 +496,7 @@ func TestEgressShardDistributionIsStableAndBounded(t *testing.T) {
 
 func TestVideoFrameAssemblerRequiresCompleteContiguousFrame(t *testing.T) {
 	assembler := &videoFrameAssembler{}
-	push := func(sequence uint16, timestamp uint32, marker bool) (uint64, bool) {
+	push := func(sequence uint16, timestamp uint32, marker bool) []uint64 {
 		t.Helper()
 		return assembler.push(&rtp.Packet{Header: rtp.Header{
 			SequenceNumber: sequence,
@@ -505,30 +505,29 @@ func TestVideoFrameAssemblerRequiresCompleteContiguousFrame(t *testing.T) {
 		}})
 	}
 
-	if _, complete := push(100, 10, false); complete {
+	if ids := push(100, 10, false); len(ids) != 0 {
 		t.Fatal("first frame has no known start boundary and must not be recorded")
 	}
-	if _, complete := push(101, 10, true); complete {
+	if ids := push(101, 10, true); len(ids) != 0 {
 		t.Fatal("first frame has no known start boundary and must not be recorded")
 	}
-	if _, complete := push(102, 20, false); complete {
+	if ids := push(102, 20, false); len(ids) != 0 {
 		t.Fatal("frame should not be recorded before its marker packet")
 	}
-	if frameID, complete := push(103, 20, true); !complete || frameID != 20 {
-		t.Fatalf("complete frame = (%d, %v), want (20, true)", frameID, complete)
+	if ids := push(103, 20, true); len(ids) != 1 || ids[0] != 20 {
+		t.Fatalf("complete frame = %v, want [20]", ids)
 	}
 
-	if _, complete := push(104, 30, false); complete {
+	if ids := push(104, 30, false); len(ids) != 0 {
 		t.Fatal("frame should not be recorded before its marker packet")
 	}
-	if _, complete := push(106, 30, true); complete {
+	if ids := push(106, 30, true); len(ids) != 0 {
 		t.Fatal("frame with a sequence gap must not be recorded")
 	}
-	if frameID, complete := push(107, 40, true); !complete || frameID != 40 {
-		t.Fatalf("contiguous frame after gap recovery = (%d, %v), want (40, true)",
-			frameID, complete)
+	if ids := push(107, 40, true); len(ids) != 1 || ids[0] != 40 {
+		t.Fatalf("contiguous frame after gap recovery = %v, want [40]", ids)
 	}
-	if _, complete := push(107, 40, true); complete {
+	if ids := push(107, 40, true); len(ids) != 0 {
 		t.Fatal("duplicate packet from the completed frame must not create another sample")
 	}
 
@@ -536,89 +535,86 @@ func TestVideoFrameAssemblerRequiresCompleteContiguousFrame(t *testing.T) {
 		frameBoundaryKnown:     true,
 		nextFrameFirstSequence: 500,
 	}
-	if _, complete := primed.push(&rtp.Packet{Header: rtp.Header{
+	if ids := primed.push(&rtp.Packet{Header: rtp.Header{
 		SequenceNumber: 500,
 		Timestamp:      50,
-	}}); complete {
+	}}); len(ids) != 0 {
 		t.Fatal("frame should not be recorded before its marker packet")
 	}
-	if frameID, complete := primed.push(&rtp.Packet{Header: rtp.Header{
+	if ids := primed.push(&rtp.Packet{Header: rtp.Header{
 		SequenceNumber: 501,
 		Timestamp:      50,
 		Marker:         true,
-	}}); !complete || frameID != 50 {
-		t.Fatalf("frame with a verified initial sequence = (%d, %v), want (50, true)",
-			frameID, complete)
+	}}); len(ids) != 1 || ids[0] != 50 {
+		t.Fatalf("frame with a verified initial sequence = %v, want [50]", ids)
 	}
 
 	reordered := &videoFrameAssembler{
 		frameBoundaryKnown:     true,
 		nextFrameFirstSequence: 600,
 	}
-	if _, complete := reordered.push(&rtp.Packet{Header: rtp.Header{
+	if ids := reordered.push(&rtp.Packet{Header: rtp.Header{
 		SequenceNumber: 601,
 		Timestamp:      60,
 		Marker:         true,
-	}}); complete {
+	}}); len(ids) != 0 {
 		t.Fatal("marker arriving before an earlier fragment must wait for that fragment")
 	}
-	if frameID, complete := reordered.push(&rtp.Packet{Header: rtp.Header{
+	if ids := reordered.push(&rtp.Packet{Header: rtp.Header{
 		SequenceNumber: 600,
 		Timestamp:      60,
-	}}); !complete || frameID != 60 {
-		t.Fatalf("reordered complete frame = (%d, %v), want (60, true)", frameID, complete)
+	}}); len(ids) != 1 || ids[0] != 60 {
+		t.Fatalf("reordered complete frame = %v, want [60]", ids)
 	}
 
 	wrapped := &videoFrameAssembler{
 		frameBoundaryKnown:     true,
 		nextFrameFirstSequence: 65535,
 	}
-	if _, complete := wrapped.push(&rtp.Packet{Header: rtp.Header{
+	if ids := wrapped.push(&rtp.Packet{Header: rtp.Header{
 		SequenceNumber: 0,
 		Timestamp:      70,
 		Marker:         true,
-	}}); complete {
+	}}); len(ids) != 0 {
 		t.Fatal("wrapped marker arriving first must wait for the initial fragment")
 	}
-	if frameID, complete := wrapped.push(&rtp.Packet{Header: rtp.Header{
+	if ids := wrapped.push(&rtp.Packet{Header: rtp.Header{
 		SequenceNumber: 65535,
 		Timestamp:      70,
-	}}); !complete || frameID != 70 {
-		t.Fatalf("wrapped reordered frame = (%d, %v), want (70, true)", frameID, complete)
+	}}); len(ids) != 1 || ids[0] != 70 {
+		t.Fatalf("wrapped reordered frame = %v, want [70]", ids)
 	}
 
 	lateRetransmission := &videoFrameAssembler{
 		frameBoundaryKnown:     true,
 		nextFrameFirstSequence: 800,
 	}
-	if frameID, complete := lateRetransmission.push(&rtp.Packet{Header: rtp.Header{
+	if ids := lateRetransmission.push(&rtp.Packet{Header: rtp.Header{
 		SequenceNumber: 800,
 		Timestamp:      80,
 		Marker:         true,
-	}}); !complete || frameID != 80 {
-		t.Fatalf("first frame before late retransmission = (%d, %v), want (80, true)",
-			frameID, complete)
+	}}); len(ids) != 1 || ids[0] != 80 {
+		t.Fatalf("first frame before late retransmission = %v, want [80]", ids)
 	}
-	if _, complete := lateRetransmission.push(&rtp.Packet{Header: rtp.Header{
+	if ids := lateRetransmission.push(&rtp.Packet{Header: rtp.Header{
 		SequenceNumber: 801,
 		Timestamp:      90,
-	}}); complete {
+	}}); len(ids) != 0 {
 		t.Fatal("next frame should wait for its marker")
 	}
-	if _, complete := lateRetransmission.push(&rtp.Packet{Header: rtp.Header{
+	if ids := lateRetransmission.push(&rtp.Packet{Header: rtp.Header{
 		SequenceNumber: 800,
 		Timestamp:      80,
 		Marker:         true,
-	}}); complete {
+	}}); len(ids) != 0 {
 		t.Fatal("late packet from an older frame must be ignored")
 	}
-	if frameID, complete := lateRetransmission.push(&rtp.Packet{Header: rtp.Header{
+	if ids := lateRetransmission.push(&rtp.Packet{Header: rtp.Header{
 		SequenceNumber: 802,
 		Timestamp:      90,
 		Marker:         true,
-	}}); !complete || frameID != 90 {
-		t.Fatalf("frame after late retransmission = (%d, %v), want (90, true)",
-			frameID, complete)
+	}}); len(ids) != 1 || ids[0] != 90 {
+		t.Fatalf("frame after late retransmission = %v, want [90]", ids)
 	}
 }
 
@@ -626,14 +622,14 @@ func TestVideoFrameAssemblerRequiresCompleteContiguousFrame(t *testing.T) {
 // loses its marker and five packets; frame 151 (one packet, seq
 // 1010, ts 110) arrives but is finalised without counting (unknown
 // boundary); frame 152 completes normally. The retransmits must
-// complete 150 late, and 151 late on the next call (one packet can
-// complete two span frames, so the second queues in completedQueue).
+// complete 150 and 151 late on the same call (one packet can
+// complete two span frames, and push reports both at once).
 func TestVideoFrameAssemblerLateCompletionRecoversMarkerLoss(t *testing.T) {
 	assembler := &videoFrameAssembler{
 		frameBoundaryKnown:     true,
 		nextFrameFirstSequence: 1000,
 	}
-	push := func(sequence uint16, timestamp uint32, marker bool) (uint64, bool) {
+	push := func(sequence uint16, timestamp uint32, marker bool) []uint64 {
 		t.Helper()
 		return assembler.push(&rtp.Packet{Header: rtp.Header{
 			SequenceNumber: sequence,
@@ -642,50 +638,53 @@ func TestVideoFrameAssemblerLateCompletionRecoversMarkerLoss(t *testing.T) {
 		}})
 	}
 	// Frame 149 (ts 90, seqs 1000-1001): complete, primes the boundary.
-	if _, complete := push(1000, 90, false); complete {
+	if ids := push(1000, 90, false); len(ids) != 0 {
 		t.Fatal("frame 149 should wait for its marker")
 	}
-	if frameID, complete := push(1001, 90, true); !complete || frameID != 90 {
-		t.Fatalf("frame 149 = (%d, %v), want (90, true)", frameID, complete)
+	if ids := push(1001, 90, true); len(ids) != 1 || ids[0] != 90 {
+		t.Fatalf("frame 149 = %v, want [90]", ids)
 	}
 	// Frame 150 (ts 100): only 1002-1003 arrive; marker 1009 and
 	// 1004-1008 are lost.
-	if _, complete := push(1002, 100, false); complete {
+	if ids := push(1002, 100, false); len(ids) != 0 {
 		t.Fatal("frame 150 should wait for its marker")
 	}
-	if _, complete := push(1003, 100, false); complete {
+	if ids := push(1003, 100, false); len(ids) != 0 {
 		t.Fatal("frame 150 should wait for its marker")
 	}
 	// Frame 151 (ts 110, seq 1010, marker): arrives, finalised
 	// without counting (unknown boundary).
-	if _, complete := push(1010, 110, true); complete {
+	if ids := push(1010, 110, true); len(ids) != 0 {
 		t.Fatal("frame 151 must not count while frame 150's boundary is unknown")
 	}
 	// Frame 152 (ts 120, seqs 1011-1012): complete normally.
-	if _, complete := push(1011, 120, false); complete {
+	if ids := push(1011, 120, false); len(ids) != 0 {
 		t.Fatal("frame 152 should wait for its marker")
 	}
-	if frameID, complete := push(1012, 120, true); !complete || frameID != 120 {
-		t.Fatalf("frame 152 = (%d, %v), want (120, true)", frameID, complete)
+	if ids := push(1012, 120, true); len(ids) != 1 || ids[0] != 120 {
+		t.Fatalf("frame 152 = %v, want [120]", ids)
 	}
 	// Retransmits for frame 150 arrive late, out of order.
 	for _, sequence := range []uint16{1005, 1002, 1003, 1004, 1006, 1007, 1008} {
-		if _, complete := push(sequence, 100, false); complete {
+		if ids := push(sequence, 100, false); len(ids) != 0 {
 			t.Fatalf("frame 150 should still be missing its marker after %d", sequence)
 		}
 	}
-	if frameID, complete := push(1009, 100, true); !complete || frameID != 100 {
-		t.Fatalf("late frame 150 = (%d, %v), want (100, true)", frameID, complete)
+	// With the queue drained on every push, the marker call reports
+	// both late frames at once: 150 completes from the span and 151,
+	// already whole behind it, is released in the same call.
+	if ids := push(1009, 100, true); len(ids) != 2 || ids[0] != 100 || ids[1] != 110 {
+		t.Fatalf("late frames 150+151 = %v, want [100 110]", ids)
 	}
-	// Frame 151 was already whole behind 150; it was queued and is
-	// reported on the next call. Push a duplicate of its own packet
-	// to drive the queue (a duplicate never completes anything new).
-	if frameID, complete := push(1010, 110, true); !complete || frameID != 110 {
-		t.Fatalf("late frame 151 = (%d, %v), want (110, true)", frameID, complete)
+	// Frame 151 was already reported on the marker call above; the
+	// queue is empty, so a duplicate of its own packet reports
+	// nothing new.
+	if ids := push(1010, 110, true); len(ids) != 0 {
+		t.Fatalf("duplicate must report nothing, got %v", ids)
 	}
 	// No further frames are queued.
-	if frameID, complete := push(1011, 120, false); complete {
-		t.Fatalf("unexpected queued completion (%d, %v)", frameID, complete)
+	if ids := push(1011, 120, false); len(ids) != 0 {
+		t.Fatalf("unexpected queued completion %v", ids)
 	}
 }
 
@@ -699,7 +698,7 @@ func TestVideoFrameAssemblerLateCompletionRecoversMissedFrames(t *testing.T) {
 		frameBoundaryKnown:     true,
 		nextFrameFirstSequence: 1000,
 	}
-	push := func(sequence uint16, timestamp uint32, marker bool) (uint64, bool) {
+	push := func(sequence uint16, timestamp uint32, marker bool) []uint64 {
 		t.Helper()
 		return assembler.push(&rtp.Packet{Header: rtp.Header{
 			SequenceNumber: sequence,
@@ -708,11 +707,11 @@ func TestVideoFrameAssemblerLateCompletionRecoversMissedFrames(t *testing.T) {
 		}})
 	}
 	// Frame 149 (ts 90, seqs 1000-1001): complete.
-	if _, complete := push(1000, 90, false); complete {
+	if ids := push(1000, 90, false); len(ids) != 0 {
 		t.Fatal("frame 149 should wait for its marker")
 	}
-	if frameID, complete := push(1001, 90, true); !complete || frameID != 90 {
-		t.Fatalf("frame 149 = (%d, %v), want (90, true)", frameID, complete)
+	if ids := push(1001, 90, true); len(ids) != 1 || ids[0] != 90 {
+		t.Fatalf("frame 149 = %v, want [90]", ids)
 	}
 	// Frames 150 (ts 100, seq 1002, marker), 151 (ts 110, seq 1003,
 	// marker) and 152 (ts 120, seq 1004, marker) never arrive.
@@ -720,35 +719,43 @@ func TestVideoFrameAssemblerLateCompletionRecoversMissedFrames(t *testing.T) {
 	// start is unproven while the missed frames' sequences are
 	// still unconsumed in the span. It completes late, once the
 	// retransmits consume the span.
-	if _, complete := push(1005, 130, false); complete {
+	if ids := push(1005, 130, false); len(ids) != 0 {
 		t.Fatal("frame 153 should wait for its marker")
 	}
-	if _, complete := push(1006, 130, true); complete {
+	if ids := push(1006, 130, true); len(ids) != 0 {
 		t.Fatal("frame 153 must wait for the missed frames' retransmits")
 	}
 	// Retransmits for the missed frames arrive late.
-	if frameID, complete := push(1002, 100, true); !complete || frameID != 100 {
-		t.Fatalf("late frame 150 = (%d, %v), want (100, true)", frameID, complete)
+	if ids := push(1002, 100, true); len(ids) != 1 || ids[0] != 100 {
+		t.Fatalf("late frame 150 = %v, want [100]", ids)
 	}
-	if frameID, complete := push(1003, 110, true); !complete || frameID != 110 {
-		t.Fatalf("late frame 151 = (%d, %v), want (110, true)", frameID, complete)
+	if ids := push(1003, 110, true); len(ids) != 1 || ids[0] != 110 {
+		t.Fatalf("late frame 151 = %v, want [110]", ids)
 	}
-	if frameID, complete := push(1004, 120, true); !complete || frameID != 120 {
-		t.Fatalf("late frame 152 = (%d, %v), want (120, true)", frameID, complete)
+	// With the queue drained on every push, this call reports both
+	// 152 (from the span) and 153 (re-checked once the span is
+	// consumed) at once.
+	if ids := push(1004, 120, true); len(ids) != 2 || ids[0] != 120 || ids[1] != 130 {
+		t.Fatalf("late frames 152+153 = %v, want [120 130]", ids)
 	}
-	// Frame 153 was already whole behind the missed frames; it was
-	// queued when the span was consumed and is reported on the next
-	// call. Push a duplicate of 152's packet to drive the queue (a
-	// duplicate never completes anything new).
-	if frameID, complete := push(1004, 120, true); !complete || frameID != 130 {
-		t.Fatalf("late frame 153 = (%d, %v), want (130, true)", frameID, complete)
+	// Frame 153 was already reported on the call above; the queue
+	// is empty, so a duplicate of 152's packet reports nothing new.
+	if ids := push(1004, 120, true); len(ids) != 0 {
+		t.Fatalf("duplicate must report nothing, got %v", ids)
 	}
 }
 
 // FIX 31: the gap tracker NACKs exactly the sequences between two
 // received sequences, retries them after the retry interval, and
 // never NACKs a sequence that arrived or a pre-subscription sequence.
-func TestNACKGapTrackerDetectsRetriesAndResets(t *testing.T) {
+// TestNACKGapTrackerSingleAttemptNoRetry pins LADDER FIX 5: a missing
+// sequence is NACKed once, never retried. The retry (600 ms after the
+// first NACK) was designed to honour a genuinely lost retransmit, but
+// a frame dissolves ~400 ms after its first packet, so a retry
+// retransmit can never complete its frame — at 20x10,000 the retries
+// were the storm (run 2: 7.55M NACK sequences, 12.5M retransmits,
+// 77% kernel/receive loss, delivery 22.6%). One attempt only.
+func TestNACKGapTrackerSingleAttemptNoRetry(t *testing.T) {
 	tracker := newNACKGapTracker()
 	now := time.Unix(0, 0)
 	// Pre-subscription sequences are never NACKed: the first observed
@@ -767,19 +774,21 @@ func TestNACKGapTrackerDetectsRetriesAndResets(t *testing.T) {
 	if batch := tracker.observe(106, now.Add(599*time.Millisecond)); len(batch) != 0 {
 		t.Fatalf("early retry = %v, want empty", batch)
 	}
-	// At the interval the whole gap is re-NACKed.
-	if batch := tracker.observe(107, now.Add(600*time.Millisecond)); len(batch) != 3 || batch[0] != 102 {
-		t.Fatalf("retry observe = %v, want [102 103 104]", batch)
+	// No retry at the interval either: the single attempt is spent, and
+	// the gap is abandoned (a retry retransmit could not complete its
+	// frame anyway — it dissolves ~400 ms after its first packet).
+	if batch := tracker.observe(107, now.Add(600*time.Millisecond)); len(batch) != 0 {
+		t.Fatalf("retry observe = %v, want empty", batch)
 	}
 	// A retransmit of 103 removes it from the missing set; the next
 	// retry names only 102 and 104.
 	if batch := tracker.observe(103, now.Add(600*time.Millisecond)); len(batch) != 0 {
 		t.Fatalf("retransmit observe = %v, want empty", batch)
 	}
-	if batch := tracker.observe(108, now.Add(1200*time.Millisecond)); len(batch) != 2 || batch[0] != 102 || batch[1] != 104 {
-		t.Fatalf("second retry = %v, want [102 104]", batch)
+	if batch := tracker.observe(108, now.Add(1200*time.Millisecond)); len(batch) != 0 {
+		t.Fatalf("second retry = %v, want empty", batch)
 	}
-	// After three attempts the gap is abandoned (no fourth retry).
+	// After the single attempt the gap is abandoned (no retry at all).
 	if batch := tracker.observe(109, now.Add(1800*time.Millisecond)); len(batch) != 0 {
 		t.Fatalf("abandoned retry = %v, want empty", batch)
 	}
@@ -826,19 +835,19 @@ func TestSFUFrameDiagnosticRecorderFiltersAndBoundsJSONL(t *testing.T) {
 		nextFrameFirstSequence: 10,
 	}
 	before := snapshotSFUFrameAssembler(assembler)
-	frameID, complete := assembler.push(packet)
+	ids := assembler.push(packet)
 	after := snapshotSFUFrameAssembler(assembler)
-	if !complete || frameID != 20 {
-		t.Fatalf("expected complete frame 20, got frame=%d complete=%t", frameID, complete)
+	if len(ids) != 1 || ids[0] != 20 {
+		t.Fatalf("expected complete frame 20, got %v", ids)
 	}
-	if err := recorder.record("viewer-1", "track-1", packet, before, after, frameID, complete); err != nil {
+	if err := recorder.record("viewer-1", "track-1", packet, before, after, ids[0], true); err != nil {
 		t.Fatal(err)
 	}
 	unrelated := &rtp.Packet{Header: rtp.Header{SequenceNumber: 11, Timestamp: 21}}
 	if err := recorder.record("viewer-1", "track-1", unrelated, after, after, 0, false); err != nil {
 		t.Fatal(err)
 	}
-	if err := recorder.record("viewer-1", "track-1", packet, before, after, frameID, complete); err != nil {
+	if err := recorder.record("viewer-1", "track-1", packet, before, after, ids[0], true); err != nil {
 		t.Fatal(err)
 	}
 	outputText := output.String()
@@ -1688,6 +1697,91 @@ func TestNACKSelectionDeduplicatesCapsAndPrioritizesRecentSequence(t *testing.T)
 	}
 }
 
+// TestFilterUpstreamForwardableDedupsWithinWindow pins LADDER FIX 2:
+// the same upstream-lost sequence forwards once per
+// nackAggregationWindow per track, not once per viewer NACK. Probes
+// are not deduped here (handleNACK forwards those separately).
+func TestFilterUpstreamForwardableDedupsWithinWindow(t *testing.T) {
+	track := &sfuPublishedTrack{}
+	now := time.Now()
+	first := track.filterUpstreamForwardable([]uint16{100, 101, 102}, now)
+	if len(first) != 3 {
+		t.Fatalf("first forward: got %d sequences, want 3", len(first))
+	}
+	again := track.filterUpstreamForwardable([]uint16{100, 101, 102}, now.Add(100*time.Millisecond))
+	if len(again) != 0 {
+		t.Fatalf("repeat within window: got %d sequences, want 0", len(again))
+	}
+	partial := track.filterUpstreamForwardable([]uint16{101, 103}, now.Add(100*time.Millisecond))
+	if len(partial) != 1 || partial[0] != 103 {
+		t.Fatalf("partial repeat: got %v, want [103]", partial)
+	}
+	after := track.filterUpstreamForwardable([]uint16{100}, now.Add(nackAggregationWindow+time.Millisecond))
+	if len(after) != 1 || after[0] != 100 {
+		t.Fatalf("after window: got %v, want [100]", after)
+	}
+}
+
+// LADDER FIX 3: the 20 global phase offsets (0..19) must put each
+// publisher's first IDR on a different send index mod 30, so no two
+// publishers' IDRs align. IDR file positions for the ladder video are
+// 0, 30, ..., 270 in a 300-frame file.
+func TestIDRPhaseStaggerSpreadsFirstIDR(t *testing.T) {
+	const frameCount = 300
+	idrPositions := map[int]bool{0: true, 30: true, 60: true, 90: true, 120: true, 150: true, 180: true, 210: true, 240: true, 270: true}
+	seen := make(map[int]int)
+	for global := 0; global < 20; global++ {
+		firstIDR := -1
+		for k := 0; k < 30; k++ {
+			if idrPositions[int(frameIndexForSend(uint64(k), uint64(global), frameCount))] {
+				firstIDR = k
+				break
+			}
+		}
+		if firstIDR < 0 {
+			t.Fatalf("publisher %d: no IDR in first 30 send indexes", global)
+		}
+		if prev, dup := seen[firstIDR]; dup {
+			t.Fatalf("publishers %d and %d share first-IDR send index %d", prev, global, firstIDR)
+		}
+		seen[firstIDR] = global
+	}
+	// Sanity: the rotation preserves the frame multiset — 302 sends cover
+	// every file frame at least once.
+	covered := make(map[uint64]bool)
+	for k := 0; k < 302; k++ {
+		covered[frameIndexForSend(uint64(k), 7, frameCount)] = true
+	}
+	if len(covered) != frameCount {
+		t.Fatalf("phase offset 7 covers %d of %d frames in 302 sends", len(covered), frameCount)
+	}
+}
+
+// TestResetFeedbackReceivedClearsPLIFIRDedup pins LADDER FIX 4: the
+// publisher-side feedback retry resets the router's per-viewer received
+// flags so a re-sent PLI/FIR is forwarded upstream instead of dropped as
+// a duplicate by forwardFeedback. NACK receipt is not deduped by
+// hasReceivedFeedback, so its counter stays intact for the diagnosis.
+func TestResetFeedbackReceivedClearsPLIFIRDedup(t *testing.T) {
+	subscription := &sfuSubscription{viewerID: "viewer-test"}
+	subscription.recordPLIReceived()
+	subscription.recordFIRReceived()
+	subscription.recordNACKReceived()
+	if !subscription.hasReceivedFeedback("pli") || !subscription.hasReceivedFeedback("fir") || !subscription.hasReceivedFeedback("nack") {
+		t.Fatal("setup: subscription must report all three feedback kinds received")
+	}
+	subscription.resetFeedbackReceived()
+	if subscription.hasReceivedFeedback("pli") {
+		t.Fatal("PLI flag must clear after reset (re-send must forward)")
+	}
+	if subscription.hasReceivedFeedback("fir") {
+		t.Fatal("FIR flag must clear after reset (re-send must forward)")
+	}
+	if !subscription.hasReceivedFeedback("nack") {
+		t.Fatal("NACK receipt counter must survive the reset (diagnosis)")
+	}
+}
+
 func TestNACKExpectedSequenceFilterPreservesOnlyProofRequests(t *testing.T) {
 	expected := map[uint16]struct{}{
 		0:  {},
@@ -1870,17 +1964,109 @@ func TestMetricsEndpointIsLoopbackOnlyAndServesPrometheus(t *testing.T) {
 		t.Fatalf("metrics response status=%d body=%q", response.StatusCode, body)
 	}
 
+	// POLISH-001: the metrics server no longer serves an unauthenticated
+	// heap profile — a heap dump can hold the bearer token / HMAC key in
+	// memory. The bearer-protected /heap-profile on the signalling server
+	// is the only heap endpoint.
 	profileResponse, err := http.Get("http://" + server.Addr + "/debug/pprof/heap?gc=1")
 	if err != nil {
 		t.Fatalf("capture local heap profile: %v", err)
 	}
-	defer profileResponse.Body.Close()
-	profile, err := io.ReadAll(profileResponse.Body)
-	if err != nil {
-		t.Fatalf("read local heap profile: %v", err)
+	_ = profileResponse.Body.Close()
+	if profileResponse.StatusCode != http.StatusNotFound {
+		t.Fatalf("unauthenticated heap profile response status=%d, want 404", profileResponse.StatusCode)
 	}
-	if profileResponse.StatusCode != http.StatusOK || len(profile) == 0 {
-		t.Fatalf("heap profile response status=%d bytes=%d", profileResponse.StatusCode, len(profile))
+}
+
+func TestM7HSFUTokenPipeRoundTrip(t *testing.T) {
+	// POLISH-001: the token pipe carries the token to the child without
+	// it ever appearing in argv.
+	const token = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+	readEnd, err := newM7HSFUTokenPipe(token)
+	if err != nil {
+		t.Fatalf("newM7HSFUTokenPipe: %v", err)
+	}
+	defer readEnd.Close()
+	raw, err := io.ReadAll(readEnd)
+	if err != nil {
+		t.Fatalf("read token pipe: %v", err)
+	}
+	if string(raw) != token {
+		t.Fatalf("token pipe read = %q, want %q", string(raw), token)
+	}
+}
+
+func TestReadM7HSFUTokenFile(t *testing.T) {
+	// POLISH-001: the fd reader trims whitespace, and fails closed on
+	// an empty or overlong token.
+	readEnd, writeEnd, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("create pipe: %v", err)
+	}
+	if _, err := io.WriteString(writeEnd, "tok-123\n"); err != nil {
+		t.Fatalf("write pipe: %v", err)
+	}
+	if err := writeEnd.Close(); err != nil {
+		t.Fatalf("close pipe: %v", err)
+	}
+	got, err := readM7HSFUTokenFile(readEnd)
+	if err != nil {
+		t.Fatalf("readM7HSFUTokenFile: %v", err)
+	}
+	if got != "tok-123" {
+		t.Fatalf("token = %q, want %q", got, "tok-123")
+	}
+	emptyRead, emptyWrite, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("create empty pipe: %v", err)
+	}
+	if err := emptyWrite.Close(); err != nil {
+		t.Fatalf("close empty pipe: %v", err)
+	}
+	if _, err := readM7HSFUTokenFile(emptyRead); err == nil {
+		t.Fatal("readM7HSFUTokenFile accepted an empty token")
+	}
+	longRead, longWrite, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("create long pipe: %v", err)
+	}
+	if _, err := io.WriteString(longWrite, strings.Repeat("x", m7hSFUTokenMaxBytes+1)); err != nil {
+		t.Fatalf("write long pipe: %v", err)
+	}
+	if err := longWrite.Close(); err != nil {
+		t.Fatalf("close long pipe: %v", err)
+	}
+	if _, err := readM7HSFUTokenFile(longRead); err == nil {
+		t.Fatal("readM7HSFUTokenFile accepted an overlong token")
+	}
+}
+
+func TestM7HRemoteSFUCommandHasNoTokenInArgs(t *testing.T) {
+	// POLISH-001: the child argv must never contain the bearer token.
+	const token = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+	pipe, err := newM7HSFUTokenPipe(token)
+	if err != nil {
+		t.Fatalf("newM7HSFUTokenPipe: %v", err)
+	}
+	defer pipe.Close()
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+	defer listener.Close()
+	listenerFile, err := listener.(*net.TCPListener).File()
+	if err != nil {
+		t.Fatalf("duplicate listener: %v", err)
+	}
+	defer listenerFile.Close()
+	cmd := newM7HRemoteSFUCommand(context.Background(), "/bin/true", 1<<30, "00", listenerFile, pipe)
+	for _, arg := range cmd.Args {
+		if strings.Contains(arg, token) {
+			t.Fatalf("SFU child argv contains the bearer token: %q", arg)
+		}
+	}
+	if len(cmd.ExtraFiles) != 2 {
+		t.Fatalf("ExtraFiles = %d files, want 2 (listener + token pipe)", len(cmd.ExtraFiles))
 	}
 }
 
@@ -2057,5 +2243,245 @@ func TestM7HRemoteSFUCPUProfileRejectsDurationOverLimit(t *testing.T) {
 	}
 	if _, err := os.Stat(path); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("invalid duration created a profile: stat error = %v", err)
+	}
+}
+
+// FIX 31: partial retransmit, late delivery. The 7-packet IDR (seqs
+// 1002-1008, ts 100) and the 1-packet P-frame (seq 1009, ts 110) are
+// lost. The 1-packet frame's packet is a layerDelta packet: it is
+// never cached by the router (main.go rememberPacket), so it is never
+// retransmitted — its NACK comes back missing. Frames 152 and 153
+// arrive and 153 completes normally, THEN the IDR's retransmits arrive
+// late. The retransmits must complete the IDR late AND release 152: a
+// single unrecoverable packet must not cost three frames.
+// NOTE: the frame numbers here follow the diagnosis-001 labels
+// ("150" = IDR, "151" = P-frame). The video parse (diagnosis-002 §3)
+// shows reality is swapped (real 150 = 1-packet P, real 151 = IDR);
+// the packet pattern — and therefore the bug — is identical.
+// FAILS on the current fix: the IDR completes late, but 152 stays stuck
+// behind the missing packet (299 frames, not 300).
+func TestVideoFrameAssemblerLateRetransmitAfterNewerFramesStarted(t *testing.T) {
+	assembler := &videoFrameAssembler{
+		frameBoundaryKnown:     true,
+		nextFrameFirstSequence: 1000,
+	}
+	push := func(sequence uint16, timestamp uint32, marker bool) []uint64 {
+		t.Helper()
+		return assembler.push(&rtp.Packet{Header: rtp.Header{
+			SequenceNumber: sequence,
+			Timestamp:      timestamp,
+			Marker:         marker,
+		}})
+	}
+	completed := map[uint64]bool{}
+	record := func(sequence uint16, timestamp uint32, marker bool) []uint64 {
+		t.Helper()
+		ids := push(sequence, timestamp, marker)
+		for _, frameID := range ids {
+			completed[frameID] = true
+		}
+		return ids
+	}
+	// Frame 149 (ts 90, seqs 1000-1001): complete, primes the boundary.
+	record(1000, 90, false)
+	record(1001, 90, true)
+	if !completed[90] {
+		t.Fatal("frame 149 should complete")
+	}
+	// Frames 150 (ts 100, seqs 1002-1008) and 151 (ts 110, seq 1009)
+	// never arrive.
+	// Frame 152 (ts 120, seqs 1010-1011): arrives, waits behind 151.
+	record(1010, 120, false)
+	record(1011, 120, true)
+	if completed[120] {
+		t.Fatal("frame 152 must wait while 151 is missing")
+	}
+	// Frame 153 (ts 130, seqs 1012-1013): completes normally.
+	record(1012, 130, false)
+	record(1013, 130, true)
+	if !completed[130] {
+		t.Fatalf("frame 153 should complete normally; completed: %v", completed)
+	}
+	// Frame 150's retransmits arrive LATE, after 153 completed.
+	// Frame 151's retransmit never arrives (uncached delta).
+	for _, sequence := range []uint16{1005, 1002, 1003, 1004, 1006, 1007} {
+		record(sequence, 100, false)
+	}
+	record(1008, 100, true)
+	if !completed[100] {
+		t.Fatalf("frame 150 should complete late; completed: %v", completed)
+	}
+	// Frame 152 was already reported when 153's first packet
+	// arrived (rescue); with the queue drained on every push, no
+	// drive packet is needed, and a duplicate reports nothing new.
+	if !completed[120] {
+		t.Fatalf("frame 152 should complete after the late retransmit; completed: %v", completed)
+	}
+	if ids := record(1011, 120, true); len(ids) != 0 {
+		t.Fatalf("duplicate must report nothing, got %v", ids)
+	}
+	for _, want := range []uint64{90, 100, 120, 130} {
+		if !completed[want] {
+			t.Fatalf("completed = %v, want it to contain %d", completed, want)
+		}
+	}
+	if len(completed) != 4 {
+		t.Fatalf("completed = %v, want exactly {90 100 120 130}", completed)
+	}
+}
+
+// FIX 31: runtime-order retransmit. Same packet pattern as
+// TestVideoFrameAssemblerLateRetransmitAfterNewerFramesStarted, but the
+// IDR's retransmits arrive BEFORE frame 153's first packet — the order
+// the event run (diagnosis-002) measured at runtime (~124 ms before
+// 153). The retransmits complete the IDR late, but 152 is not yet
+// merged into the late span when the scans run, and no scan ever runs
+// after 153 merges it — so on the current fix 152 sits orphaned and
+// never completes, even though it is completable. The fix must re-scan
+// the span when a frame is merged into it.
+// FAILS on the current fix: 152 never completes (299 frames, not 300).
+func TestVideoFrameAssemblerLateRetransmitBeforeNextFrameMerges(t *testing.T) {
+	assembler := &videoFrameAssembler{
+		frameBoundaryKnown:     true,
+		nextFrameFirstSequence: 1000,
+	}
+	push := func(sequence uint16, timestamp uint32, marker bool) []uint64 {
+		t.Helper()
+		return assembler.push(&rtp.Packet{Header: rtp.Header{
+			SequenceNumber: sequence,
+			Timestamp:      timestamp,
+			Marker:         marker,
+		}})
+	}
+	completed := map[uint64]bool{}
+	record := func(sequence uint16, timestamp uint32, marker bool) []uint64 {
+		t.Helper()
+		ids := push(sequence, timestamp, marker)
+		for _, frameID := range ids {
+			completed[frameID] = true
+		}
+		return ids
+	}
+	// Frame 149 (ts 90, seqs 1000-1001): complete, primes the boundary.
+	record(1000, 90, false)
+	record(1001, 90, true)
+	if !completed[90] {
+		t.Fatal("frame 149 should complete")
+	}
+	// Frames 150 (ts 100, seqs 1002-1008) and 151 (ts 110, seq 1009)
+	// never arrive.
+	// Frame 152 (ts 120, seqs 1010-1011): arrives, waits behind 151.
+	record(1010, 120, false)
+	record(1011, 120, true)
+	if completed[120] {
+		t.Fatal("frame 152 must wait while 151 is missing")
+	}
+	// The IDR's retransmits arrive NOW, before 153 — runtime order.
+	// Frame 151's retransmit never arrives (uncached delta).
+	for _, sequence := range []uint16{1005, 1002, 1003, 1004, 1006, 1007} {
+		record(sequence, 100, false)
+	}
+	record(1008, 100, true)
+	if !completed[100] {
+		t.Fatalf("frame 150 should complete late; completed: %v", completed)
+	}
+	if completed[120] {
+		t.Fatal("frame 152 must not complete before 153 merges it")
+	}
+	// Frame 153 (ts 130, seqs 1012-1013): completes normally. Merging
+	// 152 into the span must re-scan it: 152 is whole and completable.
+	record(1012, 130, false)
+	record(1013, 130, true)
+	if !completed[130] {
+		t.Fatalf("frame 153 should complete normally; completed: %v", completed)
+	}
+	if !completed[120] {
+		t.Fatalf("frame 152 should complete when 153 merges it; completed: %v", completed)
+	}
+	for _, want := range []uint64{90, 100, 120, 130} {
+		if !completed[want] {
+			t.Fatalf("completed = %v, want it to contain %d", completed, want)
+		}
+	}
+	if len(completed) != 4 {
+		t.Fatalf("completed = %v, want exactly {90 100 120 130}", completed)
+	}
+}
+
+// FIX 31 latency: complete on retransmit arrival, drain the queue.
+// Runtime packet pattern (diagnosis-002 corrected assignment): frame
+// 150 is a 1-packet P-frame (seq 1002, ts 100), frame 151 is a 7-packet
+// IDR (seqs 1003-1009, ts 110), frame 152 is a 1-packet P-frame
+// (seq 1010, ts 120), frame 153 is a 1-packet P-frame (seq 1011,
+// ts 130). 150's and 151's packets are dropped, 152 arrives and waits.
+// Their retransmits arrive (marker first, as the event run measured)
+// BEFORE 153. The retransmits must complete 150 and 151 late AND
+// release 152 at once — 152's own packet is already here, only its
+// predecessors were missing — and 153, a 1-packet frame, must be
+// reported by its own push call, not queued behind 152: one packet
+// can complete two frames, and the second used to wait a whole frame
+// interval for the next packet to report it. That queued report is
+// what left every frame after the recovery one interval late until
+// the next IDR (f31fixi11: 31 frames at ~200 ms).
+// FAILS on commit 61e3480: 152 does not complete on the retransmits,
+// and 153 is not reported by its own call.
+func TestVideoFrameAssemblerLateRetransmitCompletesOnRetransmitArrival(t *testing.T) {
+	assembler := &videoFrameAssembler{
+		frameBoundaryKnown:     true,
+		nextFrameFirstSequence: 1000,
+	}
+	push := func(sequence uint16, timestamp uint32, marker bool) []uint64 {
+		t.Helper()
+		return assembler.push(&rtp.Packet{Header: rtp.Header{
+			SequenceNumber: sequence,
+			Timestamp:      timestamp,
+			Marker:         marker,
+		}})
+	}
+	completed := map[uint64]bool{}
+	record := func(sequence uint16, timestamp uint32, marker bool) []uint64 {
+		t.Helper()
+		ids := push(sequence, timestamp, marker)
+		for _, frameID := range ids {
+			completed[frameID] = true
+		}
+		return ids
+	}
+	// Frame 149 (ts 90, seqs 1000-1001): complete, primes the boundary.
+	record(1000, 90, false)
+	if ids := record(1001, 90, true); len(ids) != 1 || ids[0] != 90 {
+		t.Fatalf("frame 149 = %v, want [90]", ids)
+	}
+	// Frames 150 (ts 100, seq 1002) and 151 (ts 110, seqs 1003-1009)
+	// never arrive. Frame 152 (ts 120, seq 1010): arrives, waits.
+	if ids := record(1010, 120, true); len(ids) != 0 {
+		t.Fatalf("frame 152 must wait while 150/151 are missing, got %v", ids)
+	}
+	// The retransmits arrive now, marker first, before 153.
+	for _, sequence := range []uint16{1009, 1008, 1007, 1006, 1005, 1004, 1003} {
+		record(sequence, 110, sequence == 1009)
+	}
+	if completed[120] {
+		t.Fatal("frame 152 must wait while 150's packet is missing")
+	}
+	// 150's single packet arrives last: 150 and 151 complete, and
+	// 152 — already whole behind them — must complete on this same
+	// call, not when 153 merges it.
+	if ids := record(1002, 100, true); !completed[100] || !completed[110] || !completed[120] {
+		t.Fatalf("retransmits must complete 150, 151 and 152 at once; completed: %v (last call: %v)", completed, ids)
+	}
+	// Frame 153 (ts 130, seq 1011): a 1-packet frame. It must be
+	// reported by its own push call — on the old code it queued
+	// behind 152 and was reported one frame interval late.
+	if ids := record(1011, 130, true); len(ids) != 1 || ids[0] != 130 {
+		t.Fatalf("frame 153 = %v, want [130] on its own call", ids)
+	}
+	for _, want := range []uint64{90, 100, 110, 120, 130} {
+		if !completed[want] {
+			t.Fatalf("completed = %v, want it to contain %d", completed, want)
+		}
+	}
+	if len(completed) != 5 {
+		t.Fatalf("completed = %v, want exactly {90 100 110 120 130}", completed)
 	}
 }

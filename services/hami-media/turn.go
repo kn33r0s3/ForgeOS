@@ -47,6 +47,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"runtime"
 	"strings"
 	"syscall"
 
@@ -85,6 +86,20 @@ type sfuTURNConfig struct {
 // HAMI_SFU_TURN_PASSWORD_FILE (preferred) or HAMI_SFU_TURN_PASSWORD.
 func loadSFUTURNPassword() (string, error) {
 	if path := strings.TrimSpace(os.Getenv("HAMI_SFU_TURN_PASSWORD_FILE")); path != "" {
+		// POLISH-001: the password file must be a regular file readable
+		// only by its owner — the same rule as readSFUKeyFile in auth.go.
+		// A group- or world-readable credential file is refused instead
+		// of silently used.
+		info, err := os.Stat(path)
+		if err != nil {
+			return "", fmt.Errorf("stat TURN password file: %w", err)
+		}
+		if !info.Mode().IsRegular() {
+			return "", errors.New("TURN password file path must be a regular file")
+		}
+		if runtime.GOOS != "windows" && info.Mode().Perm()&0o077 != 0 {
+			return "", fmt.Errorf("TURN password file mode is %04o; it must not be readable by group or others (run chmod 600)", uint32(info.Mode().Perm()))
+		}
 		raw, err := os.ReadFile(path)
 		if err != nil {
 			return "", fmt.Errorf("read TURN password file: %w", err)
