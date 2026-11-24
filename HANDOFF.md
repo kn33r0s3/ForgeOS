@@ -1,3 +1,9 @@
+## Freshness check — 2026-11-24 06:23 +0545
+
+- `git pull --ff-only` fast-forwarded main 80ebb082..8b3b7ee5 (7 commits): the D95 cold-chain / Farmer Registry evidence series (ae87e88e, 40f731d6, bdcc4c0a) and Bhotekoshi–Trishuli projection sync (8b3b7ee5), plus media/SFU commits (6ce9969c, e4257b4f) and the prior freshness commit (3dc4a4c7). No new D-number was added. Banked unknowns: 113 D-rows in docs/UNKNOWN_MAP.md (unchanged).
+- Live health check 2026-11-24 06:23 NPT: both https://haminp.vercel.app/api/health and https://forge-os-ebon.vercel.app/api/health return HTTP 402 DEPLOYMENT_DISABLED (unchanged — production outage ongoing since 31 October). The forge-bot config endpoint also returns 402, so intake_enabled was unreadable in this run; no intake-flag change is asserted.
+- Verified stamp: 2026-11-24.
+
 ## 2026-11-24 06:20 +0545 — Bhotekoshi–Trishuli update and unknown-projection correction
 
 Run-start main bdcc4c0a7963790ccc50790223b6951835d9629a. Exact-head CI run 45296869651 completed with 8/10 jobs successful; backend pytest, typecheck, build, lint, route smoke, evidence-triage tests, gate checks and CI gitleaks passed. frontend-tests and repository-guards failed because the D95 UNKNOWN_MAP row had been updated without regenerating backend/app/data/unknowns.json and src/lib/unknowns.ts. Separate Secrets scan 45296869621 passed. Independent deploy verification 45296869613 failed at “Fetch production content”; no production-content/health proof. The projections are regenerated in this commit using the exact scripts/sync-unknowns-json.mjs logic.
