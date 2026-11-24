@@ -84,6 +84,25 @@ const (
 	// from one NACK and let the viewer re-NACK the rest.
 	// Split forwarded NACKs at Pion's per-report limit below.
 	nackAggregationWindow = 500 * time.Millisecond
+	// FIX 31: mid-run NACK recovery. The viewer light API has no Pion
+	// NACK generator (it was the NACK-storm source), so the viewer
+	// ReadRTP loop detects sequence gaps itself (nackGapTracker) and
+	// NACKs the actually-missing sequences; the router retransmits
+	// them from its per-track cache (handleNACK, unchanged). A NACK
+	// is retried at most nackGapMaxAttempts times, nackGapRetryInterval
+	// apart — 600 ms clears the router's 500 ms retransmit dedup
+	// window (selectNACKSequences), so a retry after a genuinely lost
+	// retransmit is honoured instead of skipped as a duplicate.
+	// nackGapMaxJump bounds the gap a single arrival can open (a
+	// larger jump is a sequence restart, not loss). The assembler
+	// retains the most recent incomplete frame span (lateSpanMaxSequences
+	// bounds it) so a retransmit arriving after the next frame started
+	// can still complete its frame (videoFrameAssembler.push).
+	nackGapRetryInterval = 600 * time.Millisecond
+	nackGapMaxAttempts   = 3
+	nackGapMaxBatch       = 256
+	nackGapMaxJump        = 1024
+	lateSpanMaxSequences  = 1024
 	maxSequencesPerNACK   = 512
 	// Pion's NACK marshaler requires len(Nacks)+2 <= MaxUint8.
 	maxNACKPairsPerRTCPPacket = math.MaxUint8 - 2
@@ -349,7 +368,12 @@ type sfuViewerResult struct {
 	LatencyJSONLPath     string            `json:"latency_jsonl_path,omitempty"`
 	LatencySummaryPath   string            `json:"latency_summary_path,omitempty"`
 	RetransmittedPackets uint64            `json:"retransmitted_packets_received"`
-	PeerConnection       string            `json:"peer_connection_state"`
+	// FIX 31: mid-run NACK recovery sent by this viewer (gap
+	// detection in the read loop): sequences named in NACKs and
+	// NACK RTCP packets written. Zero on a lossless run.
+	NACKSequencesSent uint64 `json:"nack_recovery_sequences_sent"`
+	NACKPacketsSent   uint64 `json:"nack_recovery_packets_sent"`
+	PeerConnection    string `json:"peer_connection_state"`
 	FeedbackForwarded    sfuFeedbackCounts `json:"feedback_handled"`
 	OnlyRequested        bool              `json:"only_requested_track_received"`
 }
@@ -5623,6 +5647,14 @@ type sfuViewerCapture struct {
 	readTiming       *m7hRTPReadTiming
 	errors           chan error
 	received         chan struct{}
+	// FIX 31: mid-run NACK recovery counts (per viewer, all tracks).
+	// nackSequencesSent counts the sequences named in NACKs the
+	// viewer sent; nackPacketsSent counts the NACK RTCP packets;
+	// nackSendErrors counts failed NACK writes (best-effort: a
+	// failed write never fails the run).
+	nackSequencesSent atomic.Uint64
+	nackPacketsSent   atomic.Uint64
+	nackSendErrors    atomic.Uint64
 }
 
 type sfuFrameDiagnosticSummary struct {
@@ -5727,6 +5759,38 @@ type videoFrameAssembler struct {
 	frameBoundaryKnown     bool
 	lastFinalizedTimestamp uint32
 	hasFinalizedTimestamp  bool
+	// FIX 31: retained late span. When a frame is finalised incomplete
+	// (its marker was lost, or some of its packets were lost) or whole
+	// frames are skipped (sequence gap at a new frame), the missed
+	// sequences are retained here instead of being discarded, so a
+	// NACK retransmit arriving after the next frame started can still
+	// complete its frame. Only the most recent span is kept: a newer
+	// incomplete frame extends it (the span covers everything missed
+	// since the last cleanly completed frame). lateFirstSequence /
+	// lateLastSequence bound the span in uint16 serial space;
+	// lateSequences holds the sequences seen so far (originals plus
+	// retransmits); lateTimestamps records each sequence's RTP
+	// timestamp (a frame completes with its marker packet's timestamp);
+	// lateMarkers records which sequences arrived with the marker bit.
+	// lateLowTimestamp / lateHighTimestamp bound the span's frames in
+	// RTP timestamp space: a span packet's timestamp lies in
+	// (lateLowTimestamp, lateHighTimestamp], where lateHighTimestamp
+	// is the timestamp of the newest frame in the span (inclusive). A frame
+	// whose marker packet never arrives, even after NACK retries,
+	// blocks late completion of the frames after it in the same span;
+	// that is the bounded-grace limit of this design.
+	lateActive         bool
+	lateFirstSequence  uint16
+	lateLastSequence   uint16
+	lateLowTimestamp   uint32
+	lateHighTimestamp  uint32
+	lateSequences      map[uint16]struct{}
+	lateTimestamps     map[uint16]uint32
+	lateMarkers        map[uint16]struct{}
+	// completedQueue holds frame IDs completed by an earlier packet
+	// (a late retransmit can complete several span frames at once);
+	// push reports them one per call.
+	completedQueue []uint64
 }
 
 type sfuFeedbackEvent struct {
@@ -12986,6 +13050,8 @@ func runLocalSFUProofWithConfig(
 			ReceivedTrackIDs:     trackIDsReceived,
 			Received:             snapshot,
 			RetransmittedPackets: viewer.capture.duplicatePackets(viewer.key.TrackID),
+			NACKSequencesSent:    viewer.capture.nackSequencesSent.Load(),
+			NACKPacketsSent:      viewer.capture.nackPacketsSent.Load(),
 			PeerConnection:       viewer.client.ConnectionState().String(),
 			OnlyRequested:        onlyRequested,
 		}
@@ -13277,6 +13343,36 @@ func newSFUViewerCapture(
 		capture.tracks[track.ID()] = counter
 		capture.sequenceCounts[track.ID()] = make(map[uint16]uint64)
 		capture.mu.Unlock()
+		// FIX 31: mid-run NACK recovery, video only. The viewer
+		// light API has no Pion NACK generator, so the read loop
+		// detects sequence gaps itself (nackGapTracker) and hands
+		// NACK batches to a dedicated sender goroutine: WriteRTCP
+		// can block for seconds under memory pressure, and blocking
+		// the read loop on it would stall packet intake and create
+		// the very loss the NACK is meant to repair. The enqueue
+		// is non-blocking; a dropped batch is re-sent by the
+		// tracker's retry on a later arrival.
+		var gapTracker *nackGapTracker
+		var nackJobs chan nackSendJob
+		if codec == "video/H264" {
+			gapTracker = newNACKGapTracker()
+			nackJobs = make(chan nackSendJob, 8)
+			go func() {
+				for {
+					select {
+					case <-ctx.Done():
+						return
+					case job := <-nackJobs:
+						if err := writeViewerNACK(peer, job.snapshot, job.sequences); err != nil {
+							capture.nackSendErrors.Add(1)
+						} else {
+							capture.nackSequencesSent.Add(uint64(len(job.sequences)))
+							capture.nackPacketsSent.Add(1)
+						}
+					}
+				}
+			}()
+		}
 		go func() {
 			for {
 				readStarted := time.Now()
@@ -13311,6 +13407,18 @@ func newSFUViewerCapture(
 					}
 				}
 				capture.mu.Unlock()
+				// FIX 31: gap detection. The snapshot carries the
+				// SSRC writeViewerNACK needs; it is taken here, in
+				// the read loop, so the sender goroutine takes no
+				// capture locks.
+				if gapTracker != nil {
+					if nackBatch := gapTracker.observe(packet.SequenceNumber, time.Now()); len(nackBatch) != 0 {
+						select {
+						case nackJobs <- nackSendJob{snapshot: counter.snapshotResult(), sequences: nackBatch}:
+						default:
+						}
+					}
+				}
 				counter.record(packet.SequenceNumber, packet.Timestamp, len(packet.Payload))
 				if capture.latencyRecorder != nil && capture.latencyClock != nil ||
 					capture.frameDiagnostics != nil {
@@ -13522,19 +13630,79 @@ func (r *sfuFrameDiagnosticRecorder) summary() *sfuFrameDiagnosticSummary {
 	}
 }
 
+// push feeds one RTP packet to the assembler and reports one completed
+// frame, if any. A packet can complete more than one frame at once (a
+// late retransmit may complete its own frame while the next frame in
+// the span was already whole behind it), so completions queue in
+// completedQueue and push reports them one per call; a frame reported
+// on a later call was completed by an earlier packet, and its recorded
+// latency therefore includes up to one frame interval of queue delay.
+// The frame count — what the gates check — is exact either way.
 func (a *videoFrameAssembler) push(packet *rtp.Packet) (uint64, bool) {
+	a.processPacket(packet)
+	if len(a.completedQueue) == 0 {
+		return 0, false
+	}
+	frameID := a.completedQueue[0]
+	a.completedQueue = a.completedQueue[1:]
+	return frameID, true
+}
+
+func (a *videoFrameAssembler) processPacket(packet *rtp.Packet) {
+	// FIX 31: late packets first. A retransmit for a frame in the
+	// retained late span arrives after newer frames started, so the
+	// stale checks below would drop it. A packet belongs to the span
+	// exactly when its sequence lies in [lateFirstSequence,
+	// lateLastSequence] AND its RTP timestamp lies in
+	// (lateLowTimestamp, lateHighTimestamp]: timestamps increase
+	// strictly per frame, and lateHighTimestamp is the timestamp of
+	// the newest frame in the span (inclusive), so the current
+	// frame's packets (newer timestamp) never match, and the
+	// sequence range keeps a duplicate timestamp from matching.
+	if a.lateActive &&
+		int32(packet.Timestamp-a.lateLowTimestamp) > 0 &&
+		int32(packet.Timestamp-a.lateHighTimestamp) <= 0 &&
+		int16(packet.SequenceNumber-a.lateFirstSequence) >= 0 &&
+		int16(packet.SequenceNumber-a.lateLastSequence) <= 0 {
+		if a.lateSequences == nil {
+			a.lateSequences = make(map[uint16]struct{})
+		}
+		if a.lateTimestamps == nil {
+			a.lateTimestamps = make(map[uint16]uint32)
+		}
+		if a.lateMarkers == nil {
+			a.lateMarkers = make(map[uint16]struct{})
+		}
+		a.lateSequences[packet.SequenceNumber] = struct{}{}
+		a.lateTimestamps[packet.SequenceNumber] = packet.Timestamp
+		if packet.Marker {
+			a.lateMarkers[packet.SequenceNumber] = struct{}{}
+		}
+		a.lateComplete()
+		// FIX 31: consuming the span can prove the active frame's
+		// start (whole missed frames, whose retransmits have now
+		// arrived, no longer count against it), so re-check it.
+		a.completeActiveFrameIfReady()
+		return
+	}
 	// RTP timestamps use serial arithmetic; stale retransmissions must not
 	// reset the frame currently being assembled.
 	if a.active && packet.Timestamp != a.timestamp &&
 		int32(packet.Timestamp-a.timestamp) < 0 {
-		return 0, false
+		return
 	}
 	if a.hasFinalizedTimestamp &&
 		int32(packet.Timestamp-a.lastFinalizedTimestamp) <= 0 {
-		return 0, false
+		return
 	}
 
 	if a.active && packet.Timestamp != a.timestamp {
+		// FIX 31: retain the frame being finalised incomplete. Its
+		// start is nextFrameFirstSequence (captured before the
+		// update below); the span runs up to the arriving packet,
+		// so it also covers whole frames skipped between the two.
+		frameStart := a.nextFrameFirstSequence
+		prevFinalized := a.lastFinalizedTimestamp
 		if a.markerSeen {
 			a.nextFrameFirstSequence = a.markerSequence + 1
 			a.frameBoundaryKnown = true
@@ -13544,8 +13712,27 @@ func (a *videoFrameAssembler) push(packet *rtp.Packet) (uint64, bool) {
 		a.lastFinalizedTimestamp = a.timestamp
 		a.hasFinalizedTimestamp = true
 		a.active = false
+		// FIX 31: the span's high bound is the timestamp of the
+		// frame being merged (inclusive), not the arriving packet's:
+		// the arriving packet starts the next frame, whose packets
+		// must not match the span.
+		a.mergeLateSpan(frameStart, packet.SequenceNumber-1, prevFinalized, a.timestamp, a.frameSequences, a.timestamp, a.markerSequence, a.markerSeen)
 	}
 	if !a.active {
+		// FIX 31: a sequence gap at a new frame means whole frames
+		// were skipped (no packet of theirs arrived to finalise).
+		// Retain the skipped range so their retransmits can still
+		// complete them. Only once a boundary is known: before the
+		// first frame there is no meaningful expected sequence.
+		// The high bound is the arriving packet's timestamp minus
+		// one: the skipped frames' timestamps are all strictly
+		// below it (RTP timestamps are integers, so nothing lies
+		// between), while the arriving frame's own packets must
+		// not match the span.
+		if (a.hasFinalizedTimestamp || a.frameBoundaryKnown) &&
+			int16(packet.SequenceNumber-a.nextFrameFirstSequence) > 0 {
+			a.mergeLateSpan(a.nextFrameFirstSequence, packet.SequenceNumber-1, a.lastFinalizedTimestamp, packet.Timestamp-1, nil, 0, 0, false)
+		}
 		a.active = true
 		a.timestamp = packet.Timestamp
 		clear(a.frameSequences)
@@ -13560,37 +13747,306 @@ func (a *videoFrameAssembler) push(packet *rtp.Packet) (uint64, bool) {
 		a.markerSeen = true
 	}
 	if !a.markerSeen {
-		return 0, false
+		return
 	}
 
 	if !a.frameBoundaryKnown {
+		// FIX 31: this frame was finalised without counting because
+		// the previous frame's marker was lost, so its start is
+		// unknown — but its packets are real, and the span already
+		// holds the previous frame. Merge this frame's sequences
+		// into the span so it can still complete late once the
+		// previous frame's retransmits arrive; without this the
+		// frame after a marker loss is unrecoverable by design.
+		// Only when a span exists (hasFinalizedTimestamp is set by
+		// the step above, which always creates one first).
+		if a.lateActive {
+			a.mergeLateSpan(a.nextFrameFirstSequence, a.markerSequence, a.lateLowTimestamp, a.timestamp, a.frameSequences, a.timestamp, a.markerSequence, true)
+		}
 		a.lastFinalizedTimestamp = a.timestamp
 		a.hasFinalizedTimestamp = true
 		a.nextFrameFirstSequence = a.markerSequence + 1
 		a.frameBoundaryKnown = true
 		a.active = false
 		clear(a.frameSequences)
-		return 0, false
+		return
 	}
 
-	packetSpan := int(uint16(a.markerSequence-a.nextFrameFirstSequence)) + 1
+	// FIX 31: the frame completes; completeActiveFrameIfReady is the
+	// single completion path for both the normal and the late path.
+	a.completeActiveFrameIfReady()
+}
+
+// completeActiveFrameIfReady completes the frame currently being
+// assembled when its marker has arrived and every sequence in
+// [nextFrameFirstSequence, markerSequence] is present. It is the
+// single completion path: the normal path calls it when a frame
+// packet arrives, and the late path calls it after lateComplete,
+// because consuming the span can prove the active frame's start
+// (lateCompleteOne moves nextFrameFirstSequence past wholly missed
+// frames once their retransmits have completed them).
+func (a *videoFrameAssembler) completeActiveFrameIfReady() {
+	if !a.active || !a.markerSeen || !a.frameBoundaryKnown {
+		return
+	}
+	frameStart := a.nextFrameFirstSequence
+	packetSpan := int(uint16(a.markerSequence-frameStart)) + 1
 	if len(a.frameSequences) < packetSpan {
-		return 0, false
+		return
 	}
 	for offset := 0; offset < packetSpan; offset++ {
-		sequence := a.nextFrameFirstSequence + uint16(offset)
+		sequence := frameStart + uint16(offset)
 		if _, exists := a.frameSequences[sequence]; !exists {
-			return 0, false
+			return
 		}
 	}
-
 	frameID := a.timestamp
+	markerSequence := a.markerSequence
 	a.lastFinalizedTimestamp = a.timestamp
 	a.hasFinalizedTimestamp = true
 	a.nextFrameFirstSequence = a.markerSequence + 1
 	a.active = false
 	clear(a.frameSequences)
-	return uint64(frameID), true
+	// FIX 31: a frame that completes normally may be the first
+	// sequence of the retained span (a gap-created span starts at
+	// the frame that later completed). Advance the span past it so
+	// the scan does not stall on a frame that is already counted.
+	if a.lateActive &&
+		int16(a.lateFirstSequence-frameStart) >= 0 &&
+		int16(a.lateFirstSequence-markerSequence) <= 0 {
+		a.lateFirstSequence = markerSequence + 1
+		if int16(a.lateFirstSequence-a.lateLastSequence) > 0 {
+			a.clearLateSpan()
+		}
+	}
+	a.completedQueue = append(a.completedQueue, uint64(frameID))
+}
+
+// mergeLateSpan merges a finalised frame (and any gap up to the
+// arriving packet) into the retained late span, creating it when none
+// exists. frameStart is the frame's first sequence; newLast is the
+// last sequence the span must cover (the arriving packet's sequence
+// minus one, or the frame's marker for a boundary-unknown frame);
+// lowTimestamp bounds the span's frames below (the previously
+// finalised timestamp, or 0 before the first frame); newHigh is the
+// timestamp of the newest frame in the span (inclusive) — the merged
+// frame's timestamp, or the arriving packet's timestamp minus one
+// for a pure gap (the skipped frames' timestamps are all strictly
+// below it).
+// sequences / frameTimestamp / markerSequence / markerSeen describe
+// the finalised frame; pass nil / 0 / 0 / false for a pure gap with
+// no sequences to merge. The span never shrinks: a new last/high
+// behind the current one is ignored. A span longer than
+// lateSpanMaxSequences is abandoned (sequence restart or long outage).
+func (a *videoFrameAssembler) mergeLateSpan(frameStart, newLast uint16, lowTimestamp, newHigh uint32, sequences map[uint16]struct{}, frameTimestamp uint32, markerSequence uint16, markerSeen bool) {
+	start := frameStart
+	if a.lateActive {
+		start = a.lateFirstSequence
+	}
+	spanLen := int(uint16(newLast-start)) + 1
+	if spanLen <= 0 || spanLen > lateSpanMaxSequences {
+		a.clearLateSpan()
+		return
+	}
+	if !a.lateActive {
+		a.lateActive = true
+		a.lateFirstSequence = frameStart
+		a.lateLowTimestamp = lowTimestamp
+		if a.lateSequences == nil {
+			a.lateSequences = make(map[uint16]struct{})
+		}
+		if a.lateTimestamps == nil {
+			a.lateTimestamps = make(map[uint16]uint32)
+		}
+		if a.lateMarkers == nil {
+			a.lateMarkers = make(map[uint16]struct{})
+		}
+	}
+	if int16(newLast-a.lateLastSequence) > 0 {
+		a.lateLastSequence = newLast
+	}
+	if int32(newHigh-a.lateHighTimestamp) > 0 {
+		a.lateHighTimestamp = newHigh
+	}
+	for sequence := range sequences {
+		a.lateSequences[sequence] = struct{}{}
+		a.lateTimestamps[sequence] = frameTimestamp
+	}
+	if markerSeen {
+		a.lateMarkers[markerSequence] = struct{}{}
+		a.lateTimestamps[markerSequence] = frameTimestamp
+	}
+}
+
+func (a *videoFrameAssembler) clearLateSpan() {
+	a.lateActive = false
+	a.lateFirstSequence = 0
+	a.lateLastSequence = 0
+	a.lateLowTimestamp = 0
+	a.lateHighTimestamp = 0
+	clear(a.lateSequences)
+	clear(a.lateTimestamps)
+	clear(a.lateMarkers)
+}
+
+// lateComplete attempts to complete frames from the retained late
+// span, appending every completable frame to completedQueue. Markers
+// are scanned in serial order from lateFirstSequence; a frame
+// completes when every sequence in [frame start, marker] has arrived
+// (originals plus retransmits). A frame whose run is still incomplete
+// is skipped for now — the next frame's run is independent, so one
+// stuck frame does not block the frames after it — but a skipped
+// frame is abandoned once lateFirstSequence moves past it. The scan
+// repeats until a full pass completes nothing: one packet can
+// complete several span frames at once (a frame that was already
+// whole behind the frame this packet finished).
+func (a *videoFrameAssembler) lateComplete() {
+	for a.lateActive && len(a.lateMarkers) != 0 {
+		if !a.lateCompleteOne() {
+			return
+		}
+	}
+}
+
+func (a *videoFrameAssembler) lateCompleteOne() bool {
+	markers := make([]uint16, 0, len(a.lateMarkers))
+	for sequence := range a.lateMarkers {
+		if offset := int16(sequence - a.lateFirstSequence); offset >= 0 &&
+			int16(sequence-a.lateLastSequence) <= 0 {
+			markers = append(markers, sequence)
+		}
+	}
+	if len(markers) == 0 {
+		return false
+	}
+	sort.Slice(markers, func(i, j int) bool {
+		return int16(markers[i]-markers[j]) < 0
+	})
+	prev := a.lateFirstSequence
+	for _, marker := range markers {
+		complete := true
+		for offset := 0; ; offset++ {
+			sequence := prev + uint16(offset)
+			if _, exists := a.lateSequences[sequence]; !exists {
+				complete = false
+				break
+			}
+			if sequence == marker {
+				break
+			}
+		}
+		if !complete {
+			prev = marker + 1
+			continue
+		}
+		a.completedQueue = append(a.completedQueue, uint64(a.lateTimestamps[marker]))
+		a.lateFirstSequence = marker + 1
+		if int16(a.lateFirstSequence-a.lateLastSequence) > 0 {
+			// FIX 31: the span is fully consumed. The active
+			// frame (if any) starts at the first unconsumed
+			// sequence: the skipped sequences before it belonged
+			// to whole frames that have now completed, so they no
+			// longer count against it. Without this, a frame
+			// after wholly missed frames could never complete:
+			// its start would stay at the missed frames'
+			// sequences. Only when the span is consumed (not
+			// abandoned) is this safe — a consumed sequence was
+			// proven to belong to a completed span frame, never
+			// to the active frame.
+			if a.active && int16(a.lateFirstSequence-a.nextFrameFirstSequence) > 0 {
+				a.nextFrameFirstSequence = a.lateFirstSequence
+			}
+			a.clearLateSpan()
+		}
+		return true
+	}
+	return false
+}
+
+// nackMissingEntry is one sequence a viewer has not received yet, with
+// its NACK history for bounded retries.
+type nackMissingEntry struct {
+	firstSeen  time.Time
+	lastNacked time.Time
+	attempts   int
+}
+
+// nackGapTracker detects RTP sequence gaps for one viewer track and
+// reports the sequences to NACK: newly-detected gaps immediately,
+// plus retries for sequences still missing after nackGapRetryInterval
+// (at most nackGapMaxAttempts attempts each). It NACKs only sequences
+// strictly between two received sequences, so the pre-subscription
+// packets (before the first received sequence) and the proof's
+// never-sent probe sequence are never requested.
+type nackGapTracker struct {
+	haveLast bool
+	lastSeq  uint16
+	missing  map[uint16]*nackMissingEntry
+}
+
+func newNACKGapTracker() *nackGapTracker {
+	return &nackGapTracker{missing: make(map[uint16]*nackMissingEntry)}
+}
+
+// observe records a received RTP sequence number and returns the
+// sequences to NACK now (nil when nothing is due). now is a parameter
+// so tests can control retry timing exactly.
+func (t *nackGapTracker) observe(sequence uint16, now time.Time) []uint16 {
+	if _, ok := t.missing[sequence]; ok {
+		delete(t.missing, sequence)
+	}
+	if !t.haveLast {
+		t.haveLast = true
+		t.lastSeq = sequence
+		return nil
+	}
+	if ahead := int16(sequence - t.lastSeq); ahead > 0 {
+		if ahead <= nackGapMaxJump {
+			for offset := int16(1); offset < ahead; offset++ {
+				missed := t.lastSeq + uint16(offset)
+				if _, exists := t.missing[missed]; !exists {
+					if len(t.missing) >= nackGapMaxJump {
+						break
+					}
+					t.missing[missed] = &nackMissingEntry{firstSeen: now}
+				}
+			}
+		} else {
+			// Implausible jump (sequence restart): reset rather
+			// than NACKing a thousand phantom sequences.
+			clear(t.missing)
+		}
+		t.lastSeq = sequence
+	}
+	var due []uint16
+	for sequence, entry := range t.missing {
+		if entry.attempts == 0 ||
+			(entry.attempts < nackGapMaxAttempts && !entry.lastNacked.IsZero() &&
+				now.Sub(entry.lastNacked) >= nackGapRetryInterval) {
+			due = append(due, sequence)
+		}
+	}
+	if len(due) == 0 {
+		return nil
+	}
+	sort.Slice(due, func(i, j int) bool { return int16(due[i]-due[j]) < 0 })
+	if len(due) > nackGapMaxBatch {
+		due = due[:nackGapMaxBatch]
+	}
+	for _, sequence := range due {
+		entry := t.missing[sequence]
+		entry.attempts++
+		entry.lastNacked = now
+	}
+	return due
+}
+
+// nackSendJob is one NACK batch for the per-track sender goroutine.
+// The snapshot carries the SSRC writeViewerNACK needs; taking it in
+// the read loop keeps the sender free of capture locks.
+type nackSendJob struct {
+	snapshot  streamSnapshot
+	sequences []uint16
 }
 
 func (c *sfuViewerCapture) reportError(err error) {

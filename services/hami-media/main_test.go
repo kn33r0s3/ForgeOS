@@ -622,6 +622,180 @@ func TestVideoFrameAssemblerRequiresCompleteContiguousFrame(t *testing.T) {
 	}
 }
 
+// FIX 31: marker loss. Frame 150 (8 packets, seqs 1002-1009, ts 100)
+// loses its marker and five packets; frame 151 (one packet, seq
+// 1010, ts 110) arrives but is finalised without counting (unknown
+// boundary); frame 152 completes normally. The retransmits must
+// complete 150 late, and 151 late on the next call (one packet can
+// complete two span frames, so the second queues in completedQueue).
+func TestVideoFrameAssemblerLateCompletionRecoversMarkerLoss(t *testing.T) {
+	assembler := &videoFrameAssembler{
+		frameBoundaryKnown:     true,
+		nextFrameFirstSequence: 1000,
+	}
+	push := func(sequence uint16, timestamp uint32, marker bool) (uint64, bool) {
+		t.Helper()
+		return assembler.push(&rtp.Packet{Header: rtp.Header{
+			SequenceNumber: sequence,
+			Timestamp:      timestamp,
+			Marker:         marker,
+		}})
+	}
+	// Frame 149 (ts 90, seqs 1000-1001): complete, primes the boundary.
+	if _, complete := push(1000, 90, false); complete {
+		t.Fatal("frame 149 should wait for its marker")
+	}
+	if frameID, complete := push(1001, 90, true); !complete || frameID != 90 {
+		t.Fatalf("frame 149 = (%d, %v), want (90, true)", frameID, complete)
+	}
+	// Frame 150 (ts 100): only 1002-1003 arrive; marker 1009 and
+	// 1004-1008 are lost.
+	if _, complete := push(1002, 100, false); complete {
+		t.Fatal("frame 150 should wait for its marker")
+	}
+	if _, complete := push(1003, 100, false); complete {
+		t.Fatal("frame 150 should wait for its marker")
+	}
+	// Frame 151 (ts 110, seq 1010, marker): arrives, finalised
+	// without counting (unknown boundary).
+	if _, complete := push(1010, 110, true); complete {
+		t.Fatal("frame 151 must not count while frame 150's boundary is unknown")
+	}
+	// Frame 152 (ts 120, seqs 1011-1012): complete normally.
+	if _, complete := push(1011, 120, false); complete {
+		t.Fatal("frame 152 should wait for its marker")
+	}
+	if frameID, complete := push(1012, 120, true); !complete || frameID != 120 {
+		t.Fatalf("frame 152 = (%d, %v), want (120, true)", frameID, complete)
+	}
+	// Retransmits for frame 150 arrive late, out of order.
+	for _, sequence := range []uint16{1005, 1002, 1003, 1004, 1006, 1007, 1008} {
+		if _, complete := push(sequence, 100, false); complete {
+			t.Fatalf("frame 150 should still be missing its marker after %d", sequence)
+		}
+	}
+	if frameID, complete := push(1009, 100, true); !complete || frameID != 100 {
+		t.Fatalf("late frame 150 = (%d, %v), want (100, true)", frameID, complete)
+	}
+	// Frame 151 was already whole behind 150; it was queued and is
+	// reported on the next call. Push a duplicate of its own packet
+	// to drive the queue (a duplicate never completes anything new).
+	if frameID, complete := push(1010, 110, true); !complete || frameID != 110 {
+		t.Fatalf("late frame 151 = (%d, %v), want (110, true)", frameID, complete)
+	}
+	// No further frames are queued.
+	if frameID, complete := push(1011, 120, false); complete {
+		t.Fatalf("unexpected queued completion (%d, %v)", frameID, complete)
+	}
+}
+
+// FIX 31: fully-missed frames. Frames 150-152 (ts 100, 110, 120) never
+// arrive at all; frame 153 (ts 130, seqs 1005-1006) waits for the
+// span to be consumed. Their retransmits must complete all four
+// late: 150-152 from the span, 153 from the re-check once the span
+// is consumed.
+func TestVideoFrameAssemblerLateCompletionRecoversMissedFrames(t *testing.T) {
+	assembler := &videoFrameAssembler{
+		frameBoundaryKnown:     true,
+		nextFrameFirstSequence: 1000,
+	}
+	push := func(sequence uint16, timestamp uint32, marker bool) (uint64, bool) {
+		t.Helper()
+		return assembler.push(&rtp.Packet{Header: rtp.Header{
+			SequenceNumber: sequence,
+			Timestamp:      timestamp,
+			Marker:         marker,
+		}})
+	}
+	// Frame 149 (ts 90, seqs 1000-1001): complete.
+	if _, complete := push(1000, 90, false); complete {
+		t.Fatal("frame 149 should wait for its marker")
+	}
+	if frameID, complete := push(1001, 90, true); !complete || frameID != 90 {
+		t.Fatalf("frame 149 = (%d, %v), want (90, true)", frameID, complete)
+	}
+	// Frames 150 (ts 100, seq 1002, marker), 151 (ts 110, seq 1003,
+	// marker) and 152 (ts 120, seq 1004, marker) never arrive.
+	// Frame 153 (ts 130, seqs 1005-1006) cannot complete yet: its
+	// start is unproven while the missed frames' sequences are
+	// still unconsumed in the span. It completes late, once the
+	// retransmits consume the span.
+	if _, complete := push(1005, 130, false); complete {
+		t.Fatal("frame 153 should wait for its marker")
+	}
+	if _, complete := push(1006, 130, true); complete {
+		t.Fatal("frame 153 must wait for the missed frames' retransmits")
+	}
+	// Retransmits for the missed frames arrive late.
+	if frameID, complete := push(1002, 100, true); !complete || frameID != 100 {
+		t.Fatalf("late frame 150 = (%d, %v), want (100, true)", frameID, complete)
+	}
+	if frameID, complete := push(1003, 110, true); !complete || frameID != 110 {
+		t.Fatalf("late frame 151 = (%d, %v), want (110, true)", frameID, complete)
+	}
+	if frameID, complete := push(1004, 120, true); !complete || frameID != 120 {
+		t.Fatalf("late frame 152 = (%d, %v), want (120, true)", frameID, complete)
+	}
+	// Frame 153 was already whole behind the missed frames; it was
+	// queued when the span was consumed and is reported on the next
+	// call. Push a duplicate of 152's packet to drive the queue (a
+	// duplicate never completes anything new).
+	if frameID, complete := push(1004, 120, true); !complete || frameID != 130 {
+		t.Fatalf("late frame 153 = (%d, %v), want (130, true)", frameID, complete)
+	}
+}
+
+// FIX 31: the gap tracker NACKs exactly the sequences between two
+// received sequences, retries them after the retry interval, and
+// never NACKs a sequence that arrived or a pre-subscription sequence.
+func TestNACKGapTrackerDetectsRetriesAndResets(t *testing.T) {
+	tracker := newNACKGapTracker()
+	now := time.Unix(0, 0)
+	// Pre-subscription sequences are never NACKed: the first observed
+	// sequence anchors the tracker without naming anything before it.
+	if batch := tracker.observe(100, now); len(batch) != 0 {
+		t.Fatalf("first observe = %v, want empty", batch)
+	}
+	if batch := tracker.observe(101, now); len(batch) != 0 {
+		t.Fatalf("contiguous observe = %v, want empty", batch)
+	}
+	// A gap of 102-104 is NACKed immediately on 105.
+	if batch := tracker.observe(105, now); len(batch) != 3 || batch[0] != 102 || batch[2] != 104 {
+		t.Fatalf("gap observe = %v, want [102 103 104]", batch)
+	}
+	// No retry before the interval, even on a later arrival.
+	if batch := tracker.observe(106, now.Add(599*time.Millisecond)); len(batch) != 0 {
+		t.Fatalf("early retry = %v, want empty", batch)
+	}
+	// At the interval the whole gap is re-NACKed.
+	if batch := tracker.observe(107, now.Add(600*time.Millisecond)); len(batch) != 3 || batch[0] != 102 {
+		t.Fatalf("retry observe = %v, want [102 103 104]", batch)
+	}
+	// A retransmit of 103 removes it from the missing set; the next
+	// retry names only 102 and 104.
+	if batch := tracker.observe(103, now.Add(600*time.Millisecond)); len(batch) != 0 {
+		t.Fatalf("retransmit observe = %v, want empty", batch)
+	}
+	if batch := tracker.observe(108, now.Add(1200*time.Millisecond)); len(batch) != 2 || batch[0] != 102 || batch[1] != 104 {
+		t.Fatalf("second retry = %v, want [102 104]", batch)
+	}
+	// After three attempts the gap is abandoned (no fourth retry).
+	if batch := tracker.observe(109, now.Add(1800*time.Millisecond)); len(batch) != 0 {
+		t.Fatalf("abandoned retry = %v, want empty", batch)
+	}
+	// A jump over 1024 sequences is a reset, not a 1000+ gap.
+	if batch := tracker.observe(2000, now.Add(1800*time.Millisecond)); len(batch) != 0 {
+		t.Fatalf("reset observe = %v, want empty", batch)
+	}
+	if batch := tracker.observe(2001, now.Add(1800*time.Millisecond)); len(batch) != 0 {
+		t.Fatalf("post-reset observe = %v, want empty", batch)
+	}
+	// A duplicate of an already-seen sequence names nothing.
+	if batch := tracker.observe(2001, now.Add(1800*time.Millisecond)); len(batch) != 0 {
+		t.Fatalf("duplicate observe = %v, want empty", batch)
+	}
+}
+
 func TestParseSFUFrameDiagnosticIDsDeduplicatesAndSorts(t *testing.T) {
 	ids, err := parseSFUFrameDiagnosticIDs(" 20,10,20 ")
 	if err != nil {
