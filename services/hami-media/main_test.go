@@ -1981,7 +1981,7 @@ func TestMetricsEndpointIsLoopbackOnlyAndServesPrometheus(t *testing.T) {
 func TestM7HSFUTokenPipeRoundTrip(t *testing.T) {
 	// POLISH-001: the token pipe carries the token to the child without
 	// it ever appearing in argv.
-	const token = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+	const token = "test token for pipe round trip"
 	readEnd, err := newM7HSFUTokenPipe(token)
 	if err != nil {
 		t.Fatalf("newM7HSFUTokenPipe: %v", err)
@@ -2043,7 +2043,7 @@ func TestReadM7HSFUTokenFile(t *testing.T) {
 
 func TestM7HRemoteSFUCommandHasNoTokenInArgs(t *testing.T) {
 	// POLISH-001: the child argv must never contain the bearer token.
-	const token = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+	const token = "test token must not appear in argv"
 	pipe, err := newM7HSFUTokenPipe(token)
 	if err != nil {
 		t.Fatalf("newM7HSFUTokenPipe: %v", err)
