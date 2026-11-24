@@ -1,3 +1,16 @@
+## 2026-11-24 05:56 +0545 — D95 source-aware asset and grant traceability
+
+**Evidence delta:** NAMP FY2081/82 grant details list a Syangja orange coldstore/coldroom operating-support programme (25 beneficiaries; amount 41 in NPR thousands) but no asset identity or measured result. The FY2082/83 NAMP cold-storage booklet says most facilities are partial/closed without a denominator. The FY2081/82 PMAMP study surveys 25 units but uses 87, 86 and 25 as different inventory/installed/survey counts; it reports diverse utilization and non-digitized records. Lumbini OAG's 3 completed/950MT plus 2 under-construction/1,000MT are a separate provincial programme. Farmer Registry dashboard (2083-08-08 03:17) shows 2,681,048 households, 871,867 ward-verified, 81,270 classified and 126 grant records, while warning national migration is incomplete. Circulars #70/#71 and PIU Rupandehi notice #27 provide a farmer-ID requirement; no nationwide compliance or OAG-to-registry link is proved.
+
+**Reusable capability:** use existing ENTITY/RELATION/EVENT/EVIDENCE/CAPABILITY/ACTION and Signal/Evidence provenance to connect grant → stable facility/project → operator/commissioning/handover → seasonal operation/throughput/cost → buyer/offtake → verified outcome. Preserve programme identity, geography, source publication/update, effective period, retrieval time, metric definition and denominator. Do not aggregate provincial OAG and federal PMAMP/NAMP counts without matching asset/programme IDs. A Farmer Registry ID may support grant deduplication only under authorized government access; no individual data access is authorized.
+
+**Existing technical seam:** Signal/Evidence already have published_at, retrieved_at and provenance. SourceCollector.normalize selects raw_item.provenance or metadata; runner merges only selected context; ObserverEngine persists provenance, not all metadata; same-content dedup returns the old record without refreshing provenance/timestamps; evidence assessment uses publication-vs-retrieval age; synthesis citations expose registry ID/retrieval but omit publication/effective cutoff/version; prompt memory omits registry identity/effective cutoff/claim support/body. Current tests do not cover effective-cutoff survival or dedup refresh.
+
+**Gate / current blocker:** no new model/table/collector/primitive. NAMP, PMAMP, Chitwan PIU and Farmer Registry remain NOT CLEARED for automated collection or provider transmission; robots/terms could not be reviewed through the browser route. No source body persisted, no individual data accessed, and no code write attempted. The existing research_planner.py source-write block was not bypassed.
+
+**Next:** retrieve Chitwan FY2082/83 achievement/learning, FY2081/82 annual progress and FY2082/83 cost-benefit bodies only if official file URLs surface; continue NAMP FY2082/83 progress and dated asset-level operation/handover evidence. D95 remains UNKNOWN; no new D-number.
+
+
 ## 2026-11-24 05:28 +0545 — D95 public agricultural investment and banana post-harvest crosswalk (manual-only; D95 remains UNKNOWN)
 
 ### New source evidence, source dates and scope

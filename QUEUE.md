@@ -1,3 +1,12 @@
+## Current queue — 2026-11-24 05:56 +0545 — D95 evidence crosswalk; preserve LiveKit priority
+
+1. **Priority 1 — LiveKit capacity/reliability:** unchanged and first. No load test or capacity measurement in this discovery run.
+2. **D93:** continue the exact dated Gorkha/Chumnubri/NEA/road restoration search; official #02 and #04 PDF bodies remain unread and October cutoffs are not current service status.
+3. **D95 — cold-chain and farmer-ID traceability:** new evidence from the NAMP grant book, NAMP cold-store booklet, PMAMP cold-room study, Farmer Registry dashboard, circulars #70/#71 and PIU Rupandehi notice #27. Keep Lumbini provincial OAG cold stores separate from PMAMP/NAMP. D95 remains UNKNOWN.
+4. **Next evidence:** retrieve Chitwan FY2082/83 achievement/learning, FY2081/82 annual progress and FY2082/83 cost-benefit report bodies only if official file URLs surface; continue NAMP FY2082/83 progress and facility-level records; crosswalk only stable project/asset IDs and dated operation/handover evidence.
+5. **Rights and gates:** NAMP/PMAMP/Chitwan/Farmer Registry remain manual-only / NOT CLEARED. No automated ingestion, individual data access, provider transmission, contact, application, deposit, payment, publishing or external action. No source-write bypass.
+6. **Continuity:** no new D-number or new architecture; update D95 in the existing UNKNOWN_MAP and capability ledger only. Keep six canonical primitives and existing Signal/Evidence seam.
+
 ## Current queue — 2026-11-24 follow-up — identity-linked public-grant evidence; preserve LiveKit priority
 
 1. **Run-start main and checks:** ae87e88e39224ee96b818e6d424bd17033bb90a5 (documentation-only commit); last code-bearing commit e4257b4f7ed7b083ebf1cddbe275bf27c062a31d. CI 45293329973 passed 9/9 jobs; secret scan 45293329793 passed. Independent deploy verification 45293329754 failed at Fetch production content; no production-content/health proof. Vercel hami deployment READY; forge-os Vercel account/deployment-blocked.
