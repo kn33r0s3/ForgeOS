@@ -1,3 +1,57 @@
+## 2026-11-25 05:36 +0545 — M0–M9 exact-head audit; media-path drift and security blocker
+
+### Exact repository and verification state
+
+- Remote `refs/heads/main` was read directly and equals `bf00803745c75a065106824171b9e9b76a617054` (parent `70b30390b8fa6ed979c18c1990cee4c280abfba3`; authored 2026-11-24 14:48:09Z). This is the current code/config SHA inspected below.
+- Exact-head ForgeOS CI run [45418192145](https://github.com/kn33r0s3/ForgeOS/actions/runs/45418192145) passed 10/10 jobs. Backend: 1,412 passed, 2 skipped, 17 warnings. `npm run gates`: GREEN. Separate secret scan [45418191942](https://github.com/kn33r0s3/ForgeOS/actions/runs/45418191942) passed.
+- Independent deploy verifier [45418191938](https://github.com/kn33r0s3/ForgeOS/actions/runs/45418191938) failed at “Fetch production content” with HTTP 402; later production checks were skipped. Commit status: Vercel Hami success; Vercel ForgeOS failure/account deployment blocked. No public production-health claim.
+- The exact-head CI job list is backend, frontend, route smoke, evidence-triage, lint, typecheck, build, repository guards, gates and Gitleaks. The build/lint logs contain no Go commands. **No exact-head Go test/vet/build was run by CI.** The VM measurements in `services/hami-sfu/LAYERS.md` predate the new auth/room-list code in this commit and are not exact-head verification.
+
+### M0 measurement contract and current harness
+
+- `services/hami-media/main.go:1547` (`runLocalPair`) creates one publisher and one subscriber PeerConnection; `main_test.go:42` tests that 1P/1V direct Pion pair. It is not a two-viewer SFU test.
+- `main_test.go:304` (`TestLocalSFURoutesAuthorizedStreamsAndRTCP`) exercises two viewers, but they receive two distinct tracks (`stream-red`, `stream-blue`), not one publisher feeding two viewers on the same track. No current M0 1P/2V same-track proof was found.
+- `main.go:10401` defines M1-H as 1 publisher/10 viewers. The video viewer path creates `LatencyRecorder(ModeReceive)` at `main.go:12408` and records after RTP frame assembly at `main.go:13820`; that is receive/assembly time, not decoded/presented video. `INTEGRATION.md:48-63` explicitly says receive mode must not be relabelled capture-to-render. A generic ModeRender exists, but no video presentation callback is wired into this proof path.
+- Consequently no current M0 result satisfies the requested same-monotonic-clock, matched-frame capture-to-render contract, p95/p99 thresholds, 300 rendered frames/viewer and 60-second duration. Historical M1-H–M5-H “passed” notes in UNKNOWN_MAP are retained as reported local TEST history, not promoted to current milestone passes: raw artifacts are not linked to this exact SHA and the timing mode is receive-only.
+
+### M0–M9 state
+
+| Milestone | Target | Current status | Last evidence / exact limitation |
+|---|---:|---|---|
+| M0 | 1 publisher / 2 viewers | NOT MEASURABLE | No same-track 1P/2V SFU proof. Direct pair is 1P/1V; the two-viewer SFU regression uses two distinct tracks. Video timing is receive/assembly, not render. |
+| M1 | 1 / 10 | NOT MEASURABLE | Historical UNKNOWN_MAP says local rung passed; no raw result tied to current SHA. Current runner uses ModeReceive, not capture-to-render. |
+| M2 | 10 / 50 | NOT MEASURABLE | Historical local pass recorded; current exact-SHA raw result unavailable; receive-only timing. |
+| M3 | 50 / 100 | NOT MEASURABLE | Historical local pass recorded; current exact-SHA raw result unavailable; receive-only timing. |
+| M4 | 100 / 500 | NOT MEASURABLE | Historical local pass recorded; current exact-SHA raw result unavailable; receive-only timing. |
+| M5 | 500 / 1,000 | NOT MEASURABLE | Historical local pass recorded; current exact-SHA raw result unavailable; receive-only timing. |
+| M6 | 1,000 / 2,000 | NOT MEASURABLE | Prior 5-fps run failed RTCP feedback with 91,118 “too many reports” errors and timed out; no current rerun. |
+| M7 | 3,000 / 3,000 | NOT MEASURABLE | Prior 3,000-pair run had 15.06 GB HeapAlloc, 120,631 goroutines, 2,588 stale publishers and no final p99. The later 10×500 run aborted at viewer 2,801 under pressure level 2; no complete result. |
+| M8 | 3,000+ / 3,000+ across rooms | NOT MEASURABLE | Two-worker cascade is only a 1P/1V, one-second correctness test (22 relay packets, 18 viewer packets, RTCP and cleanup); no multi-room scale proof. |
+| M9 | 9,000 / 10,000 | NOT MEASURABLE | Target/topology only; no full-target run, independent infrastructure, global latency or failover proof. |
+
+Current code/config SHA for the native media harness: `bf00803745c75a065106824171b9e9b76a617054`. Native module declares Go 1.24.0 and Pion WebRTC v4.2.26. Historical runs used local Mac/VM loopback and synthetic H.264 sources; current machine/toolchain, bitrate/resolution/fps per rung, current resource state and exact raw artifact availability were not re-established in this run. The prior latest host record was pressure level 2 / 378.44 MiB free swap at 2026-11-23 01:50 +0545, below the 2,048 MiB stop floor; this is stale, not a current reading. The Mac runtime is not accessible to this scheduled run.
+
+Historical evidence paths retained in existing records:
+- `~/workspace/hami-reports/live-video-rung-01-v1.md` — local 10P/100V, 76-second TEST profile; not capacity proof.
+- `/Users/nirojpaudyal/hami/work/capacity-run/out-amended-20261123-003638/` — 10P/500V attempt aborted at viewer 2,801 under pressure level 2; no complete measurement.
+- M7-H failure profiles/logs are recorded under the existing `/tmp/hami-media-011-*` references; no final p99 was obtained.
+
+### Material media-path and security blocker
+
+- The prior decision in this ledger (2026-11-23 entry, lines 127–164) and QUEUE.md says the standalone `hami-sfu/` duplicate was removed after merge `165426c`; `services/hami-media/main.go` remains the canonical Hami Pion SFU and measurement path. Current HEAD `bf008` reintroduces `services/hami-sfu/` with its own Go module, server/room/track/subscriber state, auth, browser UI, tests, layer module and compiled binary. `docker-compose.yml` has no reference to it; no evidence establishes that it is deployed or running. This is an architecture regression/parallel implementation, not a new capacity result.
+- Static security finding if that standalone service is run: `auth.go` defines tokens scoped to one room; `main.go:369` `requireAnyToken` verifies signature/expiry but discards the room claim; `main.go:708` exposes `GET /api/rooms` to any valid token; `main.go:597` enumerates every room and returns publisher/subscriber identities. `auth_test.go:650` tests only one room, so it does not test cross-room isolation. A token for room A can therefore enumerate metadata for room B. No runtime exploit or production exposure is claimed because this standalone service is not wired into the Compose configuration and deployment was not established.
+- `LAYERS.md:123-173` reports only loopback/fake-sink microbenchmarks (10 subscribers; 100→58 WriteRTP calls under selected layer masks). The same document states no production traffic proof, the canonical hami-media router is not layered, and no subscriber has selected fewer layers. These results are TEST microbenchmarks, not savings or capacity.
+
+### Next resumable operation
+
+1. Keep `services/hami-media` as the canonical path. Do not run/deploy the reintroduced standalone `services/hami-sfu`; resolve its duplicate status and cross-room authorization before any use. If retained by an explicit design decision, add a global-directory authorization boundary and a two-room isolation regression.
+2. On an authorized Mac/VM, run exact-SHA `go test -count=1 ./...`, `go vet ./...` and `go build ./...` for `services/hami-media`; separately validate the standalone module only if it is retained. Current GitHub CI does not cover these Go modules.
+3. Add the missing canonical M0 proof: one Hami publisher, two subscribers to the same authorized track, real RTP on each subscriber, SSRC attribution and advancing per-subscriber packet/timestamp evidence.
+4. Wire an actual video decoder/presentation callback (or browser `requestVideoFrameCallback`) with matched source frame IDs and one calibrated monotonic clock. Until then, report receive latency only and keep capture-to-render NOT VERIFIED.
+5. Recheck Mac pressure, free swap (>=2,048 MiB), free disk (>=10 GiB) and bounded heap budget before any local load. No Docker, LiveKit Cloud, premium service or paid infrastructure was used or authorized in this run.
+
+Hami-wide discovery remains independent: D93, D95, the separate Bhotekoshi–Trishuli recovery/procurement track, D109/D110 and other domains remain active. No new source registration, ingestion, contact, publication, money movement, intake/outbound activation or production action occurred.
+
 ## 2026-11-24 06:20 +0545 — Separate Bhotekoshi–Trishuli recovery/procurement evidence
 
 **Evidence delta:** Nuwakot DAO’s one-page update effective through 2083 Mangsir 6 (22 Nov) reports 17,954 affected people, 3,841 households, 323 institutions and 2,256 damaged structures; six hydropower projects fully damaged; 631 missing and 17 identified deaths in the headline, while the local death table totals 30 and body-management categories are not reconciled. Earlier #30/#31 reports list 2,723 missing and 205 bodies; do not infer a resolved-person count from the difference. NEA’s current public tender pages identify Bhotekoshi-deposit work at Upper Trishuli 3A, Trishuli HPS and Devighat; one financial opening was extended, one cancellation attachment reissues as CST-06, and one cancellation reason remains unknown. No award, completion or generation status is established.

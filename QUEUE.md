@@ -1,3 +1,13 @@
+## Current queue — 2026-11-25 05:36 +0545 — capacity proof and media-path integrity
+
+1. **P0 — Native Hami Media exact-head Go verification.** Run `go test -count=1 ./...`, `go vet ./...`, and `go build ./...` in `services/hami-media` on an authorized Mac/VM at code SHA `bf00803745c75a065106824171b9e9b76a617054`. Current exact-head CI passes 10/10 general jobs but contains no Go media test/vet/build. Preserve test failures; do not convert CI green into media proof.
+2. **P0 — Canonical M0 1P/2V proof.** Add/use the existing Hami Media seam to send one publisher track to two independent authorized subscriber PeerConnections. Verify both receive real RTP, distinct real SSRCs, increasing packets and timestamps, track isolation, RTCP/cleanup. Current direct pair is 1P/1V; the two-viewer regression uses two different tracks.
+3. **P0 — True video capture-to-render.** The current video recorder is ModeReceive at RTP frame assembly. Wire an actual decoder/presentation callback or browser `requestVideoFrameCallback`, associate the same frame ID, and use one calibrated monotonic clock. Until then receive/decode latency is diagnostic only; p95/p99 capture-to-render remain NOT VERIFIED.
+4. **P0 — Contain duplicate `services/hami-sfu/`.** Prior continuity says it was removed because it duplicates `services/hami-media`; current HEAD reintroduced it. Do not run/deploy it. Resolve the duplicate in favor of the canonical path or, only if explicitly retained as an experiment, fix room-list authorization and add cross-room isolation tests before use.
+5. **P1 — M6/M7 resource and feedback diagnosis.** Do not start scale runs until a fresh host preflight confirms pressure NORMAL, free swap >=2,048 MiB, free disk >=10 GiB and bounded heap. Last known 378.44 MiB free swap is stale and below the floor. Preserve previous 2,000-viewer RTCP failure and 3,000-pair no-final-p99 result.
+6. **P1 — M8/M9 topology.** Keep logical Hami event/directory/identity separate from physical rooms; selective subscriptions only. The two-worker 1P/1V cascade is correctness evidence, not 3k+ multi-room capacity. No exact node count until independent resource/network benchmarks.
+7. **Parallel Hami-wide work.** Continue D93, D95, Bhotekoshi–Trishuli, D109/D110 and broad discovery independently; no media experiment gates Hami's mission or other safe work. Preserve source rights and effective-time provenance; no blanket .gov.np clearance.
+
 ## Current queue — 2026-11-24 06:20 +0545 — preserve event boundaries and projection sync
 
 1. **Priority 1 — LiveKit capacity/reliability:** unchanged and first. No load/capacity measurement in this discovery run.

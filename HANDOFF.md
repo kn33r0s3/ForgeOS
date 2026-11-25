@@ -1,3 +1,21 @@
+## Current handoff — 2026-11-25 05:36 +0545 — resume native M0 proof from verified repo state
+
+### Exact state
+- Run-start main SHA: `bf00803745c75a065106824171b9e9b76a617054`.
+- Exact-head ForgeOS CI 45418192145: 10/10 jobs passed; backend 1,412 passed, 2 skipped, 17 warnings; gates GREEN. Secret scan 45418191942 passed. Deploy verifier 45418191938 failed HTTP 402 at production-content fetch. No Go media tests/vet/build were included in these CI jobs.
+- Canonical media implementation remains `services/hami-media`. The current commit reintroduced a separate `services/hami-sfu` after the prior continuity decision to remove it. It is not in docker-compose and is not established as deployed. Do not run/deploy it: its room-list route verifies any token but returns all room names and participant identities, while tokens are room-scoped.
+- M0 1P/2V is NOT MEASURABLE. Existing direct Pion pair is 1P/1V; the two-viewer SFU test uses two distinct tracks. Video latency is ModeReceive at RTP assembly; no actual video render callback is wired. Historical M1–M5 records do not qualify as current capacity passes under the capture-to-render contract.
+- Mac host pressure/free swap and local raw artifacts are inaccessible here. Last recorded free swap is 378.44 MiB (2026-11-23 01:50 +0545), below the 2,048 MiB floor; stale. No Docker, Cloud, paid infra or local load run occurred.
+
+### Next resumable operation
+1. On the authorized Mac/VM, run exact-SHA Go tests/vet/build for `services/hami-media`; current GitHub CI does not cover it.
+2. Add the missing same-track 1P/2V M0 RTP test on the canonical Hami Media router.
+3. Add a real video decoder/render callback with frame-ID matching and same monotonic clock; keep ModeReceive results explicitly separate.
+4. Fresh host preflight (pressure NORMAL, free swap >=2,048 MiB, disk >=10 GiB) before any local load. No Docker commands without new explicit owner authorization.
+5. Keep the standalone duplicate contained until removed or its architecture and cross-room authorization are resolved.
+
+See the 2026-11-25 top entry in `docs/CAPABILITY_QUEUE.md` for the complete M0–M9 table and evidence paths. Hami-wide discovery remains independent of this engineering track.
+
 ## Freshness check — 2026-11-24 06:23 +0545
 
 - `git pull --ff-only` fast-forwarded main 80ebb082..8b3b7ee5 (7 commits): the D95 cold-chain / Farmer Registry evidence series (ae87e88e, 40f731d6, bdcc4c0a) and Bhotekoshi–Trishuli projection sync (8b3b7ee5), plus media/SFU commits (6ce9969c, e4257b4f) and the prior freshness commit (3dc4a4c7). No new D-number was added. Banked unknowns: 113 D-rows in docs/UNKNOWN_MAP.md (unchanged).
