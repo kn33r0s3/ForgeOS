@@ -1,3 +1,31 @@
+## Addendum — 2026-11-26 05:13 +0545 — NRB's monthly PSP reporting closes part of D116's data gap
+
+This follow-up was found after the preceding cash-access handoff entry. It is a source-backed refinement, not firsthand buyer/agent evidence and not proof of a coordination failure.
+
+### NRB's internal reporting path is documented
+- NRB Payment Systems Oversight Report FY2024/25, published August 2026: https://www.nrb.org.np/psd/payment-systems-oversight-report-2081-82-2024-2025/ . The report says regulatory reporting is under Directive No. 10; Annex 10 specifies report types, frequency and deadlines; NRB uses these reports for oversight and publication of indicators, and licensed institutions must meet the deadlines.
+- Annex 10 shows PSP transaction reports, success/failed transactions, e-money/settlement-bank reconciliation, customer details and PSP-agent transaction reports as monthly, due within the 7th day of the next month. ATM-location-centre details and branchless-centre details are listed separately as needed. This is a reporting obligation described in the FY2024/25 oversight report, not proof that every filing was complete or that the data is publicly downloadable.
+- NRB's consolidated Payment Systems Unified Directive 2082 (published 16 Apr 2026; consolidation through 2082 Chaitra 30): https://www.nrb.org.np/contents/uploads/2026/04/PSD-UD-2082.pdf . The PSP success/failure form separates merchant payment, P2P, bank transfer, government payment, wallet load, agent cash-in, agent cash-out and ATM withdrawal. The customer-details form distinguishes active and inactive wallets/cards and asks for total agents plus active agents per month. The agent transaction form records agent code/name, balances, cash-in channels, cash-out by bank transfer and physical cash, QR, refunds and other transactions.
+- This means NRB's prescribed reporting schema contains the exact distinction missing from public monthly indicators: total agents vs active agents, plus actual agent cash-out channels. It does not mean those submitted values are public. No provider-level or geographic active-agent/cash-out data was found in the public Asoj indicator PDF.
+- The current directive's cash-in form still uses the label “Agent/Sub-Agent” for digital, non-digital and remittance cash-in, while the agent-level report uses agent code/name and separate cash-out fields. NRB's Asoj footnote says the post-Magh 2081 PSP-agent series includes agents plus sub-agents converted into agents. Treat this as a documented terminology/definition seam requiring interpretation, not proof that unauthorized sub-agents still operate. It may be a legacy label in the cash-in template.
+- The report also says NRB introduced additional reporting requirements in FY2024/25 for more granular service-type, geographic-coverage, transaction-volume and transaction-value analysis of merchant transactions. This documents regulatory intent and collection scope, not public release of the granular data.
+
+### Later policy-version checks
+- The NRB Payment Systems Department archive lists a 24 Jul 2026 amendment to Unified Directive 2082. Its inspected two-page PDF amends the wallet-opening/National-ID verification subsection (including self-declaration and follow-up status by Asoj end); it does not amend the agent reporting forms inspected here. The Asoj-end compliance status remains UNKNOWN.
+- The 15 Oct 2026 NRB wallet-load notice temporarily raised the daily number of wallet deposits from 10 to 50 during Dashain and Tihar/Chhath date windows. Those windows have passed; this was a temporary deposit-frequency exception, not a current cash-out limit change.
+- The 27 Aug 2026 notice about mobile banking/web/e-money transfers concerns deposits to the Prime Minister Disaster Relief and Prime Minister Relief Funds; it is not a general cash-out or agent rule.
+- These notices reinforce that publication date, effective date, reporting period and temporary exception window must remain distinct in evidence.
+
+### Updated D109–D116 interpretation
+- D116 is narrower but still UNKNOWN: the one-time sub-agent conversion is not a sufficient explanation for the entire post-Magh 2081 year-on-year fall, but the public series does not reveal whether the decline reflects closures, inactive registrations, later definition changes or reporting cleanup. The regulator's monthly forms ask for active-agent counts, but those values are not in the public indicator table.
+- D114/D115 remain UNKNOWN. The NRB forms distinguish agent cash-out and ATM withdrawal, but no buyer substitution, OTP success, ATM uptime, cash float, travel distance or fee burden has been observed firsthand.
+- The public Asoj 2083 “Wallet” count also should not be treated as active wallet users: the directive form separates active wallets from inactive wallets (6–12 months and over 12 months), while the public indicator gives a total count. No active/inactive public split was found.
+- The NRB E-Map remains inaccessible through the inspected iframe at `reporting.nrb.org.np/carto_map`; no location-level coverage was established.
+- Next lawful evidence path: use already published non-personal aggregates if available, or seek an owner-authorized formal request for aggregate/provider/region-level data. No request or contact was made. Do not copy agent names/phone numbers or automate NRB collection without source clearance.
+
+### Citation/source register reminder
+The public-source register already marks NRB PSD material manual-only / NOT CLEARED for automated collection, body persistence or provider transmission; runtime source registry has no NRB clearance. These PDFs/pages were manually reviewed for this research only. No ingestion, source registration, provider transmission or code change occurred.
+
 ## Current handoff — 2026-11-26 05:04 +0545 — D109–D116 cash-access reporting crosswalk
 
 ### Exact repository state at run start
