@@ -24,3 +24,11 @@ func m7hProcessCPUSeconds() (float64, error) {
 	return float64(user.Nanoseconds())/float64(time.Second) +
 		float64(kernel.Nanoseconds())/float64(time.Second), nil
 }
+
+func readSFUHostSnapshotLive(baseline sfuHostSnapshot) (sfuHostSnapshot, error) {
+	return baseline, fmt.Errorf("macOS live host snapshot is unavailable on Windows")
+}
+
+func readAudioSwapMiB() (used, free float64, returnErr error) {
+	return 0, 0, fmt.Errorf("macOS swap accounting is unavailable on Windows")
+}

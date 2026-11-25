@@ -30,7 +30,6 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
-	"syscall"
 	"time"
 
 	"github.com/pion/ice/v4"
@@ -729,47 +728,6 @@ func readSFUHostSnapshot() (sfuHostSnapshot, error) {
 	return snapshot, nil
 }
 
-// FIX 30: readSFUHostSnapshotLive is the in-run host watchdog reader.
-// The preflight reader above spawns four subprocesses per call (sysctl
-// pressure, sysctl vm.swapusage, vm_stat, df); fired once a second
-// inside a streaming cell, those forks stalled the whole process
-// 50-120 ms per tick (FIX 30 measurement: heartbeat late 50-120 ms at
-// exactly the watchdog tick phase in every cell, both runs; frames
-// whose transit overlapped the stall went 100+ ms slow; run-to-run
-// variance is the tick phase vs the 200 ms frame grid). This reader
-// uses only direct syscalls — pressure via sysctlbyname, swap via
-// syscall.Sysctl("vm.swapusage"), disk via statfs — so a watchdog tick
-// costs microseconds and cannot stall the pipeline.
-// MemFreeMiB/Swapouts/Pageouts are carried from the preflight baseline:
-// macOS exposes them only via Mach host_statistics (vm_stat), which has
-// no fork-free equivalent. That is safe: the watchdog's abort decision
-// (sfuHostWatchdogFailures) uses only pressure, swap and disk — all read
-// live here — and the parent aggregates the preflight snapshot, not the
-// live samples. The live sample JSON keeps its shape.
-func readSFUHostSnapshotLive(baseline sfuHostSnapshot) (sfuHostSnapshot, error) {
-	// Start from the preflight baseline: MemFreeMiB/Swapouts/Pageouts
-	// have no fork-free source on macOS (see the FIX 30 note above)
-	// and are carried forward unchanged. ObservedAt, pressure, swap
-	// and disk are all refreshed live below.
-	snapshot := baseline
-	snapshot.ObservedAt = time.Now().UTC()
-	pressure, err := syscall.SysctlUint32("kern.memorystatus_vm_pressure_level")
-	if err != nil {
-		return snapshot, fmt.Errorf("read macOS VM pressure: %w", err)
-	}
-	snapshot.PressureLevel = int(pressure)
-	snapshot.SwapUsedMiB, snapshot.SwapFreeMiB, err = readAudioSwapMiB()
-	if err != nil {
-		return snapshot, err
-	}
-	snapshot.SwapTotalMiB = snapshot.SwapUsedMiB + snapshot.SwapFreeMiB
-	var stat syscall.Statfs_t
-	if err := syscall.Statfs(".", &stat); err != nil {
-		return snapshot, fmt.Errorf("read free disk space: %w", err)
-	}
-	snapshot.FreeDiskBytes = stat.Bavail * uint64(stat.Bsize)
-	return snapshot, nil
-}
 
 // parseVMStatPageSize reads the page size in bytes from the vm_stat
 // header line "Mach Virtual Memory Statistics: (page size of N bytes)".
@@ -4644,31 +4602,6 @@ func audioHandRaiseSmoke(
 	return events, nil
 }
 
-// FIX 30: readAudioSwapMiB reads swap usage via the sysctl(2) syscall
-// instead of spawning `sysctl vm.swapusage`. The old version forked a
-// subprocess on every call; called once a second by the host watchdog
-// inside a ~700 MB / 36k-goroutine cell, that fork stalled the whole
-// process 50-120 ms (FIX 30 measurement: the 10 ms heartbeat goroutine
-// went late by 50-120 ms at exactly the watchdog tick phase, and every
-// frame whose transit overlapped the stall went 100+ ms slow). The raw
-// sysctl returns struct xsw_usage: total, avail, used as uint64 bytes
-// at offsets 0/8/16, then pagesize + encrypted. All Macs are
-// little-endian. Same (used, free) MiB contract as before.
-func readAudioSwapMiB() (used, free float64, returnErr error) {
-	raw, err := syscall.Sysctl("vm.swapusage")
-	if err != nil {
-		return 0, 0, fmt.Errorf("read macOS swap usage: %w", err)
-	}
-	rawBytes := []byte(raw)
-	if len(rawBytes) < 24 {
-		return 0, 0, fmt.Errorf("read macOS swap usage: short xsw_usage (%d bytes)", len(rawBytes))
-	}
-	freeBytes := binary.LittleEndian.Uint64(rawBytes[8:16])
-	usedBytes := binary.LittleEndian.Uint64(rawBytes[16:24])
-	used = float64(usedBytes) / (1024 * 1024)
-	free = float64(freeBytes) / (1024 * 1024)
-	return used, free, nil
-}
 
 type audioHeapSampler struct {
 	cancel context.CancelFunc
