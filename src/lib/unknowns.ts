@@ -1037,6 +1037,33 @@ export const discoveryUnknowns: DiscoveryUnknown[] = [
     stakes: "If the state's own counters are cash-only, cash demand has a government-set floor — digital adoption stalls at the state's door, not the shop's",
     round: null,
   },
+  {
+    id: "D114",
+    question: "Do buyers actually use the cardless wallet-to-ATM rail when the kirana refuses, or do they go to a bank branch, borrow cash, or go without — and what does each route cost in fee, time and distance? (round 25: formal rail exists — eSewa via NIC Asia/Everest ATMs, Khalti via Nabil ATMs, OTP-based, Rs 15/txn, Rs 5,000/day cap — with outage/OTP complaints; no buyer voice found on actual replacement behaviour)",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "Ask 5 buyers: \"the last time you needed cash and the shop said no — where did you get it, and what did it cost you?\"; check whether NRB's ATM series splits card vs cardless withdrawals",
+    stakes: "If buyers don't use the ATM rail, the cash-out door closed with no working replacement — the stranded-buyer gap is real and a cash-access directory (D109's capability candidate) is the fix; if they do, the fee/cap is the tax on small cash",
+    round: null,
+  },
+  {
+    id: "D115",
+    question: "What does the Rs 15 fee + Rs 5,000/day cap cost a buyer who needs small cash often — does the fee push small cash needs back to informal channels? (round 25: kirana cash-out was free and instant for Rs 500–1,000; cardless ATM charges ~Rs 15, i.e. 3% on Rs 500, and caps at Rs 5,000/day)",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "Ask 5 buyers how often they need under-Rs 1,000 cash and what they'd pay for it; compare fee as share of amount across Rs 500 / 1,000 / 5,000 withdrawals",
+    stakes: "If the fee is trivial at Rs 5,000 but punitive at Rs 500, the replacement rail taxes exactly the small-cash need the kirana served — the gap is a small-denomination problem, not a cash problem",
+    round: null,
+  },
+  {
+    id: "D116",
+    question: "Is the PSP agent-count drop (439,175 → 329,896 in a year) real closures or reclassification of sub-agents — and are cash-out points actually fewer on the ground? (round 25: NRB Bhadra 2082→2083; directive bans sub-agents and requires appointed-representative lists, yet Oct 2026 sub-agent flyers still advertise cash withdrawal)",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "Sample 10 agent points from the pre-drop list: still operating as cash-out or reclassified/closed; read the appointed-representative lists for coverage outside the Valley",
+    stakes: "If points closed, cash access contracted on the ground and the stranded-buyer gap widens; if it is reclassification, the network is formalising and the directory must track the new authorised list, not the old agent count",
+    round: null,
+  },
 ];
 
 export const unknownsCount = discoveryUnknowns.length;
