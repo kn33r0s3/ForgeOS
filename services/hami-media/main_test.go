@@ -376,6 +376,74 @@ func TestLocalSFURoutesAuthorizedStreamsAndRTCP(t *testing.T) {
 	}
 }
 
+// This is a TEST-only loopback RTP fanout proof. It does not measure
+// capture-to-render latency or satisfy the 60s/300-rendered-frame contract.
+func TestLocalM0HSameTrackFanoutToTwoViewers(t *testing.T) {
+	fixture, err := base64.StdEncoding.DecodeString(testH264AccessUnit)
+	if err != nil {
+		t.Fatal(err)
+	}
+	frames, err := readH264Frames(bytes.NewReader(fixture))
+	if err != nil {
+		t.Fatalf("read embedded H.264 test frame: %v", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	result, err := runLocalSFUProofWithConfig(ctx, frames, 1500*time.Millisecond, sfuProofConfig{
+		proofID: "m0h-fanout",
+		tracks: []sfuTrackSpec{
+			{publisherID: "hami-m0h-publisher", trackID: "stream-main"},
+		},
+		viewerTrackIndexes: []int{0, 0},
+	})
+	if err != nil {
+		t.Fatalf("run same-track local M0-H SFU proof: %v", err)
+	}
+	if result.EvidenceType != "TEST" || !result.LocalOnly {
+		t.Fatalf("result did not identify a local TEST: %+v", result)
+	}
+	if result.PublisherState != webrtcConnected {
+		t.Fatalf("publisher PeerConnection not connected: %s", result.PublisherState)
+	}
+	if len(result.PublisherTracks) != 1 || result.PublisherTracks[0] != "stream-main" {
+		t.Fatalf("expected one published source track: %+v", result.PublisherTracks)
+	}
+	if len(result.Viewers) != 2 {
+		t.Fatalf("expected two viewers on one source track: %+v", result.Viewers)
+	}
+	if !result.CleanupVerified {
+		t.Fatal("router retained tracks, viewers, or subscriptions after cleanup")
+	}
+	if len(result.ForwardingErrors) != 0 {
+		t.Fatalf("router reported forwarding errors: %v", result.ForwardingErrors)
+	}
+
+	seenSSRCs := make(map[uint32]struct{}, len(result.Viewers))
+	for _, viewer := range result.Viewers {
+		if viewer.RequestedTrackID != "stream-main" ||
+			len(viewer.ReceivedTrackIDs) != 1 ||
+			viewer.ReceivedTrackIDs[0] != "stream-main" ||
+			!viewer.OnlyRequested {
+			t.Fatalf("viewer %s did not receive only the shared requested track: %+v", viewer.ViewerID, viewer)
+		}
+		if viewer.PeerConnection != webrtcConnected || viewer.Received.PacketsReceived == 0 {
+			t.Fatalf("viewer %s did not receive RTP over a connected PeerConnection: %+v",
+				viewer.ViewerID, viewer)
+		}
+		if viewer.Received.SSRC == 0 {
+			t.Fatalf("viewer %s received zero SSRC: %+v", viewer.ViewerID, viewer)
+		}
+		if viewer.Received.FirstTimestamp == viewer.Received.LastTimestamp {
+			t.Fatalf("viewer %s RTP timestamp did not advance: %+v", viewer.ViewerID, viewer.Received)
+		}
+		if _, exists := seenSSRCs[viewer.Received.SSRC]; exists {
+			t.Fatalf("viewers share an egress SSRC: %+v", result.Viewers)
+		}
+		seenSSRCs[viewer.Received.SSRC] = struct{}{}
+	}
+}
+
 func TestLocalSFUCascadeRoutesRTCPAcrossWorkers(t *testing.T) {
 	fixture, err := base64.StdEncoding.DecodeString(testH264AccessUnit)
 	if err != nil {
