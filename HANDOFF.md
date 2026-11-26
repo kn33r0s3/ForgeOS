@@ -20,6 +20,30 @@ M0–M9 all remain **NOT MEASURABLE**. M0's same-track Pion test is a TEST-only 
 
 Hami-wide continuity remains active: recent discovery round 25 added D114–D116 cash-access unknowns, and the 26 Nov NRB addendum documents monthly PSP reporting obligations. These remain public-source research, not firsthand buyer evidence or proof of coordination failure. No new unknown/projection was added in this capacity run.
 
+## Hami-wide discovery addendum — 2026-11-27 05:25 +0545 — SET4NPL service-chain evidence
+
+Run-start main was b0544d1ba26adca4560acd7e96bf35b0722759f1; the code-bearing SHA remains 209b7addd319bbd1061f46f6e34cb3ad82109458. Exact-head ForgeOS CI 45910166652 passed 11/11 jobs; Secrets scan 45910166641 passed. Independent deploy verifier 45910166664 passed 295 local tests, then failed at production-content fetch with HTTP 402; production checks after that step were skipped. Hami Vercel is success; ForgeOS Vercel is account-blocked. No production-health proof. This was a documentation/research run; LiveKit remains Priority 1 and M0–M9 remain NOT MEASURABLE.
+
+### New evidence
+- Independent Dorsch Impact/Oxford Policy Management mid-term ELE, cover June 2026; fieldwork Feb 16–26, analysis Feb–Apr, 39 interviews / 63 interviewees, 58 documents, four low-response surveys and two route surveys. Fieldwork was mainly Kathmandu. The evaluator warns that vehicle/registration data are fragmented and customs data do not establish sales, financing or deployment.
+- The evaluator reports 365 EMBs subsidised or approved by mid-June as the clearest verified direct project-supported measure; it calls ~1,200 financed through project-linked mechanisms plausible but unverified. MAF's 30 Oct TSU visit article says ~1,000 vehicles "supported" based on a 5–9 Oct visit. Keep all three metrics separate; the Management Response schedules bank reconciliation in 2027.
+- The evaluation reports uneven dealer-led service coverage, longer repair/parts waits, specialised tool/OEM-access limits for independent mechanics, low completion/additionality of the project mechanic-training stream, and unresolved resale/battery end-of-life issues. It does not provide current regional service-centre coverage, actual repair downtime or job-placement outcomes.
+- MAF's October response says the 2026 mechanic rounds are being evaluated for additionality/sustainability before another cohort; redesign with vendors/maintenance centres is planned only if service/employment demand supports it. It also says the GIZ–GGGI grant ended by mutual agreement in September; GGGI remaining activities are due 30 Nov and GIZ takes over the TC component. This is a management plan; completion is UNKNOWN as of this run.
+- The independent evaluation documents a bounded programme-level delivery/follow-through gap: TC budget execution 33%, GGGI partner-led activities 26%, four Working Committee and three Steering Committee meetings with a >1-year gap before the third; committees mainly shared information/procedurally endorsed rather than escalating delivery bottlenecks. The evaluator cites insufficient follow-through, possible HR/decision/coordination constraints and delayed government engagement. It did not find an absence of forums; do not generalise beyond SET4NPL.
+- Adjacent links: 25 women completed driver training but did not enter the sector at scale because of equity/collateral and informal-hiring barriers; the response plans employment/finance/permit/ownership outcome mapping. E-ticketing is ready for a Q4 2026 pilot with NCHL interoperability agreed in October; rollout is planned from Q2 2027. Charging-payment integration and rural/intercity coverage are future plans, not live results.
+
+### Existing Hami seam and boundaries
+- Reuse ENTITY/RELATION/EVENT/EVIDENCE/CAPABILITY/ACTION and existing Signal/Evidence. Signal and Evidence have published_at, retrieved_at and provenance but no dedicated effective cutoff. SourceCollector.normalize uses raw_item.provenance or metadata; non-empty explicit provenance can drop metadata-only source-time fields. runner does not merge all normalized metadata; assessment compares publication with retrieval; citation omits source-effective cutoff. No code change or new schema was made.
+- MAF, CTEVT, SET4NPL and GGGI remain manual-only / NOT CLEARED for automated collection, body persistence or provider transmission. MAF robots was inaccessible and no general reuse grant was reviewed. No source registration, ingestion, contact, publication, spend, payment or external action.
+- No new D-number or generated projection. Existing EV workforce/maintenance-chain track is updated in the capability queue and public-source register only.
+
+### Next
+1. Retrieve SET4NPL Annual Report 2026 and public post-30-November GIZ/GGGI transition evidence.
+2. Reconcile subsidised/approved, supported and financed fleet counts with bank and registration data; preserve each definition.
+3. Verify 2026 mechanic cohort completion, OJT, certification, employment and independent-workshop outcomes; map dealer/independent service coverage, diagnostic tools, OEM access, warranty, parts and repair wait times by geography.
+4. Add the source-effective-time round-trip regression only when the authorised source-edit path permits it; do not bypass the existing block.
+
+
 ## Addendum — 2026-11-26 05:13 +0545 — NRB's monthly PSP reporting closes part of D116's data gap
 
 This follow-up was found after the preceding cash-access handoff entry. It is a source-backed refinement, not firsthand buyer/agent evidence and not proof of a coordination failure.
