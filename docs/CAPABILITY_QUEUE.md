@@ -1,3 +1,45 @@
+## 2026-11-27 04:57 +0545 — M0–M9 exact-head recheck: same-track Pion fanout test verified; LiveKit M0 still NOT MEASURABLE
+
+### Exact main and independent verification
+- Direct Git ref: `refs/heads/main = 209b7addd319bbd1061f46f6e34cb3ad82109458`, parent `8e020eefc9b7d0f7a925a809f1a90ddedb2cf030`, tree `21b2589ad422393ea949e3267250438cfdac2724`.
+- Exact-head [ForgeOS CI run 45722771089](https://github.com/kn33r0s3/ForgeOS/actions/runs/45722771089) passed 11/11 jobs. Job `hami-media-go` (139584928091) passed `go test -count=1 ./...` (package result 21.877s), `go vet ./...`, `go build ./...`, `CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build`, and Windows/amd64 cross-build. [Secret scan 45722770912](https://github.com/kn33r0s3/ForgeOS/actions/runs/45722770912) passed. Runner was `ubuntu-latest`; module declares Go 1.24.0 and Pion WebRTC v4.2.26.
+- [Independent deploy verifier 45722771007](https://github.com/kn33r0s3/ForgeOS/actions/runs/45722771007) passed its local tests but failed at “Fetch production content” with HTTP 402; preconditions, production wait, protected owner-cycle probe and final evaluation were skipped. Commit statuses: Hami Vercel success; ForgeOS Vercel failure. Production health is not established.
+
+### New verified sub-capability — TEST only
+- Ancestor commit `b5bccfa0cfb9edb23c058ba16d9ce3cbfb25130a` added `TestLocalM0HSameTrackFanoutToTwoViewers` in `services/hami-media/main_test.go` and the native Go CI job.
+- Test topology: one Pion publisher, one source track (`stream-main`), two independent Pion viewer PeerConnections, in-process loopback, 1.5-second proof window, embedded H.264 fixture. Assertions: TEST/local-only label; connected publisher/viewers; one published source track; each viewer receives only its requested shared track; packets >0; nonzero, distinct egress SSRCs; advancing RTP timestamps; no forwarding errors; cleanup verified.
+- This is real Pion PeerConnection/RTP loopback exercised by CI, but still a synthetic TEST fixture and a different topology from the requested LiveKit server + patched LiveKit CLI. It does not prove a LiveKit room, a capacity rung, 5 consecutive 1-second per-SSRC getter deltas, 60 seconds, 300 rendered frames/subscriber, capture-to-render latency, or a p95/p99 result. No raw per-subscriber latency JSONL, bitrate/resolution/fps, region/path, jitter/loss/retransmission profile or resource trace was emitted by this test.
+
+### Current M0–M9 state
+| Milestone | Target | Status | Last evidence / exact environment | Independent verifier | Next action / blocker |
+|---|---:|---|---|---|---|
+| M0 | 1 publisher / 2 viewers | **NOT MEASURABLE** | 2026-11-26; code SHA `209b7add`; `ubuntu-latest`, Go 1.24.0, Pion v4.2.26; 1P/2V same-track Pion loopback TEST, 1.5s. Not LiveKit server. | GitHub Actions 45722771089, job 139584928091; validates test suite only. | Inspect historical LiveKit CLI checkout and recorder/SSRC path on authorized Mac; actual LiveKit room requires new Docker authorization; wire render callback. |
+| M1 | 1 / 10 | **NOT MEASURABLE** | Historical local TEST note only; no current exact-head 1P/10 LiveKit run or raw per-viewer evidence. | None for current target. | Only after M0, run same LiveKit topology with 10 independent subscribers and selective subscription. |
+| M2 | 10 / 50 | **NOT MEASURABLE** | Historical local TEST note only; no current exact-head multi-publisher/subscriber evidence. | None for current target. | After M1, verify 10 publishers, 50 viewers, track/SSRC mapping and simultaneous selected subscriptions. |
+| M3 | 50 / 100 | **NOT MEASURABLE** | Historical local TEST note only; no current exact-head multi-track room result. | None for current target. | After M2, test multi-track room behavior and per-subscriber selective delivery. |
+| M4 | 100 / 500 | **NOT MEASURABLE** | Historical local TEST note only; no current 100P/500V raw run or resource/latency distribution. | None for current target. | After M3, benchmark fanout, network, CPU/memory and latency separately. |
+| M5 | 500 / 1,000 | **NOT MEASURABLE** | Historical local TEST note only; no current 500P/1,000V exact-topology run. | None for current target. | After M4, test concurrency, feedback/retransmission and failure recovery. |
+| M6 | 1,000 / 2,000 | **NOT MEASURABLE** | Prior 5-fps local run failed RTCP feedback with 91,118 “too many reports” errors and timed out; no current rerun. | Historical raw run only; no current independent verifier. | Diagnose feedback/transport behavior and resource budget before retry; host preflight required. |
+| M7 | 3,000 / 3,000 | **NOT MEASURABLE** | Prior 3,000-pair run: 15.06 GB HeapAlloc, 120,631 goroutines, 2,588 stale publishers, no final p99; later 10×500 attempt aborted at viewer 2,801 under pressure level 2. | Historical logs only; no complete qualifying run. | No scale retry until fresh safe host preflight and bounded architecture; investigate single-node boundary without forcing one room. |
+| M8 | 3,000+ / 3,000+ across multiple physical rooms | **NOT MEASURABLE** | Two-worker cascade is only 1P/1V, ~1-second correctness TEST (22 relay packets, 18 viewer packets, RTCP/cleanup); no multi-room scale evidence. | Historical test only. | Prove directory/identity/permissions across physical rooms, then measure cross-room selective media forwarding. |
+| M9 | 9,000 / 10,000 | **NOT MEASURABLE** | Target/topology only; no full-target test, global network, independent infrastructure or failover evidence. | None. | Decompose into benchmarked regional ingest/fanout/room distribution; no 19k claim from one Mac. |
+
+### LiveKit topology, versions and security boundary
+- Current main's root `docker-compose.yml` contains no LiveKit service/profile. Current `services/` contains `hami-media` and the separate `hami-sfu`; `hami-media/go.mod` is Pion-based, not the LiveKit Go SDK. The historical CLI checkout `/Users/nirojpaudyal/Downloads/livekit-cli` is outside this repository and inaccessible to this scheduled run. Historical server image v1.13.11, CLI v2.19.4, SDK v2.19.0 and base revision `297b4ccad2b1e22ba87f33215decba06e266c3c0` remain unverified leads.
+- No Docker command was run. Task 019's no-Docker order remains in force; Docker execution requires new explicit owner authorization. No LiveKit Cloud/premium or paid infrastructure.
+- The reintroduced `services/hami-sfu` is not referenced by root Compose and no deployment is established. Static review: `requireAnyToken` checks signature/expiry but does not bind the room claim; `handleListRooms` enumerates every room and publisher/subscriber identity. Do not run/deploy this duplicate until removed through the authorized path or fixed with a deliberate global-directory authorization model and cross-room isolation regression.
+- Mac host state is UNKNOWN. Last recorded sample 2026-11-23 01:50 +0545: pressure 2, free swap 378.44 MiB (below 2,048 MiB floor); stale. Before any local load, require pressure NORMAL, free swap >=2,048 MiB, free disk >=10 GiB and bounded heap.
+- The latest CI cross-builds the Darwin/arm64 binary but does not execute it on macOS. Linux CI uses `platform_linux.go`; macOS syscall/watchdog runtime behavior remains NOT VERIFIED.
+
+### Next resumable operation
+1. On the authorized Mac, inspect the external LiveKit CLI checkout and exact patch state without Docker: revision, dirty tree, build, recorder registration, getter lifetime, SSRC-to-subscriber mapping and cleanup.
+2. Wire actual video decode/presentation callback with matching frame IDs and a single monotonic clock. Receiver/assembly timestamps remain diagnostic only.
+3. Keep the standalone duplicate contained until its architecture/security decision is resolved.
+4. Obtain a fresh safe host preflight. Only after explicit owner authorization may the LiveKit Docker room stage run.
+5. Continue Hami-wide research independently; do not let LiveKit capacity or a seller pilot gate the settled mission.
+
+
+
 ## 2026-11-25 05:50 +0545 — D95: Farmer Registry refresh and Siyar fish cold-chain cross-link
 
 ### Evidence delta (public records only; not firsthand)

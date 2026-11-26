@@ -1,3 +1,25 @@
+## Current handoff — 2026-11-27 04:57 +0545 — resume M0 from exact main; distinguish Pion from LiveKit
+
+### Verified repository and CI state
+- Main: `209b7addd319bbd1061f46f6e34cb3ad82109458`; parent `8e020eefc9b7d0f7a925a809f1a90ddedb2cf030`. Latest commit 209b7add isolates macOS host syscalls into platform-specific files and adds Darwin/arm64 plus Windows/amd64 cross-builds.
+- Exact-head ForgeOS CI [45722771089](https://github.com/kn33r0s3/ForgeOS/actions/runs/45722771089): 11/11 jobs passed. Native `services/hami-media` job 139584928091 passed Go tests (21.877s package result), vet, build and both cross-builds. Secret scan [45722770912](https://github.com/kn33r0s3/ForgeOS/actions/runs/45722770912) passed.
+- The new `TestLocalM0HSameTrackFanoutToTwoViewers` is a 1P/2V, one-track, 1.5s Pion loopback TEST. It verifies connected PeerConnections, requested-track-only delivery, packets, distinct nonzero egress SSRCs, advancing RTP timestamps and cleanup. It does not use LiveKit server/CLI, does not satisfy the 60s/300-rendered-frame rule, and has no actual presentation callback. Treat it as a tested fanout capability, not M0 completion.
+- Current main's `services/hami-media` module is Pion WebRTC v4.2.26 / Go 1.24.0. Root `docker-compose.yml` has no LiveKit service/profile; current services tree has `hami-media` and a separate `hami-sfu`. The historical CLI checkout under `/Users/nirojpaudyal/Downloads/livekit-cli` cannot be inspected from this scheduled environment. Do not assume historical LiveKit image/CLI/SDK versions remain current.
+- `services/hami-sfu` remains an unreferenced duplicate. Its global room list accepts any valid token without binding the room claim and returns participant identities. No deployment/exploit is established; do not run/deploy it.
+- Deploy verifier [45722771007](https://github.com/kn33r0s3/ForgeOS/actions/runs/45722771007) failed at production-content fetch with HTTP 402 after local verifier tests passed. Hami Vercel status is success; ForgeOS status is failure. Production health remains UNKNOWN.
+
+### Milestone state
+M0–M9 all remain **NOT MEASURABLE**. M0's same-track Pion test is a TEST-only sub-rung, not the requested LiveKit room proof. Capture-to-render remains NOT VERIFIED; no p50/p95/p99, packet-loss/jitter/feedback distributions, 60-second run, or 300 rendered frames exist for this exact head. See the current table at the top of `docs/CAPABILITY_QUEUE.md`.
+
+### Exact resumption
+1. Inspect the historical LiveKit CLI checkout and patch on the authorized Mac without Docker: exact revision, dirty tree, recorder registration/getter lifetime, per-subscriber SSRC mapping and cleanup.
+2. Wire actual video presentation timing with matched frame IDs and one monotonic clock; do not substitute LastPacketReceivedTimestamp.
+3. Keep the duplicate `hami-sfu` contained until resolved.
+4. Recheck host pressure/swap/disk. Last known sample (23 Nov) was pressure 2 / 378.44 MiB free swap and is stale.
+5. Only after explicit new owner authorization may the local Docker LiveKit stage run. No Cloud/premium/paid infrastructure.
+
+Hami-wide continuity remains active: recent discovery round 25 added D114–D116 cash-access unknowns, and the 26 Nov NRB addendum documents monthly PSP reporting obligations. These remain public-source research, not firsthand buyer evidence or proof of coordination failure. No new unknown/projection was added in this capacity run.
+
 ## Addendum — 2026-11-26 05:13 +0545 — NRB's monthly PSP reporting closes part of D116's data gap
 
 This follow-up was found after the preceding cash-access handoff entry. It is a source-backed refinement, not firsthand buyer/agent evidence and not proof of a coordination failure.
