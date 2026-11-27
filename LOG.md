@@ -1,3 +1,11 @@
+## 2026-11-27 05:52 +0545 — Dhangadhi waste-to-value / BioCNG / Patela ISWM crosswalk
+
+- Reconciled latest main af40044b5bfbbbd310de330061d6fb5927581520 against code-bearing 209b7add; the three intervening commits changed only six continuity/source documents. Code-bearing CI 11/11 and secret scan passed; current docs-only head has no surfaced workflow run, Hami Vercel success and ForgeOS Vercel failure. Production health remains UNKNOWN after HTTP 402.
+- Read current charter/continuity and source-time code seam. Verified the existing UNKNOWN_MAP parser contract read-only: 132 map rows / 116 D rows; generated JSON and TS projections match exactly.
+- Researched AEPC's Dhangadhi 30-TPD BioCNG design, 2025 and 2026 operating reports, UNDP's waste PPP/jobs account, Jan 2026 Patela ISWM/FSTP construction report and ADB project contract metadata.
+- Key correction: the original AEPC design specified thermal bottled Bio-CNG for nearby communities/hotels, not only vehicle fuel. The plant's reported utilization/output varies across dated sources; no metered output, gas quality, sales/offtake or residual mass balance was found. The separate Ward 7 Patela facility's commissioning after its Apr 2026 forecast remains UNKNOWN.
+- Recorded the capability candidate in CAPABILITY_QUEUE and source-specific manual-only boundaries in PUBLIC_SOURCES. No new D-number, source registration, ingestion, body persistence, provider transmission, code/test/schema/collector change, contact, PII, publication, spend, payment or external action.
+
 ## 2026-11-27 05:25 +0545 — Battery traceability and second-life value connection
 
 - Extended the SET4NPL discovery beyond workforce: the independent ELE proposes a second-life transfer of repossessed EMBs (illustrative EUR 2–3k refurbishment vs ~EUR 20k full loan loss) and records one 11-seat lease-to-own resource that was not yet on public routes or within the subsidy.

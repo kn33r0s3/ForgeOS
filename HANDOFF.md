@@ -1,8 +1,8 @@
 ## Current handoff — 2026-11-27 04:57 +0545 — resume M0 from exact main; distinguish Pion from LiveKit
 
 ### Verified repository and CI state
-- Main: `209b7addd319bbd1061f46f6e34cb3ad82109458`; parent `8e020eefc9b7d0f7a925a809f1a90ddedb2cf030`. Latest commit 209b7add isolates macOS host syscalls into platform-specific files and adds Darwin/arm64 plus Windows/amd64 cross-builds.
-- Exact-head ForgeOS CI [45722771089](https://github.com/kn33r0s3/ForgeOS/actions/runs/45722771089): 11/11 jobs passed. Native `services/hami-media` job 139584928091 passed Go tests (21.877s package result), vet, build and both cross-builds. Secret scan [45722770912](https://github.com/kn33r0s3/ForgeOS/actions/runs/45722770912) passed.
+- Current main: `af40044b5bfbbbd310de330061d6fb5927581520`. Three documentation-only commits (`b0544d1`, `3a626ee`, `af40044`) follow the last code-bearing commit `209b7addd319bbd1061f46f6e34cb3ad82109458` (parent `8e020eefc9b7d0f7a925a809f1a90ddedb2cf030`); compare shows only HANDOFF, LOG, QUEUE, STATE, CAPABILITY_QUEUE and PUBLIC_SOURCES changed. The code tree remains the 209b state; no implementation changed.
+- For code-bearing SHA `209b7add`, ForgeOS CI [45722771089](https://github.com/kn33r0s3/ForgeOS/actions/runs/45722771089) passed 11/11 jobs, including native services/hami-media Go tests, vet, build and Darwin/arm64 plus Windows/amd64 cross-builds; secret scan [45722770912](https://github.com/kn33r0s3/ForgeOS/actions/runs/45722770912) passed. These results are for 209b7add, not current docs-only main af40044. Current-head workflow lookup returned zero runs; combined statuses show Hami Vercel success and ForgeOS Vercel failure. Do not claim exact-head CI/security or production health for af40044.
 - The new `TestLocalM0HSameTrackFanoutToTwoViewers` is a 1P/2V, one-track, 1.5s Pion loopback TEST. It verifies connected PeerConnections, requested-track-only delivery, packets, distinct nonzero egress SSRCs, advancing RTP timestamps and cleanup. It does not use LiveKit server/CLI, does not satisfy the 60s/300-rendered-frame rule, and has no actual presentation callback. Treat it as a tested fanout capability, not M0 completion.
 - Current main's `services/hami-media` module is Pion WebRTC v4.2.26 / Go 1.24.0. Root `docker-compose.yml` has no LiveKit service/profile; current services tree has `hami-media` and a separate `hami-sfu`. The historical CLI checkout under `/Users/nirojpaudyal/Downloads/livekit-cli` cannot be inspected from this scheduled environment. Do not assume historical LiveKit image/CLI/SDK versions remain current.
 - `services/hami-sfu` remains an unreferenced duplicate. Its global room list accepts any valid token without binding the room claim and returns participant identities. No deployment/exploit is established; do not run/deploy it.
@@ -47,6 +47,32 @@ Run-start main was b0544d1ba26adca4560acd7e96bf35b0722759f1; the code-bearing SH
 3. Verify 2026 mechanic cohort completion, OJT, certification, employment and independent-workshop outcomes; map dealer/independent service coverage, diagnostic tools, OEM access, warranty, parts and repair wait times by geography.
 4. Add the source-effective-time round-trip regression only when the authorised source-edit path permits it; do not bypass the existing block.
 
+
+## Hami-wide discovery addendum — 2026-11-27 05:52 +0545 — Dhangadhi waste-to-value and BioCNG/ISWM crosswalk
+
+### Repository and verification reconciliation
+- Current main is af40044b5bfbbbd310de330061d6fb5927581520; compare from code-bearing 209b7addd319bbd1061f46f6e34cb3ad82109458 shows three documentation-only commits and only HANDOFF, LOG, QUEUE, STATE, CAPABILITY_QUEUE and PUBLIC_SOURCES changed. No implementation changed.
+- Code-bearing SHA 209b7add has recorded ForgeOS CI 11/11 and secret scan pass. These are not exact-head results for af40044; current-head workflow lookup returned zero runs. Combined statuses show Hami Vercel success and ForgeOS Vercel failure. The independent deploy verifier failed at production-content fetch with HTTP 402; production health remains UNKNOWN.
+- Re-read AGENTS, HANDOFF, STATE, QUEUE, BRAIN, UNKNOWN_MAP, CAPABILITY_QUEUE, LOG, discovery-loop, source registry, collector/runner/Observer/Evidence/assessment/citation code and relevant tests. A read-only check using the exact sync-unknowns script parsing/serialization rules found 132 map rows, 116 D rows, and exact matches for both generated JSON and TypeScript projections. The earlier handoff statement that projections were out of sync is stale. No new D-number/ResearchQuestion or projection change was made in this documentation-only run.
+
+### New public evidence and real-world consequence
+- Dhangadhi's Ward 2 waste-to-energy plant was designed by AEPC as a 30-TPD municipal-solid-waste biogas plant with thermal Bio-CNG bottles for nearby communities and hotels, plus 3.413 tonnes/day compost. Its accessible design snapshot said about 90% progress and T&C planned Jan 2022; it does not prove current output.
+- Operating reports vary: Feb 2025 operator claim 30t/day/full capacity; May 2025 municipal account about 18t/day, 60 cooking-gas cylinders and 2.5t compost; Aug 2026 operator says 10–40% capacity and gas venting. No metered production, gas-quality, sales or offtake records were found.
+- A separate Ward 7 Patela ISWM/FSTP project was reported at 89% physical / 81% financial progress in Jan 2026, with 60t/day design capacity and an expected Apr 2026 start. Dinesh Khabar reports 8–10t/day suitable organic waste sent to the Ward 2 Dev Training Center and unsuitable waste intended for Patela. No official commissioning evidence surfaced in this bounded search through 27 Nov; absence from search is not proof of non-operation.
+- UNDP reports >90% source segregation, 145 local jobs and household fees; Nepal News reports about 95% sorting, 153 workers, residual burial and worker PPE concerns. These are dated public reports, not audited or directly comparable.
+- Key correction: the original AEPC project design specifies thermal Bio-CNG bottles for hotels/nearby communities. Lack of CNG vehicles alone does not explain the reported lack of gas offtake. Bottling/quality/safety, distribution, price, buyer conversion and legal requirements remain UNKNOWN. The Nanda Devi collection/sorting PPP and Dev Training/Trading plant operator are distinct entities; do not merge them.
+
+### Existing capability seam and boundaries
+- A reusable resource-flow reconciliation can connect facilities, operators, contracts, waste sources, collection events, intake quantities, gas/compost outputs, buyers, residuals and commissioning through the six canonical primitives and existing Signal/Evidence/evidence-graph relations. This is a capability candidate, not proof of a coordination failure.
+- Existing source-time gap remains: SourceCollector.normalize can replace metadata with explicit provenance; runner merges selected task/registry fields only; Signal/Evidence have published_at, retrieved_at and provenance but no dedicated effective cutoff; assessment compares publication with retrieval; synthesis citation omits publication/effective cutoff. No code change.
+- AEPC, UNDP, Nepal News, Kathmandu Post and Dinesh Khabar remain manual-only / NOT CLEARED. ADB public project data terms allow attributed reuse, but no source registry entry, automated collector or runtime transmission was authorized. No ingestion, source-body persistence, provider transmission, contact, PII, publication, spend, payment or external action.
+
+### Next
+1. Find official ADB/RUDP and municipal commissioning/handover records for the Patela facility; do not infer it is uncommissioned from search absence.
+2. Reconcile public aggregate waste quantities by ward/material, intake by facility, external livestock/poultry feedstock, gas and compost production, gas quality, bottling, buyers/offtake and residual disposal.
+3. Verify the intended thermal bottled BioCNG route and applicable standards before framing vehicle CNG as the sole market.
+4. Check public PPE procurement/replacement and worker-safety records; no external contact without authorization.
+5. Preserve the existing source-time round-trip capability as a separate code-gated item; do not retry the blocked planner helper through another tool.
 
 ## Addendum — 2026-11-26 05:13 +0545 — NRB's monthly PSP reporting closes part of D116's data gap
 
