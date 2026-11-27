@@ -1,3 +1,12 @@
+## 2026-11-28 04:39 +0545 — Dhangadhi material-flow and Patela status reconciliation
+
+- Reconciled run-start main 2f8289022a2fd1cab0e6ccb493449cb383554ace; four docs-only commits after code-bearing 209b changed only six continuity/source files. Hami Vercel status success; ForgeOS Vercel failure; exact-head CI/secret scan not verified; production health UNKNOWN after HTTP 402.
+- Read the current continuity set and traced SourceCollector.normalize → collector_runner → ObserverEngine/_ensure_evidence → assessment → synthesis citation plus relevant tests. Source-effective cutoff remains absent as a dedicated field; explicit provenance can drop nested metadata; duplicate Signal/Evidence reuse does not refresh metadata; assessment/citation omit effective cutoff. No code edit.
+- Official Dhangadhi FY2082/83 municipal report (through Jestha-end 2082) records 43t/day private collection in Wards 1–8 and 13 (80% of city waste), 70% recovery/30% disposal, and 115 Patela-area households / 553 people insured. Nepal News 21 Aug 2026 reports 20–25t/day for the same apparent nine-ward footprint; definitions and weighing basis are unresolved.
+- Nepal News reports seasonal sorting backlog, PPE replacement concerns, weekly/bulk-waste service complaints, a paper-scrap business service dispute and Ward 12 out-of-contract collection restrictions. These are attributed interviews, not audited or independently verified prevalence.
+- Patela construction-complete/operations-delayed claim and estimated NPR1.09bn variation order come from one May 12 daily brief; Khabarhub's May 13 digest is near-identical. Official variation-order approval and commissioning remain UNKNOWN. ADB PDS search metadata has mixed field dates; direct page open returned 403.
+- Updated existing HANDOFF, STATE, QUEUE, CAPABILITY_QUEUE and PUBLIC_SOURCES continuity only. No new D-number, ResearchQuestion, source registration, ingestion, Signal/Evidence write, body persistence, provider transmission, code/test/schema/collector change, contact, PII, publishing, spend, payment or external action.
+
 ## 2026-11-27 05:52 +0545 — Dhangadhi waste-to-value / BioCNG / Patela ISWM crosswalk
 
 - Reconciled latest main af40044b5bfbbbd310de330061d6fb5927581520 against code-bearing 209b7add; the three intervening commits changed only six continuity/source documents. Code-bearing CI 11/11 and secret scan passed; current docs-only head has no surfaced workflow run, Hami Vercel success and ForgeOS Vercel failure. Production health remains UNKNOWN after HTTP 402.
