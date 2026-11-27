@@ -1,3 +1,12 @@
+## 2026-11-27 05:25 +0545 — Battery traceability and second-life value connection
+
+- Extended the SET4NPL discovery beyond workforce: the independent ELE proposes a second-life transfer of repossessed EMBs (illustrative EUR 2–3k refurbishment vs ~EUR 20k full loan loss) and records one 11-seat lease-to-own resource that was not yet on public routes or within the subsidy.
+- New public resource: NMB Bank announced pre-owned four-wheeler EV finance on 30 Jul 2026 for individuals and businesses nationwide; public terms do not establish EMB eligibility, LTV, tenure, battery-health valuation or warranty transfer.
+- DoEnv official bulletins already publish historical tax-exemption recommendation records by company, battery type, date and quantity. The VFTC chief publicly stated at a 14 Aug NAIMA dialogue that chassis/motor are registered but battery serials are not. Two tax-exemption drafts are reported by media with different publication dates; official drafts/final status were not retrieved, and reported end-user fields include PII. No personal data collected.
+- Value hypothesis: link battery identity/condition, vehicle, service/warranty, valuation, finance, transfer and recycling to preserve assets and reduce lender losses. No actual second-life EMB transfer, liquid used-EMB market or NMB EMB eligibility is proven.
+- No source registration or ingestion; DoEnv, VFTC/MoID, NMB and MAF remain manual-only / NOT CLEARED. No code, schema, collector, model, taxonomy or D-number change. Existing source-time provenance gap remains; no code edit.
+- Corrected MAF evaluation source description: field mission 16–26 Feb, analysis Feb–Apr 2026 (not fieldwork Feb–Apr).
+
 ## 2026-11-27 05:25 +0545 — SET4NPL fleet and EV maintenance-chain evidence crosswalk
 
 - Reconciled run-start main b0544d1ba26adca4560acd7e96bf35b0722759f1, recent history, AGENTS, HANDOFF, STATE, QUEUE, BRAIN, UNKNOWN_MAP, CAPABILITY_QUEUE, PUBLIC_SOURCES, LOG, discovery-loop, source registry, collector/runner/Observer/Evidence/assessment/citation code and tests.
